@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* Paleta GastroWare (misma que gastroware-web) — siempre modo claro */
+@theme {
+  --color-crema: #f1efe7;
+  --color-crema-deep: #e6e2d4;
+  --color-celeste: #a4daee;
+  --color-celeste-soft: #cdeaf6;
+  --color-celeste-deep: #6fc3e2;
+  --color-piedra: #897e7e;
+  --color-tinta: #111111;
+  --color-borde: #dcd7c8;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: #f1efe7;
+}
+
+body {
+  background: #f1efe7;
+  color: #111111;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
