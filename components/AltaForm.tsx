@@ -9,9 +9,25 @@ import type { Cliente, Producto } from "@/lib/types";
 const inputCls =
   "w-full rounded-xl border border-borde bg-white px-4 py-3 text-base outline-none focus:border-tinta";
 
-export default function AltaForm({ productos }: { productos: Producto[] }) {
+/** Extrae un teléfono argentino plausible de un texto compartido. */
+function extraerTelefono(texto: string): string | null {
+  const m = texto.match(/(?:\+?54\s?9?[\s\-.]?)?(?:\(?\d{2,4}\)?[\s\-.]?)?\d{3,4}[\s\-.]?\d{4}/);
+  if (!m) return null;
+  const digitos = m[0].replace(/\D/g, "");
+  return digitos.length >= 8 ? m[0].trim() : null;
+}
+
+export default function AltaForm({
+  productos,
+  telefonoInicial,
+  mensajeInicial,
+}: {
+  productos: Producto[];
+  telefonoInicial?: string;
+  mensajeInicial?: string;
+}) {
   const [pending, startTransition] = useTransition();
-  const [telefono, setTelefono] = useState("");
+  const [telefono, setTelefono] = useState(telefonoInicial ?? "");
   const [existente, setExistente] = useState<Cliente | null>(null);
   const [nombre, setNombre] = useState("");
   const [rubro, setRubro] = useState("");
@@ -19,8 +35,18 @@ export default function AltaForm({ productos }: { productos: Producto[] }) {
   const [productoId, setProductoId] = useState("");
   const [origen, setOrigen] = useState("WhatsApp");
   const [temperatura, setTemperatura] = useState("tibio");
-  const [mensaje, setMensaje] = useState("");
+  const [mensaje, setMensaje] = useState(mensajeInicial ?? "");
   const [error, setError] = useState<string | null>(null);
+
+  async function pegarTelefono() {
+    try {
+      const texto = await navigator.clipboard.readText();
+      if (!texto) return;
+      setTelefono(extraerTelefono(texto) ?? texto.trim());
+    } catch {
+      // sin permiso de portapapeles
+    }
+  }
 
   async function verificarTelefono() {
     if (telefono.trim().length < 6) return;
@@ -53,15 +79,25 @@ export default function AltaForm({ productos }: { productos: Producto[] }) {
 
   return (
     <form onSubmit={enviar} className="space-y-3">
-      <input
-        type="tel"
-        required
-        placeholder="Teléfono / WhatsApp"
-        value={telefono}
-        onChange={(e) => setTelefono(e.target.value)}
-        onBlur={verificarTelefono}
-        className={inputCls}
-      />
+      <div className="flex gap-2">
+        <input
+          type="tel"
+          required
+          placeholder="Teléfono / WhatsApp"
+          value={telefono}
+          onChange={(e) => setTelefono(e.target.value)}
+          onBlur={verificarTelefono}
+          className={inputCls}
+        />
+        <button
+          type="button"
+          onClick={pegarTelefono}
+          className="shrink-0 rounded-xl border border-borde bg-white px-3 text-sm text-piedra"
+          title="Pegar del portapapeles"
+        >
+          Pegar
+        </button>
+      </div>
 
       {existente && (
         <div className="rounded-xl border border-celeste bg-celeste-soft p-3 text-sm text-tinta">

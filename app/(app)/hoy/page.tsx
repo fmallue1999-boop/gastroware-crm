@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { hoyISO, sumarDias } from "@/lib/format";
 import TareaItem from "@/components/TareaItem";
-import type { Tarea } from "@/lib/types";
+import PlantillaCopiar from "@/components/PlantillaCopiar";
+import type { Plantilla, Tarea } from "@/lib/types";
 
 const SELECT_TAREA =
   "*, cliente:clientes(*), oportunidad:oportunidades(*, producto:productos(*)), plantilla:plantillas(*)";
@@ -10,16 +11,24 @@ export default async function HoyPage() {
   const supabase = await createClient();
   const hoy = hoyISO();
 
-  const { data } = await supabase
-    .from("tareas")
-    .select(SELECT_TAREA)
-    .is("completada_at", null)
-    .eq("cancelada", false)
-    .lte("vence_el", sumarDias(7))
-    .order("vence_el", { ascending: true })
-    .limit(100);
+  const [{ data }, { data: guionesData }] = await Promise.all([
+    supabase
+      .from("tareas")
+      .select(SELECT_TAREA)
+      .is("completada_at", null)
+      .eq("cancelada", false)
+      .lte("vence_el", sumarDias(7))
+      .order("vence_el", { ascending: true })
+      .limit(100),
+    supabase
+      .from("plantillas")
+      .select("*")
+      .in("uso", ["diagnostico:gx", "diagnostico:zumex", "precio:gx", "precio:zumex"])
+      .order("nombre"),
+  ]);
 
   const tareas = (data ?? []) as unknown as Tarea[];
+  const guiones = (guionesData ?? []) as Plantilla[];
   const orden = { caliente: 0, tibio: 1, frio: 2 } as Record<string, number>;
   const porTemp = (a: Tarea, b: Tarea) =>
     (orden[a.oportunidad?.temperatura ?? "frio"] ?? 3) -
@@ -40,6 +49,25 @@ export default async function HoyPage() {
     <div>
       <h1 className="text-xl font-semibold">Hoy</h1>
       <p className="text-sm text-piedra capitalize">{fecha}</p>
+
+      {guiones.length > 0 && (
+        <details className="group mt-3">
+          <summary className="flex cursor-pointer items-center justify-between rounded-xl border border-borde bg-white px-4 py-2.5 text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
+            <span>💬 Guiones rápidos para el chat</span>
+            <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+          </summary>
+          <div className="mt-2 space-y-2">
+            {guiones.map((g) => (
+              <PlantillaCopiar
+                key={g.id}
+                nombre={g.nombre}
+                texto={g.contenido.replace("{monto}", "$X")}
+                telefono={null}
+              />
+            ))}
+          </div>
+        </details>
+      )}
 
       {vencidas.length > 0 && (
         <section className="mt-5">

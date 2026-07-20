@@ -2,14 +2,22 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import {
-  completarTarea,
-  posponerTarea,
-  crearTarea,
-} from "@/lib/actions";
+import { completarTarea, posponerTarea, crearTarea } from "@/lib/actions";
 import { linkWhatsApp, rellenarPlantilla, fechaCorta } from "@/lib/format";
 import { TempBadge, ProductoBadge } from "@/components/Badges";
 import type { Tarea } from "@/lib/types";
+
+export const RESULTADOS = [
+  "Respondió",
+  "Sin respuesta",
+  "Pidió financiación",
+  "Quedó en avisar",
+] as const;
+
+export function diasHastaLunes(): number {
+  const dow = new Date().getDay();
+  return (8 - dow) % 7 || 7;
+}
 
 export default function TareaItem({
   tarea,
@@ -20,6 +28,8 @@ export default function TareaItem({
 }) {
   const [pending, startTransition] = useTransition();
   const [pedirProxima, setPedirProxima] = useState(false);
+  const [eligiendoResultado, setEligiendoResultado] = useState(false);
+  const [posponiendo, setPosponiendo] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
   const cliente = tarea.cliente;
@@ -33,9 +43,10 @@ export default function TareaItem({
       })
     : null;
 
-  function completar() {
+  function completar(resultado?: string) {
     startTransition(async () => {
-      const res = await completarTarea(tarea.id);
+      const res = await completarTarea(tarea.id, resultado);
+      setEligiendoResultado(false);
       if (res && "sinProximaAccion" in res && res.sinProximaAccion) {
         setPedirProxima(true);
       }
@@ -51,6 +62,13 @@ export default function TareaItem({
         dias,
       });
       setPedirProxima(false);
+    });
+  }
+
+  function posponer(dias: number) {
+    startTransition(async () => {
+      await posponerTarea(tarea.id, dias);
+      setPosponiendo(false);
     });
   }
 
@@ -116,7 +134,7 @@ export default function TareaItem({
           <p className="mt-1 text-sm text-tinta/70">{tarea.titulo}</p>
         </div>
         <button
-          onClick={completar}
+          onClick={() => setEligiendoResultado(!eligiendoResultado)}
           disabled={pending}
           title="Marcar como hecha"
           className="shrink-0 rounded-full border border-borde w-8 h-8 text-piedra hover:border-green-500 hover:text-green-600 disabled:opacity-50"
@@ -124,33 +142,71 @@ export default function TareaItem({
           ✓
         </button>
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {mensaje && cliente?.telefono && (
-          <a
-            href={linkWhatsApp(cliente.telefono, mensaje)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white"
-          >
-            WhatsApp
-          </a>
-        )}
-        {mensaje && (
+
+      {eligiendoResultado ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {RESULTADOS.map((r) => (
+            <button
+              key={r}
+              onClick={() => completar(r)}
+              disabled={pending}
+              className="rounded-full border border-borde bg-crema px-3 py-1.5 text-xs"
+            >
+              {r}
+            </button>
+          ))}
           <button
-            onClick={copiar}
-            className="rounded-lg border border-borde px-3 py-1.5 text-xs"
+            onClick={() => completar()}
+            disabled={pending}
+            className="rounded-full bg-tinta px-3 py-1.5 text-xs text-white"
           >
-            {copiado ? "¡Copiado!" : "Copiar mensaje"}
+            ✓ Solo completar
           </button>
-        )}
-        <button
-          onClick={() => startTransition(() => posponerTarea(tarea.id, 2).then(() => {}))}
-          disabled={pending}
-          className="rounded-lg border border-borde px-3 py-1.5 text-xs text-piedra"
-        >
-          Posponer 2 días
-        </button>
-      </div>
+        </div>
+      ) : posponiendo ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <button onClick={() => posponer(1)} disabled={pending} className="rounded-full border border-borde px-3 py-1.5 text-xs">
+            Mañana
+          </button>
+          <button onClick={() => posponer(2)} disabled={pending} className="rounded-full border border-borde px-3 py-1.5 text-xs">
+            En 2 días
+          </button>
+          <button onClick={() => posponer(diasHastaLunes())} disabled={pending} className="rounded-full border border-borde px-3 py-1.5 text-xs">
+            El lunes
+          </button>
+          <button onClick={() => setPosponiendo(false)} className="rounded-full px-2 py-1.5 text-xs text-piedra">
+            ✕
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {mensaje && cliente?.telefono && (
+            <a
+              href={linkWhatsApp(cliente.telefono, mensaje)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white"
+            >
+              WhatsApp
+            </a>
+          )}
+          {mensaje && (
+            <button
+              onClick={copiar}
+              className="rounded-lg border border-borde px-3 py-1.5 text-xs"
+            >
+              {copiado ? "¡Copiado!" : "Copiar mensaje"}
+            </button>
+          )}
+          <button
+            onClick={() => setPosponiendo(true)}
+            disabled={pending}
+            className="rounded-lg border border-borde px-3 py-1.5 text-xs text-piedra"
+          >
+            Posponer…
+          </button>
+        </div>
+      )}
     </div>
   );
 }

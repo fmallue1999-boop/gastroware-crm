@@ -105,8 +105,9 @@ export async function crearLead(input: {
 
 // ---------- Tareas ----------
 
-export async function completarTarea(tareaId: string) {
+export async function completarTarea(tareaId: string, resultado?: string) {
   const supabase = await createClient();
+  const user = await usuarioActual();
   const { data: tarea } = await supabase
     .from("tareas")
     .select("*")
@@ -118,6 +119,16 @@ export async function completarTarea(tareaId: string) {
     .from("tareas")
     .update({ completada_at: new Date().toISOString() })
     .eq("id", tareaId);
+
+  if (resultado) {
+    await supabase.from("actividades").insert({
+      cliente_id: tarea.cliente_id,
+      oportunidad_id: tarea.oportunidad_id,
+      tipo: "nota",
+      contenido: `${tarea.titulo} → ${resultado}`,
+      created_by: user?.id ?? null,
+    });
+  }
 
   // Recompra de consumible: actualizar el ciclo
   if (tarea.recurrencia_id) {
@@ -430,6 +441,51 @@ export async function agregarNota(
     created_by: user?.id ?? null,
   });
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// ---------- Buscador global ----------
+
+export async function buscarClientes(q: string): Promise<Cliente[]> {
+  const t = q.trim();
+  if (t.length < 2) return [];
+  const supabase = await createClient();
+  const digitos = t.replace(/\D/g, "");
+  const filtros = [`nombre_comercial.ilike.%${t}%`];
+  if (digitos.length >= 4) filtros.push(`telefono.ilike.%${digitos}%`);
+  const { data } = await supabase
+    .from("clientes")
+    .select("*")
+    .or(filtros.join(","))
+    .limit(10);
+  return (data ?? []) as Cliente[];
+}
+
+// ---------- Notificaciones push ----------
+
+export async function guardarSuscripcionPush(sub: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  if (!user) return { error: "Sin sesión" };
+  const { error } = await supabase.from("push_subs").upsert(
+    { usuario_id: user.id, endpoint: sub.endpoint, subscription: sub },
+    { onConflict: "endpoint" }
+  );
+  if (error)
+    return {
+      error:
+        "No se pudo guardar (¿falta correr supabase/migrations/002_push.sql?): " +
+        error.message,
+    };
+  return { ok: true };
+}
+
+export async function borrarSuscripcionPush(endpoint: string) {
+  const supabase = await createClient();
+  await supabase.from("push_subs").delete().eq("endpoint", endpoint);
   return { ok: true };
 }
 

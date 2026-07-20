@@ -1,6 +1,4 @@
-import type { MetadataRoute } from "next";
-
-export default function manifest(): MetadataRoute.Manifest {
+export default function manifest() {
   return {
     name: "GastroWare CRM",
     short_name: "CRM",
@@ -17,5 +15,15 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "any",
       },
     ],
+    // Compartir desde WhatsApp u otra app directo al alta de lead
+    share_target: {
+      action: "/alta",
+      method: "GET",
+      params: {
+        title: "titulo",
+        text: "texto",
+        url: "url",
+      },
+    },
   };
 }

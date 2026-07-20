@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cerrarSesion } from "@/lib/actions";
+import PushToggle from "@/components/PushToggle";
 
 function MenuLink({
   href,
@@ -96,6 +97,8 @@ export default async function MasPage() {
           detalle="Fichas, videos, comparativas y casos para cada producto"
         />
       </section>
+
+      <PushToggle />
 
       <section className="rounded-xl border border-dashed border-borde p-4 text-sm text-piedra">
         <p className="font-medium text-tinta/70 mb-1">

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { fechaCorta, dinero } from "@/lib/format";
-import { ProductoBadge } from "@/components/Badges";
+import { fechaCorta, dinero, rellenarPlantilla } from "@/lib/format";
+import { EtapaBadge } from "@/components/Badges";
 import EtapaControl from "@/components/EtapaControl";
 import TemperaturaControl from "@/components/TemperaturaControl";
 import DiagnosticoForm from "@/components/DiagnosticoForm";
@@ -11,7 +11,7 @@ import ObjecionControl from "@/components/ObjecionControl";
 import PlantillaCopiar from "@/components/PlantillaCopiar";
 import MaterialItem from "@/components/MaterialItem";
 import NotaForm from "@/components/NotaForm";
-import { rellenarPlantilla } from "@/lib/format";
+import { AccionAhora, CrearAccionRapida } from "@/components/AccionAhora";
 import type {
   Actividad,
   Cotizacion,
@@ -19,6 +19,9 @@ import type {
   Plantilla,
   Tarea,
 } from "@/lib/types";
+
+const sumario =
+  "flex cursor-pointer items-center justify-between rounded-xl border border-borde bg-white px-4 py-3 text-sm font-medium list-none [&::-webkit-details-marker]:hidden";
 
 export default async function OportunidadPage({
   params,
@@ -45,7 +48,7 @@ export default async function OportunidadPage({
         .order("enviada_at", { ascending: false }),
       supabase
         .from("tareas")
-        .select("*")
+        .select("*, plantilla:plantillas(*)")
         .eq("oportunidad_id", id)
         .is("completada_at", null)
         .eq("cancelada", false)
@@ -64,7 +67,7 @@ export default async function OportunidadPage({
     ]);
 
   const cotizaciones = (cotizacionesRes.data ?? []) as Cotizacion[];
-  const tareas = (tareasRes.data ?? []) as Tarea[];
+  const tareas = (tareasRes.data ?? []) as unknown as Tarea[];
   const plantillas = (plantillasRes.data ?? []) as Plantilla[];
   const actividades = (actividadesRes.data ?? []) as Actividad[];
   const materiales = (
@@ -100,131 +103,173 @@ export default async function OportunidadPage({
   const vars = {
     nombre: opp.cliente?.nombre_comercial ?? "",
     producto: opp.producto?.nombre ?? "el producto",
-    monto: opp.monto_estimado
-      ? dinero(opp.monto_estimado, opp.moneda)
-      : "$X",
+    monto: opp.monto_estimado ? dinero(opp.monto_estimado, opp.moneda) : "$X",
   };
 
+  const cerrada = opp.etapa === "ganada" || opp.etapa === "perdida";
+  const proximaTarea = tareas[0] ?? null;
+  const mostrarDiagnosticoArriba =
+    !cerrada && faltaDiagnostico && (esGX || esZumex);
+
   return (
-    <div className="space-y-5">
-      <header>
-        <Link
-          href={`/clientes/${opp.cliente_id}`}
-          className="text-sm text-sky-700"
-        >
+    <div className="space-y-3">
+      <header className="rounded-xl border border-borde bg-white p-4">
+        <Link href={`/clientes/${opp.cliente_id}`} className="text-sm text-sky-700">
           ← {opp.cliente?.nombre_comercial}
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-semibold">
+          <h1 className="text-lg font-semibold">
             {opp.producto?.nombre ?? "Consulta"}
           </h1>
-          <ProductoBadge nombre={opp.cliente?.rubro} />
-          <TemperaturaControl
-            oportunidadId={opp.id}
-            temperatura={opp.temperatura}
-          />
+          <EtapaBadge etapa={opp.etapa} />
+          <TemperaturaControl oportunidadId={opp.id} temperatura={opp.temperatura} />
         </div>
         <p className="mt-0.5 text-sm text-piedra">
-          {opp.origen} · creada {fechaCorta(opp.created_at)}
-          {opp.monto_estimado
-            ? ` · ${dinero(opp.monto_estimado, opp.moneda)}`
-            : ""}
+          {opp.cliente?.rubro} · {opp.origen} · {fechaCorta(opp.created_at)}
+          {opp.monto_estimado ? ` · ${dinero(opp.monto_estimado, opp.moneda)}` : ""}
         </p>
-        {opp.mensaje_inicial && (
-          <p className="mt-1 text-sm text-tinta/70 italic">
-            “{opp.mensaje_inicial}”
-          </p>
-        )}
       </header>
 
-      <EtapaControl
-        oportunidadId={opp.id}
-        etapa={opp.etapa}
-        motivoPerdida={opp.motivo_perdida}
-      />
-
-      {(esGX || esZumex) && (
-        <section className="rounded-xl border border-borde bg-white p-4">
-          <h2 className="text-sm font-semibold mb-1">
-            Diagnóstico {faltaDiagnostico && (
-              <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                incompleto — completar antes de cotizar
-              </span>
-            )}
-          </h2>
+      {cerrada ? (
+        <EtapaControl
+          oportunidadId={opp.id}
+          etapa={opp.etapa}
+          motivoPerdida={opp.motivo_perdida}
+        />
+      ) : mostrarDiagnosticoArriba ? (
+        <div className="rounded-xl border-2 border-celeste-deep bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 mb-1">
+            Ahora toca
+          </p>
+          <p className="text-sm font-medium mb-2">
+            Diagnóstico antes de cotizar
+            {esZumex ? " — la cuenta de recupero es el argumento" : ""}
+          </p>
           <DiagnosticoForm
             oportunidadId={opp.id}
             categoria={categoria}
             diagnostico={diag}
           />
-        </section>
-      )}
-
-      <section className="rounded-xl border border-borde bg-white p-4">
-        <h2 className="text-sm font-semibold mb-2">Cotizaciones</h2>
-        {cotizaciones.map((c) => (
-          <div
-            key={c.id}
-            className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-crema px-3 py-2 text-sm"
-          >
-            <span>
-              {dinero(c.monto, c.moneda)}
-              {c.forma_pago ? ` · ${c.forma_pago}` : ""}
-              <span className="text-piedra/80">
-                {" "}
-                · {fechaCorta(c.enviada_at)}
-              </span>
-            </span>
-            {c.archivo_url && (
-              <a
-                href={c.archivo_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 text-sky-700"
-              >
-                Ver PDF
-              </a>
-            )}
-          </div>
-        ))}
-        <CotizacionForm
-          oportunidadId={opp.id}
-          monedaDefault={opp.producto?.moneda ?? "ARS"}
-          advertencia={
-            faltaDiagnostico
-              ? esZumex
-                ? "Falta la cuenta de recupero (vasos por día y precio). El precio suelto es donde se pierde la venta."
-                : "Falta el diagnóstico (uso y volumen). El precio suelto es donde se pierde la venta."
-              : null
-          }
+        </div>
+      ) : proximaTarea ? (
+        <AccionAhora
+          tarea={proximaTarea}
+          telefono={opp.cliente?.telefono ?? null}
+          vars={vars}
         />
-      </section>
-
-      <ObjecionControl
-        oportunidadId={opp.id}
-        objecion={opp.objecion_principal}
-      />
-
-      {plantillasUtiles.length > 0 && (
-        <section className="rounded-xl border border-borde bg-white p-4">
-          <h2 className="text-sm font-semibold mb-2">Mensajes listos</h2>
-          <div className="space-y-2">
-            {plantillasUtiles.map((p) => (
-              <PlantillaCopiar
-                key={p.id}
-                nombre={p.nombre}
-                texto={rellenarPlantilla(p.contenido, vars)}
-                telefono={opp.cliente?.telefono ?? null}
-              />
-            ))}
-          </div>
-        </section>
+      ) : (
+        <CrearAccionRapida clienteId={opp.cliente_id} oportunidadId={opp.id} />
       )}
+
+      {(esGX || esZumex) && !mostrarDiagnosticoArriba && (
+        <details className="group">
+          <summary className={sumario}>
+            <span>
+              Diagnóstico{" "}
+              {!faltaDiagnostico && esZumex && diag.recupero_meses ? (
+                <span className="text-green-700 font-normal">
+                  ✓ recupero {String(diag.recupero_meses)} meses
+                </span>
+              ) : !faltaDiagnostico ? (
+                <span className="text-green-700 font-normal">✓ completo</span>
+              ) : null}
+            </span>
+            <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+          </summary>
+          <div className="mt-2 rounded-xl border border-borde bg-white p-4">
+            <DiagnosticoForm
+              oportunidadId={opp.id}
+              categoria={categoria}
+              diagnostico={diag}
+            />
+          </div>
+        </details>
+      )}
+
+      <details className="group" {...(cotizaciones.length === 0 && !cerrada && !faltaDiagnostico ? { open: true } : {})}>
+        <summary className={sumario}>
+          <span>
+            Cotizaciones{" "}
+            <span className="font-normal text-piedra">({cotizaciones.length})</span>
+          </span>
+          <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+        </summary>
+        <div className="mt-2 rounded-xl border border-borde bg-white p-4">
+          {cotizaciones.map((c) => (
+            <div
+              key={c.id}
+              className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-crema px-3 py-2 text-sm"
+            >
+              <span>
+                {dinero(c.monto, c.moneda)}
+                {c.forma_pago ? ` · ${c.forma_pago}` : ""}
+                <span className="text-piedra"> · {fechaCorta(c.enviada_at)}</span>
+              </span>
+              {c.archivo_url && (
+                <a
+                  href={c.archivo_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-sky-700"
+                >
+                  Ver PDF
+                </a>
+              )}
+            </div>
+          ))}
+          <CotizacionForm
+            oportunidadId={opp.id}
+            monedaDefault={opp.producto?.moneda ?? "ARS"}
+            advertencia={
+              faltaDiagnostico
+                ? esZumex
+                  ? "Falta la cuenta de recupero (vasos por día y precio). El precio suelto es donde se pierde la venta."
+                  : "Falta el diagnóstico (uso y volumen). El precio suelto es donde se pierde la venta."
+                : null
+            }
+          />
+        </div>
+      </details>
+
+      <details className="group">
+        <summary className={sumario}>
+          <span>
+            Guiones y objeción{" "}
+            {opp.objecion_principal && (
+              <span className="font-normal text-amber-700">
+                · {opp.objecion_principal}
+              </span>
+            )}
+          </span>
+          <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+        </summary>
+        <div className="mt-2 space-y-3">
+          <ObjecionControl oportunidadId={opp.id} objecion={opp.objecion_principal} />
+          {plantillasUtiles.length > 0 && (
+            <div className="rounded-xl border border-borde bg-white p-4 space-y-2">
+              {plantillasUtiles.map((p) => (
+                <PlantillaCopiar
+                  key={p.id}
+                  nombre={p.nombre}
+                  texto={rellenarPlantilla(p.contenido, vars)}
+                  telefono={opp.cliente?.telefono ?? null}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
 
       {materiales.length > 0 && (
-        <section className="rounded-xl border border-borde bg-white p-4">
-          <h2 className="text-sm font-semibold mb-2">Material para mandar</h2>
-          <div className="space-y-2">
+        <details className="group">
+          <summary className={sumario}>
+            <span>
+              Material para mandar{" "}
+              <span className="font-normal text-piedra">({materiales.length})</span>
+            </span>
+            <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+          </summary>
+          <div className="mt-2 space-y-2">
             {materiales.map((m) => (
               <MaterialItem
                 key={m.id}
@@ -233,39 +278,52 @@ export default async function OportunidadPage({
               />
             ))}
           </div>
-        </section>
+        </details>
       )}
 
-      {tareas.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold mb-2">Próximas acciones</h2>
-          <div className="space-y-1.5">
-            {tareas.map((t) => (
-              <p key={t.id} className="text-sm text-tinta/70">
-                <span className="text-piedra/80">
-                  {fechaCorta(t.vence_el)}:
-                </span>{" "}
-                {t.titulo}
+      <details className="group">
+        <summary className={sumario}>
+          <span>Historial y notas</span>
+          <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+        </summary>
+        <div className="mt-2 rounded-xl border border-borde bg-white p-4">
+          {opp.mensaje_inicial && (
+            <p className="mb-2 text-sm text-tinta/70 italic">
+              “{opp.mensaje_inicial}”
+            </p>
+          )}
+          {tareas.length > 1 && (
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-piedra mb-1">
+                Próximas acciones
+              </p>
+              {tareas.map((t) => (
+                <p key={t.id} className="text-sm text-tinta/70">
+                  <span className="text-piedra">{fechaCorta(t.vence_el)}:</span>{" "}
+                  {t.titulo}
+                </p>
+              ))}
+            </div>
+          )}
+          <NotaForm clienteId={opp.cliente_id} oportunidadId={opp.id} />
+          <div className="mt-3 space-y-2">
+            {actividades.map((a) => (
+              <p key={a.id} className="text-sm">
+                <span className="text-piedra">{fechaCorta(a.created_at)}</span>{" "}
+                <span className="text-tinta/80">{a.contenido}</span>
               </p>
             ))}
           </div>
-        </section>
-      )}
-
-      <section>
-        <h2 className="text-sm font-semibold mb-2">Notas</h2>
-        <NotaForm clienteId={opp.cliente_id} oportunidadId={opp.id} />
-        <div className="mt-3 space-y-2">
-          {actividades.map((a) => (
-            <p key={a.id} className="text-sm">
-              <span className="text-piedra/80">
-                {fechaCorta(a.created_at)}
-              </span>{" "}
-              <span className="text-tinta/80">{a.contenido}</span>
-            </p>
-          ))}
         </div>
-      </section>
+      </details>
+
+      {!cerrada && (
+        <EtapaControl
+          oportunidadId={opp.id}
+          etapa={opp.etapa}
+          motivoPerdida={opp.motivo_perdida}
+        />
+      )}
     </div>
   );
 }
