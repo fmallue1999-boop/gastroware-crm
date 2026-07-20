@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { hoyISO, sumarDias } from "@/lib/format";
 import TareaItem from "@/components/TareaItem";
@@ -7,19 +8,35 @@ import type { Plantilla, Tarea } from "@/lib/types";
 const SELECT_TAREA =
   "*, cliente:clientes(*), oportunidad:oportunidades(*, producto:productos(*)), plantilla:plantillas(*)";
 
-export default async function HoyPage() {
+export default async function HoyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vista?: string }>;
+}) {
+  const { vista } = await searchParams;
   const supabase = await createClient();
   const hoy = hoyISO();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let queryTareas = supabase
+    .from("tareas")
+    .select(SELECT_TAREA)
+    .is("completada_at", null)
+    .eq("cancelada", false)
+    .lte("vence_el", sumarDias(7))
+    .order("vence_el", { ascending: true })
+    .limit(100);
+  // "Mías" (default): las asignadas a mí + las sin asignar
+  if (vista !== "todas" && user) {
+    queryTareas = queryTareas.or(
+      `vendedor_id.eq.${user.id},vendedor_id.is.null`
+    );
+  }
 
   const [{ data }, { data: guionesData }] = await Promise.all([
-    supabase
-      .from("tareas")
-      .select(SELECT_TAREA)
-      .is("completada_at", null)
-      .eq("cancelada", false)
-      .lte("vence_el", sumarDias(7))
-      .order("vence_el", { ascending: true })
-      .limit(100),
+    queryTareas,
     supabase
       .from("plantillas")
       .select("*")
@@ -47,8 +64,34 @@ export default async function HoyPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Hoy</h1>
-      <p className="text-sm text-piedra capitalize">{fecha}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Hoy</h1>
+          <p className="text-sm text-piedra capitalize">{fecha}</p>
+        </div>
+        <div className="flex gap-1">
+          <Link
+            href="/hoy"
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              vista !== "todas"
+                ? "bg-tinta text-white"
+                : "border border-borde text-piedra"
+            }`}
+          >
+            Mías
+          </Link>
+          <Link
+            href="/hoy?vista=todas"
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              vista === "todas"
+                ? "bg-tinta text-white"
+                : "border border-borde text-piedra"
+            }`}
+          >
+            Todas
+          </Link>
+        </div>
+      </div>
 
       {guiones.length > 0 && (
         <details className="group mt-3">

@@ -21,7 +21,7 @@ export function fechaCorta(iso: string | null): string {
 
 export function diasDesde(iso: string): number {
   const d = new Date(iso.length <= 10 ? iso + "T12:00:00" : iso);
-  return Math.floor((Date.now() - d.getTime()) / 86400000);
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
 }
 
 export function dinero(monto: number | null, moneda = "ARS"): string {

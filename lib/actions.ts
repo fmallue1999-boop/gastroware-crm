@@ -444,6 +444,104 @@ export async function agregarNota(
   return { ok: true };
 }
 
+// ---------- Equipos instalados y recurrencias ----------
+
+export async function agregarEquipo(input: {
+  clienteId: string;
+  productoId: string;
+  fecha?: string | null;
+  cantidad?: number;
+}) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  const { data: producto } = await supabase
+    .from("productos")
+    .select("*")
+    .eq("id", input.productoId)
+    .single();
+  if (!producto) return { error: "Producto no encontrado" };
+
+  const fecha = input.fecha || hoyISO();
+
+  if (producto.es_consumible) {
+    // Consumible directo (ej. pastillas): activar o renovar el ciclo de recompra
+    if (!producto.frecuencia_recompra_dias)
+      return { error: "El consumible no tiene frecuencia configurada" };
+    const { data: existente } = await supabase
+      .from("recurrencias")
+      .select("id")
+      .eq("cliente_id", input.clienteId)
+      .eq("producto_id", producto.id)
+      .eq("activa", true)
+      .maybeSingle();
+    if (existente) {
+      await supabase
+        .from("recurrencias")
+        .update({
+          ultima_compra: fecha,
+          proxima_alerta: sumarDias(producto.frecuencia_recompra_dias, fecha),
+        })
+        .eq("id", existente.id);
+    } else {
+      await supabase.from("recurrencias").insert({
+        cliente_id: input.clienteId,
+        producto_id: producto.id,
+        frecuencia_dias: producto.frecuencia_recompra_dias,
+        ultima_compra: fecha,
+        proxima_alerta: sumarDias(producto.frecuencia_recompra_dias, fecha),
+      });
+    }
+  } else {
+    await supabase.from("equipos_instalados").insert({
+      cliente_id: input.clienteId,
+      producto_id: producto.id,
+      cantidad: input.cantidad ?? 1,
+      fecha_compra: fecha,
+    });
+    // Si el equipo tiene consumible asociado, activar la recurrencia
+    const { data: consumible } = await supabase
+      .from("productos")
+      .select("id, frecuencia_recompra_dias")
+      .eq("consumible_de", producto.id)
+      .maybeSingle();
+    if (consumible?.frecuencia_recompra_dias) {
+      const { data: yaActiva } = await supabase
+        .from("recurrencias")
+        .select("id")
+        .eq("cliente_id", input.clienteId)
+        .eq("producto_id", consumible.id)
+        .eq("activa", true)
+        .maybeSingle();
+      if (!yaActiva) {
+        await supabase.from("recurrencias").insert({
+          cliente_id: input.clienteId,
+          producto_id: consumible.id,
+          frecuencia_dias: consumible.frecuencia_recompra_dias,
+          ultima_compra: fecha,
+          proxima_alerta: sumarDias(consumible.frecuencia_recompra_dias, fecha),
+        });
+      }
+    }
+    // Cliente con equipo instalado = cliente activo
+    await supabase
+      .from("clientes")
+      .update({ estado: "cliente_activo" })
+      .eq("id", input.clienteId)
+      .eq("estado", "prospecto");
+  }
+
+  await supabase.from("actividades").insert({
+    cliente_id: input.clienteId,
+    tipo: "nota",
+    contenido: `Se cargó ${producto.nombre} (${producto.es_consumible ? "ciclo de recompra" : "equipo instalado"})`,
+    created_by: user?.id ?? null,
+  });
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 // ---------- Buscador global ----------
 
 export async function buscarClientes(q: string): Promise<Cliente[]> {

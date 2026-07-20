@@ -4,11 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { fechaCorta, linkWhatsApp, dinero, diasDesde } from "@/lib/format";
 import { EtapaBadge, TempBadge, ProductoBadge } from "@/components/Badges";
 import NotaForm from "@/components/NotaForm";
+import EquipoForm from "@/components/EquipoForm";
 import type {
   Actividad,
   Cliente,
   EquipoInstalado,
   Oportunidad,
+  Producto,
   Recurrencia,
   Tarea,
 } from "@/lib/types";
@@ -29,7 +31,7 @@ export default async function ClientePage({
   if (!cliente) notFound();
   const c = cliente as Cliente;
 
-  const [equiposRes, recurrenciasRes, oportunidadesRes, tareasRes, actividadesRes] =
+  const [equiposRes, recurrenciasRes, oportunidadesRes, tareasRes, actividadesRes, productosRes] =
     await Promise.all([
       supabase
         .from("equipos_instalados")
@@ -59,6 +61,11 @@ export default async function ClientePage({
         .eq("cliente_id", id)
         .order("created_at", { ascending: false })
         .limit(15),
+      supabase
+        .from("productos")
+        .select("*")
+        .eq("activo", true)
+        .order("nombre"),
     ]);
 
   const equipos = (equiposRes.data ?? []) as unknown as EquipoInstalado[];
@@ -66,6 +73,7 @@ export default async function ClientePage({
   const oportunidades = (oportunidadesRes.data ?? []) as unknown as Oportunidad[];
   const tareas = (tareasRes.data ?? []) as unknown as Tarea[];
   const actividades = (actividadesRes.data ?? []) as unknown as Actividad[];
+  const productos = (productosRes.data ?? []) as Producto[];
 
   return (
     <div className="space-y-5">
@@ -95,32 +103,36 @@ export default async function ClientePage({
         {c.notas && <p className="mt-2 text-sm text-tinta/70">{c.notas}</p>}
       </header>
 
-      {(equipos.length > 0 || recurrencias.length > 0) && (
-        <section className="rounded-xl border border-borde bg-white p-4">
-          <h2 className="text-sm font-semibold mb-2">Equipos y consumibles</h2>
-          <div className="space-y-2">
-            {equipos.map((e) => (
-              <p key={e.id} className="text-sm">
-                {e.producto?.nombre}
-                {e.cantidad > 1 ? ` × ${e.cantidad}` : ""}
-                <span className="text-piedra/80">
-                  {" "}
-                  · comprado {fechaCorta(e.fecha_compra)}
-                </span>
-              </p>
-            ))}
-            {recurrencias.map((r) => (
-              <p key={r.id} className="text-sm text-amber-700">
-                🔔 {r.producto?.nombre}: cada {r.frecuencia_dias} días — próximo
-                aviso {fechaCorta(r.proxima_alerta)}
-                {r.ultima_compra
-                  ? ` (última compra hace ${diasDesde(r.ultima_compra)} días)`
-                  : ""}
-              </p>
-            ))}
-          </div>
-        </section>
-      )}
+      <section className="rounded-xl border border-borde bg-white p-4">
+        <h2 className="text-sm font-semibold mb-2">Equipos y consumibles</h2>
+        <div className="space-y-2 mb-3">
+          {equipos.map((e) => (
+            <p key={e.id} className="text-sm">
+              {e.producto?.nombre}
+              {e.cantidad > 1 ? ` × ${e.cantidad}` : ""}
+              <span className="text-piedra/80">
+                {" "}
+                · comprado {fechaCorta(e.fecha_compra)}
+              </span>
+            </p>
+          ))}
+          {recurrencias.map((r) => (
+            <p key={r.id} className="text-sm text-amber-700">
+              🔔 {r.producto?.nombre}: cada {r.frecuencia_dias} días — próximo
+              aviso {fechaCorta(r.proxima_alerta)}
+              {r.ultima_compra
+                ? ` (última compra hace ${diasDesde(r.ultima_compra)} días)`
+                : ""}
+            </p>
+          ))}
+          {equipos.length === 0 && recurrencias.length === 0 && (
+            <p className="text-sm text-piedra/80">
+              Sin equipos registrados todavía.
+            </p>
+          )}
+        </div>
+        <EquipoForm clienteId={c.id} productos={productos} />
+      </section>
 
       <section>
         <div className="flex items-center justify-between mb-2">
