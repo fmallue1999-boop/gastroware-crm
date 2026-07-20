@@ -229,7 +229,14 @@ export async function cambiarEtapa(
   }
 
   // Cotizada: generar cadencia D+2 / D+5 / D+10 / D+20
+  // (si se re-cotiza, la cadencia anterior pendiente se cancela y arranca de nuevo)
   if (etapa === "cotizada") {
+    await supabase
+      .from("tareas")
+      .update({ cancelada: true })
+      .eq("oportunidad_id", oportunidadId)
+      .eq("auto", true)
+      .is("completada_at", null);
     const { data: plantillas } = await supabase
       .from("plantillas")
       .select("id, uso")
