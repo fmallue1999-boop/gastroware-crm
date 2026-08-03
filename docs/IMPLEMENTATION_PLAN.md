@@ -3,13 +3,18 @@
 > Complejidad relativa: S (horas) · M (1-2 días) · L (varios días).
 > Cada etapa termina con build+tests verdes, verificación en producción y commit.
 
-## Etapa 0 — Documentación y calidad (S) ✅ en curso
+> Estado (2026-08-03): Etapas 0 a 3 COMPLETADAS y en producción.
+> Pendiente de Etapa 1: pegar las 4 env vars en Vercel (service key, CRON_SECRET,
+> VAPID x2) y crear los usuarios reales del equipo. Etapas 4-6 bloqueadas por
+> decisiones externas (número WhatsApp, DNS email, API key).
+
+## Etapa 0 — Documentación y calidad (S) ✅
 - docs/ completo (estos 7 documentos), .env.example documentado.
 - Vitest configurado con tests de `lib/format` y cálculos; Playwright configurado
   (browsers con `npx playwright install`); `npm test` como gate.
 - Aceptación: docs presentes, `npm run build && npm test` verdes.
 
-## Etapa 1 — Fundamentos seguros (L)
+## Etapa 1 — Fundamentos seguros (L) ✅
 - Migración `004_os_fundacion.sql`: modelo núcleo (DATA_MODEL.md), RLS real
   (PERMISSIONS_MATRIX.md), auditoría por triggers, estados de OT configurables,
   soft delete, outbox. Base limpia.
@@ -22,7 +27,7 @@
 - Aceptación: casos de prueba de PERMISSIONS_MATRIX verificados con tokens reales;
   auditoría visible; alta de usuario sin tocar Supabase; deploy verificado.
 
-## Etapa 2 — Servicio técnico + equipos EXCELENTE (L) — la entrega prioritaria
+## Etapa 2 — Servicio técnico + equipos EXCELENTE (L) ✅ — la entrega prioritaria
 - Equipos: serie única, fotos, documentos, sucursal/ubicación, estado, QR
   (`/e/{serie}` + etiqueta imprimible), timeline inalterable, ticket precargado
   desde el equipo.
@@ -37,10 +42,13 @@
 - Aceptación: los 20 criterios de PRODUCT_REQUIREMENTS.md, uno a uno, con
   Playwright + prueba manual desde teléfono real.
 
-## Etapa 3 — CRM y ventas pro (M)
-- Cotizaciones con versiones y comparación; embudo configurable; relación
-  venta→equipo→instalación (al ganar, wizard de alta de equipo con serie);
-  resumen comercial heurístico en ficha.
+## Etapa 3 — CRM y ventas pro (M) ✅
+- Cotizaciones con versiones y comparación (delta % y versión vigente); relación
+  venta→equipo→instalación (al ganar se crea el equipo y la oportunidad avisa
+  si falta serie/instalación); resumen comercial heurístico en ficha ("Situación");
+  pipeline marca oportunidades sin próxima acción o con seguimiento vencido.
+- Nota: el embudo configurable se pospuso a propósito — las etapas fijas
+  funcionan y configurarlas hoy es complejidad sin retorno.
 
 ## Etapa 4 — Integraciones (M + decisiones externas)
 - Formularios web: endpoint firmado + honeypot/rate-limit → lead + tarea + notificación.
