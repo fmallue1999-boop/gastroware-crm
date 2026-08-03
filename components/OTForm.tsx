@@ -9,13 +9,25 @@ import type { Cliente, Usuario } from "@/lib/types";
 const inputCls =
   "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
-export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
+export default function OTForm({
+  usuarios,
+  clienteInicial = null,
+  equiposIniciales = [],
+  equipoInicialId = "",
+}: {
+  usuarios: Usuario[];
+  clienteInicial?: Cliente | null;
+  equiposIniciales?: { id: string; etiqueta: string }[];
+  equipoInicialId?: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState<Cliente[]>([]);
-  const [cliente, setCliente] = useState<Cliente | null>(null);
-  const [equipos, setEquipos] = useState<{ id: string; etiqueta: string }[]>([]);
-  const [equipoId, setEquipoId] = useState("");
+  const [cliente, setCliente] = useState<Cliente | null>(clienteInicial);
+  const [equipos, setEquipos] = useState<{ id: string; etiqueta: string }[]>(
+    equiposIniciales
+  );
+  const [equipoId, setEquipoId] = useState(equipoInicialId);
   const [tipo, setTipo] = useState("correctivo");
   const [prioridad, setPrioridad] = useState("normal");
   const [fecha, setFecha] = useState("");

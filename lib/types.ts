@@ -322,6 +322,29 @@ export interface Documento {
   created_at: string;
 }
 
+export interface ChecklistPlantilla {
+  id: string;
+  nombre: string;
+  modelo_id: string | null;
+  items: string[];
+  modelo?: Modelo | null;
+}
+
+export interface OTChecklist {
+  id: string;
+  ot_id: string;
+  plantilla_id: string | null;
+  respuestas: Record<string, boolean>;
+  plantilla?: ChecklistPlantilla | null;
+}
+
+export interface EquipoFoto {
+  id: string;
+  equipo_id: string;
+  path: string;
+  created_at: string;
+}
+
 export interface Notificacion {
   id: string;
   usuario_id: string;

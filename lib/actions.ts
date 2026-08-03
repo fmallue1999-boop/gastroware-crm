@@ -669,6 +669,54 @@ export async function listarEquiposCliente(clienteId: string) {
   });
 }
 
+const CAMPOS_EQUIPO_EDITABLES = [
+  "numero_serie",
+  "estado",
+  "sucursal_id",
+  "fecha_instalacion",
+  "fecha_venta",
+  "proximo_service",
+  "observaciones",
+] as const;
+
+export async function actualizarEquipo(
+  equipoId: string,
+  patch: Record<string, string | null>
+) {
+  const limpio: Record<string, string | null> = {};
+  for (const k of CAMPOS_EQUIPO_EDITABLES) if (k in patch) limpio[k] = patch[k] || null;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("equipos")
+    .update(limpio)
+    .eq("id", equipoId);
+  if (error) {
+    if (error.code === "23505")
+      return { error: `Ese número de serie ya existe en otro equipo` };
+    return { error: error.message };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function agregarFotoEquipo(equipoId: string, path: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("equipo_fotos")
+    .insert({ equipo_id: equipoId, path });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function borrarFotoEquipo(fotoId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("equipo_fotos").delete().eq("id", fotoId);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 // =====================================================================
 // Servicio técnico
 // =====================================================================
@@ -713,6 +761,30 @@ export async function crearOT(input: {
     .select("id, numero")
     .single();
   if (error || !ot) return { error: error?.message ?? "No se pudo crear" };
+
+  // Checklists del modelo del equipo (o generales) → se copian a la OT
+  if (input.equipoId) {
+    const { data: eq } = await supabase
+      .from("equipos")
+      .select("modelo_id, producto:productos(modelo_id)")
+      .eq("id", input.equipoId)
+      .single();
+    const modeloId =
+      eq?.modelo_id ??
+      (eq?.producto as unknown as { modelo_id: string | null } | null)?.modelo_id ??
+      null;
+    if (modeloId) {
+      const { data: plantillasCk } = await supabase
+        .from("checklist_plantillas")
+        .select("id")
+        .eq("modelo_id", modeloId);
+      for (const p of plantillasCk ?? []) {
+        await supabase
+          .from("ot_checklists")
+          .insert({ ot_id: ot.id, plantilla_id: p.id, respuestas: {} });
+      }
+    }
+  }
 
   await supabase.from("actividades").insert({
     cliente_id: input.clienteId,
@@ -1017,6 +1089,57 @@ export async function guardarFirmaOT(
     .from("ordenes_trabajo")
     .update({ firma_path: path, firmante: firmante.trim() || null })
     .eq("id", otId);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// =====================================================================
+// Checklists
+// =====================================================================
+
+export async function guardarChecklistPlantilla(input: {
+  id?: string | null;
+  nombre: string;
+  modeloId: string | null;
+  items: string[];
+}) {
+  const supabase = await createClient();
+  const fila = {
+    nombre: input.nombre.trim(),
+    modelo_id: input.modeloId,
+    items: input.items.map((i) => i.trim()).filter(Boolean),
+  };
+  if (!fila.nombre) return { error: "Falta el nombre" };
+  if (fila.items.length === 0) return { error: "Cargá al menos un ítem" };
+  const { error } = input.id
+    ? await supabase.from("checklist_plantillas").update(fila).eq("id", input.id)
+    : await supabase.from("checklist_plantillas").insert(fila);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function borrarChecklistPlantilla(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("checklist_plantillas")
+    .delete()
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function responderChecklistOT(
+  checklistId: string,
+  respuestas: Record<string, boolean>
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("ot_checklists")
+    .update({ respuestas })
+    .eq("id", checklistId);
+  if (error) return { error: error.message };
   revalidatePath("/", "layout");
   return { ok: true };
 }

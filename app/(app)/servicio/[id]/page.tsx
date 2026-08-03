@@ -8,8 +8,10 @@ import { TIPOS_OT, COBERTURAS_OT, ESTADOS_OT } from "@/lib/constants";
 import { EstadoOTBadge, PrioridadBadge } from "@/components/Badges";
 import OTTrabajo from "@/components/OTTrabajo";
 import OTAdminControl from "@/components/OTAdminControl";
+import ChecklistsOT from "@/components/ChecklistsOT";
 import type {
   OrdenTrabajo,
+  OTChecklist,
   OTFoto,
   OTItem,
   OTTiempo,
@@ -49,6 +51,7 @@ export default async function OTPage({
     {
       data: { user },
     },
+    { data: checklists },
   ] = await Promise.all([
     supabase.from("ot_items").select("*").eq("ot_id", id).order("created_at"),
     supabase.from("ot_fotos").select("*").eq("ot_id", id).order("created_at"),
@@ -68,6 +71,10 @@ export default async function OTPage({
       .order("descripcion"),
     supabase.from("config").select("valor").eq("clave", "tarifa_hora").single(),
     supabase.auth.getUser(),
+    supabase
+      .from("ot_checklists")
+      .select("*, plantilla:checklist_plantillas(*)")
+      .eq("ot_id", id),
   ]);
   const { data: yo } = await supabase
     .from("usuarios")
@@ -160,6 +167,11 @@ export default async function OTPage({
           </p>
         )}
       </header>
+
+      <ChecklistsOT
+        checklists={(checklists ?? []) as unknown as OTChecklist[]}
+        editable={editable}
+      />
 
       <OTTrabajo
         ot={ot}

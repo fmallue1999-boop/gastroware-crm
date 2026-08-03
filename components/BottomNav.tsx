@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Sun,
   BarChart3,
+  HardDrive,
   Plus,
   Users,
   Menu,
@@ -32,7 +33,7 @@ const POR_ROL: Record<string, Item[]> = {
   ],
   tecnico: [
     { href: "/servicio", label: "Agenda", icono: Wrench },
-    { href: "/clientes", label: "Clientes", icono: Users },
+    { href: "/equipos", label: "Equipos", icono: HardDrive },
     { href: "/servicio/nueva", label: "Nueva OT", icono: Plus, central: true },
     { href: "/buscar", label: "Buscar", icono: Search },
     { href: "/mas", label: "Más", icono: Menu },

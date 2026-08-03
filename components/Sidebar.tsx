@@ -6,6 +6,7 @@ import {
   Sun,
   BarChart3,
   Bell,
+  HardDrive,
   Users,
   Wrench,
   Search,
@@ -29,6 +30,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
         { href: "/hoy", label: "Inicio", icono: Sun },
         { href: "/pipeline", label: "Pipeline", icono: BarChart3 },
         { href: "/servicio", label: "Servicio técnico", icono: Wrench },
+        { href: "/equipos", label: "Equipos", icono: HardDrive },
         { href: "/clientes", label: "Clientes", icono: Users },
       ],
     },
@@ -71,6 +73,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       grupo: "Operación",
       items: [
         { href: "/servicio", label: "Agenda", icono: Wrench },
+        { href: "/equipos", label: "Equipos", icono: HardDrive },
         { href: "/clientes", label: "Clientes", icono: Users },
       ],
     },

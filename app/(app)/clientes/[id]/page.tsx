@@ -174,11 +174,11 @@ export default async function ClientePage({
           {equipos.map((e) => {
             const vigente = e.garantia_hasta && e.garantia_hasta >= hoy;
             return (
-              <div key={e.id} className="text-sm">
-                <p>
+              <Link key={e.id} href={`/equipos/${e.id}`} className="block text-sm">
+                <p className="font-medium hover:underline">
                   {e.producto?.nombre ?? e.marca_modelo_libre}
                   {e.origen === "externo" && (
-                    <span className="ml-1.5 rounded-full border border-borde px-2 py-0.5 text-xs text-piedra">
+                    <span className="ml-1.5 rounded-full border border-borde px-2 py-0.5 text-xs font-normal text-piedra">
                       otra marca
                     </span>
                   )}
@@ -192,7 +192,7 @@ export default async function ClientePage({
                     </span>
                   )}
                 </p>
-              </div>
+              </Link>
             );
           })}
           {recurrencias.map((r) => (
