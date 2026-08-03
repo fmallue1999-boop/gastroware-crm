@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { actualizarOT } from "@/lib/actions";
 import { dinero } from "@/lib/format";
-import { TIPOS_OT } from "@/lib/constants";
+import { TIPOS_OT, ESTADOS_OT_ACTIVOS } from "@/lib/constants";
 import { EstadoOTBadge } from "@/components/Badges";
 import type { OrdenTrabajo, Usuario } from "@/lib/types";
 
@@ -18,7 +18,12 @@ export default function FilaOT({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const editable = ["abierta", "en_proceso"].includes(ot.estado);
+  const editable = [
+    "solicitud_recibida",
+    "pendiente_revision",
+    "pendiente_asignacion",
+    ...ESTADOS_OT_ACTIVOS,
+  ].includes(ot.estado);
 
   function actualizar(patch: Record<string, string | null>) {
     startTransition(async () => {
@@ -41,7 +46,7 @@ export default function FilaOT({
       </td>
       <td className="max-w-36 truncate px-3 py-2 text-piedra">
         {ot.equipo
-          ? (ot.equipo.producto?.nombre ?? ot.equipo.marca_modelo)
+          ? (ot.equipo.producto?.nombre ?? ot.equipo.marca_modelo_libre)
           : "—"}
       </td>
       <td className="px-3 py-2 text-piedra">

@@ -30,16 +30,31 @@ export async function GET(request: Request) {
   if (tipo === "clientes") {
     const { data } = await supabase
       .from("clientes")
-      .select("nombre_comercial, rubro, ciudad, provincia, telefono, email, estado, created_at")
+      .select(
+        "nombre_comercial, razon_social, cuit, condicion_fiscal, rubro, telefono, email, estado, created_at, sucursales(ciudad, provincia, es_principal)"
+      )
+      .is("deleted_at", null)
       .order("nombre_comercial")
       .limit(5000);
-    filas = data ?? [];
-    columnas = ["nombre_comercial", "rubro", "ciudad", "provincia", "telefono", "email", "estado", "created_at"];
+    filas = (data ?? []).map((c) => {
+      const sucs = (c.sucursales ?? []) as unknown as {
+        ciudad: string | null;
+        provincia: string | null;
+        es_principal: boolean;
+      }[];
+      const principal = sucs.find((s) => s.es_principal) ?? sucs[0];
+      return {
+        ...c,
+        ciudad: principal?.ciudad ?? "",
+        provincia: principal?.provincia ?? "",
+      };
+    });
+    columnas = ["nombre_comercial", "razon_social", "cuit", "condicion_fiscal", "rubro", "ciudad", "provincia", "telefono", "email", "estado", "created_at"];
   } else if (tipo === "servicio") {
     const { data } = await supabase
       .from("ordenes_trabajo")
       .select(
-        "numero, estado, tipo, fecha_programada, horas, total, nro_factura, created_at, cliente:clientes(nombre_comercial), tecnico:usuarios!ordenes_trabajo_tecnico_id_fkey(nombre)"
+        "numero, estado, tipo, cobertura, prioridad, fecha_programada, total, nro_factura, created_at, cliente:clientes(nombre_comercial), tecnico:usuarios!ordenes_trabajo_tecnico_id_fkey(nombre)"
       )
       .order("numero")
       .limit(5000);
@@ -48,7 +63,7 @@ export async function GET(request: Request) {
       cliente: (o.cliente as unknown as { nombre_comercial: string } | null)?.nombre_comercial ?? "",
       tecnico: (o.tecnico as unknown as { nombre: string } | null)?.nombre ?? "",
     }));
-    columnas = ["numero", "estado", "tipo", "cliente", "tecnico", "fecha_programada", "horas", "total", "nro_factura", "created_at"];
+    columnas = ["numero", "estado", "tipo", "cobertura", "prioridad", "cliente", "tecnico", "fecha_programada", "total", "nro_factura", "created_at"];
   } else if (tipo === "oportunidades") {
     const { data } = await supabase
       .from("oportunidades")

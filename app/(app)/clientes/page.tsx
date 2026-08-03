@@ -12,7 +12,6 @@ const ORDENES: Record<string, { col: string; asc: boolean }> = {
   reciente: { col: "created_at", asc: false },
   nombre: { col: "nombre_comercial", asc: true },
   rubro: { col: "rubro", asc: true },
-  ciudad: { col: "ciudad", asc: true },
   estado: { col: "estado", asc: true },
 };
 
@@ -27,7 +26,8 @@ export default async function ClientesPage({
 
   let query = supabase
     .from("clientes")
-    .select("*")
+    .select("*, sucursales(ciudad, es_principal)")
+    .is("deleted_at", null)
     .order(ord.col, { ascending: ord.asc })
     .limit(300);
 
@@ -36,7 +36,14 @@ export default async function ClientesPage({
   if (estado) query = query.eq("estado", estado);
 
   const { data } = await query;
-  const clientes = (data ?? []) as Cliente[];
+  type Fila = Cliente & {
+    sucursales?: { ciudad: string | null; es_principal: boolean }[];
+  };
+  const clientes = ((data ?? []) as Fila[]).map(({ sucursales, ...c }) => {
+    const principal =
+      (sucursales ?? []).find((s) => s.es_principal) ?? (sucursales ?? [])[0];
+    return { ...c, ciudad: principal?.ciudad ?? null } as Cliente;
+  });
 
   const linkOrden = (o: string) => {
     const p = new URLSearchParams();
@@ -118,7 +125,9 @@ export default async function ClientesPage({
                 <tr>
                   <Th campo="nombre">Nombre</Th>
                   <Th campo="rubro">Rubro</Th>
-                  <Th campo="ciudad">Ciudad</Th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-piedra">
+                    Ciudad
+                  </th>
                   <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-piedra">
                     Teléfono
                   </th>

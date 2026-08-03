@@ -38,10 +38,14 @@ const POR_ROL: Record<string, Item[]> = {
     { href: "/mas", label: "Más", icono: Menu },
   ],
 };
+POR_ROL.direccion = POR_ROL.admin;
+POR_ROL.comercial = POR_ROL.vendedor;
+POR_ROL.marketing = POR_ROL.vendedor;
+POR_ROL.distribuidor = POR_ROL.vendedor;
 
-export default function BottomNav({ rol = "vendedor" }: { rol?: string }) {
+export default function BottomNav({ rol = "comercial" }: { rol?: string }) {
   const pathname = usePathname();
-  const items = POR_ROL[rol] ?? POR_ROL.vendedor;
+  const items = POR_ROL[rol] ?? POR_ROL.comercial;
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-borde bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">

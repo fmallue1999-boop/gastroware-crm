@@ -1,0 +1,151 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Pencil } from "lucide-react";
+import { actualizarCliente } from "@/lib/actions";
+import { CONDICIONES_FISCALES } from "@/lib/constants";
+import type { Cliente } from "@/lib/types";
+
+const inputCls =
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+
+export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
+  const [editando, setEditando] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [razonSocial, setRazonSocial] = useState(cliente.razon_social ?? "");
+  const [cuit, setCuit] = useState(cliente.cuit ?? "");
+  const [condicion, setCondicion] = useState(cliente.condicion_fiscal ?? "");
+  const [email, setEmail] = useState(cliente.email ?? "");
+  const [telefono, setTelefono] = useState(cliente.telefono ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  const etiquetaCondicion = CONDICIONES_FISCALES.find(
+    (c) => c.value === cliente.condicion_fiscal
+  )?.label;
+
+  function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const res = await actualizarCliente(cliente.id, {
+        razon_social: razonSocial,
+        cuit,
+        condicion_fiscal: condicion,
+        email,
+        telefono,
+      });
+      if (res && "error" in res && res.error) {
+        setError(res.error);
+        return;
+      }
+      setEditando(false);
+    });
+  }
+
+  if (!editando) {
+    const filas = [
+      { k: "Razón social", v: cliente.razon_social },
+      { k: "CUIT", v: cliente.cuit },
+      { k: "Cond. fiscal", v: etiquetaCondicion },
+      { k: "Email", v: cliente.email },
+      { k: "Teléfono", v: cliente.telefono },
+    ];
+    return (
+      <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Datos de facturación</h2>
+          <button
+            type="button"
+            onClick={() => setEditando(true)}
+            className="inline-flex items-center gap-1 rounded-xl border border-borde px-3 py-1.5 text-xs text-piedra hover:bg-crema"
+          >
+            <Pencil className="h-3 w-3" /> Editar
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
+          {filas.map((f) => (
+            <div key={f.k}>
+              <p className="text-xs text-piedra">{f.k}</p>
+              <p className={f.v ? "" : "text-piedra/60"}>{f.v ?? "Falta"}</p>
+            </div>
+          ))}
+        </div>
+        {(!cliente.cuit || !cliente.condicion_fiscal) && (
+          <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
+            Faltan datos fiscales: los necesitás para facturar en ZEUS.
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={guardar}
+      className="space-y-2.5 rounded-2xl border border-borde bg-white shadow-sm p-4"
+    >
+      <h2 className="text-sm font-semibold">Datos de facturación</h2>
+      <input
+        type="text"
+        placeholder="Razón social"
+        value={razonSocial}
+        onChange={(e) => setRazonSocial(e.target.value)}
+        className={inputCls}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="text"
+          placeholder="CUIT (solo números)"
+          value={cuit}
+          onChange={(e) => setCuit(e.target.value)}
+          className={inputCls}
+        />
+        <select
+          value={condicion}
+          onChange={(e) => setCondicion(e.target.value)}
+          className={inputCls}
+        >
+          <option value="">Condición fiscal…</option>
+          {CONDICIONES_FISCALES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className={inputCls}
+        />
+        <input
+          type="tel"
+          placeholder="Teléfono"
+          value={telefono}
+          onChange={(e) => setTelefono(e.target.value)}
+          className={inputCls}
+        />
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-2xl bg-tinta px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        >
+          {pending ? "Guardando…" : "Guardar"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditando(false)}
+          className="rounded-2xl border border-borde px-4 py-2 text-sm text-piedra"
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
+  );
+}

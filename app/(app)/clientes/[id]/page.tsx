@@ -2,17 +2,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { firmarUrls } from "@/lib/core/storage";
 import { fechaCorta, linkWhatsApp, dinero, diasDesde, hoyISO } from "@/lib/format";
+import { ESTADOS_OT } from "@/lib/constants";
 import { EtapaBadge, TempBadge, ProductoBadge } from "@/components/Badges";
 import NotaForm from "@/components/NotaForm";
 import EquipoForm from "@/components/EquipoForm";
+import DatosClienteForm from "@/components/DatosClienteForm";
+import SucursalesCliente from "@/components/SucursalesCliente";
+import DocumentosEntidad from "@/components/DocumentosEntidad";
 import type {
   Actividad,
   Cliente,
-  EquipoInstalado,
+  Equipo,
   Oportunidad,
   Producto,
   Recurrencia,
+  Sucursal,
   Tarea,
 } from "@/lib/types";
 
@@ -27,19 +33,24 @@ export default async function ClientePage({
 
   const { data: cliente } = await supabase
     .from("clientes")
-    .select("*")
+    .select("*, sucursales(*)")
     .eq("id", id)
     .single();
   if (!cliente) notFound();
-  const c = cliente as Cliente;
+  const { sucursales: sucursalesData, ...restoCliente } = cliente as Cliente & {
+    sucursales?: Sucursal[];
+  };
+  const sucursales = (sucursalesData ?? []).filter((s) => !("deleted_at" in s) || !(s as { deleted_at?: string | null }).deleted_at);
+  const principal = sucursales.find((s) => s.es_principal) ?? sucursales[0];
+  const c: Cliente = { ...restoCliente, ciudad: principal?.ciudad ?? null };
 
-  const [equiposRes, recurrenciasRes, oportunidadesRes, tareasRes, actividadesRes, productosRes] =
+  const [equiposRes, recurrenciasRes, oportunidadesRes, tareasRes, actividadesRes, productosRes, documentosRes, otsRes] =
     await Promise.all([
       supabase
-        .from("equipos_instalados")
+        .from("equipos")
         .select("*, producto:productos(*)")
         .eq("cliente_id", id)
-        .order("fecha_compra", { ascending: false }),
+        .order("fecha_venta", { ascending: false }),
       supabase
         .from("recurrencias")
         .select("*, producto:productos(*)")
@@ -68,14 +79,54 @@ export default async function ClientePage({
         .select("*")
         .eq("activo", true)
         .order("nombre"),
+      supabase
+        .from("documentos")
+        .select("*")
+        .eq("entidad", "cliente")
+        .eq("entidad_id", id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("ordenes_trabajo")
+        .select("id, numero, estado, tipo, fecha_programada, created_at")
+        .eq("cliente_id", id)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
 
-  const equipos = (equiposRes.data ?? []) as unknown as EquipoInstalado[];
+  const equipos = (equiposRes.data ?? []) as unknown as Equipo[];
   const recurrencias = (recurrenciasRes.data ?? []) as unknown as Recurrencia[];
   const oportunidades = (oportunidadesRes.data ?? []) as unknown as Oportunidad[];
   const tareas = (tareasRes.data ?? []) as unknown as Tarea[];
   const actividades = (actividadesRes.data ?? []) as unknown as Actividad[];
   const productos = (productosRes.data ?? []) as Producto[];
+
+  const docs = (documentosRes.data ?? []) as {
+    id: string;
+    tipo: string;
+    nombre: string;
+    path: string;
+    created_at: string;
+  }[];
+  const urlsDocs = await firmarUrls(
+    "documentos",
+    docs.map((d) => d.path)
+  );
+  const documentos = docs.map((d, i) => ({
+    id: d.id,
+    tipo: d.tipo,
+    nombre: d.nombre,
+    created_at: d.created_at,
+    url: urlsDocs[i],
+  }));
+
+  const ots = (otsRes.data ?? []) as {
+    id: string;
+    numero: number;
+    estado: string;
+    tipo: string;
+    fecha_programada: string | null;
+    created_at: string;
+  }[];
 
   return (
     <div className="space-y-5">
@@ -105,6 +156,18 @@ export default async function ClientePage({
         {c.notas && <p className="mt-2 text-sm text-tinta/70">{c.notas}</p>}
       </header>
 
+      <DatosClienteForm cliente={c} />
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <SucursalesCliente clienteId={c.id} sucursales={sucursales} />
+        <DocumentosEntidad
+          entidad="cliente"
+          entidadId={c.id}
+          documentos={documentos}
+          puedeBorrar
+        />
+      </div>
+
       <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
         <h2 className="text-sm font-semibold mb-2">Equipos y consumibles</h2>
         <div className="space-y-2 mb-3">
@@ -113,8 +176,7 @@ export default async function ClientePage({
             return (
               <div key={e.id} className="text-sm">
                 <p>
-                  {e.producto?.nombre ?? e.marca_modelo}
-                  {e.cantidad > 1 ? ` × ${e.cantidad}` : ""}
+                  {e.producto?.nombre ?? e.marca_modelo_libre}
                   {e.origen === "externo" && (
                     <span className="ml-1.5 rounded-full border border-borde px-2 py-0.5 text-xs text-piedra">
                       otra marca
@@ -123,7 +185,7 @@ export default async function ClientePage({
                 </p>
                 <p className="text-xs text-piedra">
                   {e.numero_serie ? `Serie ${e.numero_serie} · ` : ""}
-                  {e.fecha_compra ? `comprado ${fechaCorta(e.fecha_compra)}` : "sin fecha"}
+                  {e.fecha_venta ? `comprado ${fechaCorta(e.fecha_venta)}` : "sin fecha"}
                   {e.garantia_hasta && (
                     <span className={vigente ? "text-green-700" : "text-red-600"}>
                       {" "}· garantía {vigente ? "vigente" : "vencida"} ({fechaCorta(e.garantia_hasta)})
@@ -200,6 +262,30 @@ export default async function ClientePage({
                 {t.titulo}
               </p>
             ))}
+          </div>
+        </section>
+      )}
+
+      {ots.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold mb-2">Órdenes de servicio</h2>
+          <div className="space-y-1.5">
+            {ots.map((o) => {
+              const est = ESTADOS_OT.find((e) => e.value === o.estado);
+              return (
+                <Link
+                  key={o.id}
+                  href={`/servicio/${o.id}`}
+                  className="flex items-center justify-between rounded-2xl border border-borde bg-white px-3 py-2.5 text-sm shadow-sm"
+                >
+                  <span className="font-medium">OT-{o.numero}</span>
+                  <span className="text-xs text-piedra">
+                    {est?.label ?? o.estado} ·{" "}
+                    {fechaCorta(o.fecha_programada ?? o.created_at)}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

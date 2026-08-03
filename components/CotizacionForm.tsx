@@ -33,18 +33,16 @@ export default function CotizacionForm({
 
       if (archivo) {
         const supabase = createClient();
-        const path = `${oportunidadId}/${Date.now()}-${archivo.name.replace(/[^\w.\-]/g, "_")}`;
+        const path = `cotizaciones/${oportunidadId}/${Date.now()}-${archivo.name.replace(/[^\w.\-]/g, "_")}`;
         const { error: errUpload } = await supabase.storage
-          .from("cotizaciones")
+          .from("documentos")
           .upload(path, archivo);
         if (errUpload) {
           setError("No se pudo subir el archivo: " + errUpload.message);
           return;
         }
-        const { data } = supabase.storage
-          .from("cotizaciones")
-          .getPublicUrl(path);
-        archivo_url = data.publicUrl;
+        // path directo (bucket privado)
+        archivo_url = path;
       }
 
       const res = await registrarCotizacion({
@@ -52,7 +50,7 @@ export default function CotizacionForm({
         monto: monto ? Number(monto) : null,
         moneda,
         forma_pago: formaPago,
-        archivo_url,
+        archivoPath: archivo_url,
       });
       if (res && "error" in res && res.error) {
         setError(res.error);

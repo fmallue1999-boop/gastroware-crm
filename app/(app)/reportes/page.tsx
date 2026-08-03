@@ -39,7 +39,7 @@ export default async function ReportesPage({
       .limit(2000),
     supabase
       .from("tareas")
-      .select("id, vendedor:usuarios(nombre)")
+      .select("id, usuario:usuarios(nombre)")
       .is("completada_at", null)
       .eq("cancelada", false)
       .lt("vence_el", hoyISO()),
@@ -48,7 +48,7 @@ export default async function ReportesPage({
   const opps = (oppsRes.data ?? []) as unknown as OppRow[];
   const vencidas = (vencidasRes.data ?? []) as unknown as {
     id: string;
-    vendedor: { nombre: string } | null;
+    usuario: { nombre: string } | null;
   }[];
 
   const ganadas = opps.filter((o) => o.etapa === "ganada");
@@ -89,7 +89,7 @@ export default async function ReportesPage({
   const vencidasPorVendedor = (() => {
     const m = new Map<string, number>();
     for (const t of vencidas) {
-      const k = t.vendedor?.nombre ?? "Sin asignar";
+      const k = t.usuario?.nombre ?? "Sin asignar";
       m.set(k, (m.get(k) ?? 0) + 1);
     }
     return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);

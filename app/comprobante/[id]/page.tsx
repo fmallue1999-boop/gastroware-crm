@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { firmarUrl } from "@/lib/core/storage";
 import { fechaCorta, dinero } from "@/lib/format";
-import { TIPOS_OT } from "@/lib/constants";
+import { TIPOS_OT, ESTADOS_ITEM_OT } from "@/lib/constants";
 import BotonImprimir from "@/components/BotonImprimir";
-import type { OrdenTrabajo, OTItem } from "@/lib/types";
+import type { OrdenTrabajo, OTItem, OTTiempo } from "@/lib/types";
 
 export default async function ComprobantePage({
   params,
@@ -13,34 +14,46 @@ export default async function ComprobantePage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data }, { data: items }, { data: cfg }] = await Promise.all([
-    supabase
-      .from("ordenes_trabajo")
-      .select(
-        "*, cliente:clientes(*), equipo:equipos_instalados(*, producto:productos(*)), tecnico:usuarios!ordenes_trabajo_tecnico_id_fkey(id, nombre)"
-      )
-      .eq("id", id)
-      .single(),
-    supabase.from("ot_items").select("*").eq("ot_id", id).order("created_at"),
-    supabase.from("config").select("valor").eq("clave", "tarifa_hora").single(),
-  ]);
+  const [{ data }, { data: items }, { data: tiempos }, { data: cfg }] =
+    await Promise.all([
+      supabase
+        .from("ordenes_trabajo")
+        .select(
+          "*, cliente:clientes(*), equipo:equipos(*, producto:productos(*)), tecnico:usuarios!ordenes_trabajo_tecnico_id_fkey(id, nombre)"
+        )
+        .eq("id", id)
+        .single(),
+      supabase.from("ot_items").select("*").eq("ot_id", id).order("created_at"),
+      supabase.from("ot_tiempos").select("*").eq("ot_id", id),
+      supabase.from("config").select("valor").eq("clave", "tarifa_hora").single(),
+    ]);
   if (!data) notFound();
   const ot = data as unknown as OrdenTrabajo;
   const listaItems = (items ?? []) as OTItem[];
+  const listaTiempos = (tiempos ?? []) as OTTiempo[];
   const tarifa = Number(cfg?.valor) || 0;
-  const manoObra = ot.es_garantia ? 0 : (Number(ot.horas) || 0) * tarifa;
+
+  const minutos = listaTiempos.reduce((s, t) => s + (t.minutos ?? 0), 0);
+  const horas = minutos / 60;
+  const esGarantia = ot.cobertura === "garantia";
+  const manoObra = esGarantia ? 0 : horas * tarifa;
+  const totalItems = listaItems
+    .filter((i) => i.estado === "facturable" && i.aprobado_admin)
+    .reduce((s, i) => s + Number(i.cantidad) * Number(i.precio_unit), 0);
+
+  const firmaUrl = await firmarUrl("servicio", ot.firma_path);
 
   return (
     <div className="mx-auto max-w-xl bg-white p-8 text-tinta print:p-0">
       <div className="mb-4 flex items-start justify-between border-b-2 border-tinta pb-4">
         <div>
           <h1 className="text-xl font-bold">GastroWare</h1>
-          <p className="text-sm text-piedra">Comprobante de servicio técnico</p>
+          <p className="text-sm text-piedra">Informe de servicio técnico</p>
         </div>
         <div className="text-right">
           <p className="text-lg font-bold">OT-{ot.numero}</p>
           <p className="text-sm text-piedra">
-            {fechaCorta(ot.cerrada_at ?? ot.created_at)}
+            {fechaCorta(ot.cerrada_tecnico_at ?? ot.created_at)}
           </p>
         </div>
       </div>
@@ -48,14 +61,15 @@ export default async function ComprobantePage({
       <div className="mb-4 grid grid-cols-2 gap-4 text-sm">
         <div>
           <p className="font-semibold">Cliente</p>
-          <p>{ot.cliente?.nombre_comercial}</p>
+          <p>{ot.cliente?.razon_social ?? ot.cliente?.nombre_comercial}</p>
+          {ot.cliente?.cuit && <p className="text-piedra">CUIT {ot.cliente.cuit}</p>}
           {ot.cliente?.telefono && <p className="text-piedra">{ot.cliente.telefono}</p>}
         </div>
         <div>
           <p className="font-semibold">Equipo</p>
           <p>
             {ot.equipo
-              ? (ot.equipo.producto?.nombre ?? ot.equipo.marca_modelo)
+              ? (ot.equipo.producto?.nombre ?? ot.equipo.marca_modelo_libre)
               : "—"}
           </p>
           {ot.equipo?.numero_serie && (
@@ -66,7 +80,7 @@ export default async function ComprobantePage({
           <p className="font-semibold">Tipo de servicio</p>
           <p>
             {TIPOS_OT.find((t) => t.value === ot.tipo)?.label}
-            {ot.es_garantia ? " (en garantía)" : ""}
+            {esGarantia ? " (en garantía)" : ""}
           </p>
         </div>
         <div>
@@ -79,6 +93,13 @@ export default async function ComprobantePage({
         <div className="mb-3 text-sm">
           <p className="font-semibold">Problema reportado</p>
           <p>{ot.problema}</p>
+        </div>
+      )}
+
+      {ot.diagnostico && (
+        <div className="mb-3 text-sm">
+          <p className="font-semibold">Diagnóstico</p>
+          <p className="whitespace-pre-wrap">{ot.diagnostico}</p>
         </div>
       )}
 
@@ -98,26 +119,30 @@ export default async function ComprobantePage({
         <tbody>
           <tr className="border-b border-borde">
             <td className="py-1.5">
-              Mano de obra ({ot.horas ?? 0} h)
-              {ot.es_garantia ? " — sin cargo por garantía" : ""}
+              Mano de obra ({horas.toFixed(1)} h)
+              {esGarantia ? " — sin cargo por garantía" : ""}
             </td>
-            <td className="py-1.5 text-right">{ot.horas ?? 0}</td>
+            <td className="py-1.5 text-right">{horas.toFixed(1)}</td>
             <td className="py-1.5 text-right">{dinero(manoObra)}</td>
           </tr>
-          {listaItems.map((i) => (
-            <tr key={i.id} className="border-b border-borde">
-              <td className="py-1.5">
-                {i.descripcion}
-                {!i.refacturable ? " — sin cargo" : ""}
-              </td>
-              <td className="py-1.5 text-right">{i.cantidad}</td>
-              <td className="py-1.5 text-right">
-                {i.refacturable
-                  ? dinero(Number(i.cantidad) * Number(i.precio_unit))
-                  : dinero(0)}
-              </td>
-            </tr>
-          ))}
+          {listaItems.map((i) => {
+            const cobra = i.estado === "facturable" && i.aprobado_admin;
+            const etiqueta = ESTADOS_ITEM_OT.find((x) => x.value === i.estado)?.label;
+            return (
+              <tr key={i.id} className="border-b border-borde">
+                <td className="py-1.5">
+                  {i.descripcion}
+                  {!cobra ? ` — ${etiqueta?.toLowerCase() ?? "sin cargo"}` : ""}
+                </td>
+                <td className="py-1.5 text-right">{i.cantidad}</td>
+                <td className="py-1.5 text-right">
+                  {cobra
+                    ? dinero(Number(i.cantidad) * Number(i.precio_unit))
+                    : dinero(0)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
         <tfoot>
           <tr className="font-bold">
@@ -125,34 +150,24 @@ export default async function ComprobantePage({
               Total
             </td>
             <td className="py-2 text-right">
-              {dinero(
-                ot.total ??
-                  manoObra +
-                    listaItems
-                      .filter((i) => i.refacturable)
-                      .reduce(
-                        (s, i) => s + Number(i.cantidad) * Number(i.precio_unit),
-                        0
-                      )
-              )}
+              {dinero(ot.total ?? manoObra + totalItems)}
             </td>
           </tr>
         </tfoot>
       </table>
 
-      {ot.firma_url && (
+      {firmaUrl && (
         <div className="mb-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={ot.firma_url} alt="Firma del cliente" className="h-20" />
+          <img src={firmaUrl} alt="Firma del cliente" className="h-20" />
           <p className="border-t border-tinta pt-1 text-sm">
-            Firma: {ot.firmante ?? "Cliente"}
+            Firma y conformidad: {ot.firmante ?? "Cliente"}
           </p>
         </div>
       )}
 
       <p className="text-xs text-piedra">
-        GastroWare · Servicio técnico oficial · Este comprobante no es una
-        factura.
+        GastroWare · Servicio técnico oficial · Este informe no es una factura.
         {ot.nro_factura ? ` Facturado: ${ot.nro_factura}.` : ""}
       </p>
 

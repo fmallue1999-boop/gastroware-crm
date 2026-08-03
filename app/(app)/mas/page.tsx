@@ -63,7 +63,7 @@ export default async function MasPage() {
       supabase.from("usuarios").select("rol, nombre").eq("id", user!.id).single(),
       supabase.from("config").select("valor").eq("clave", "tarifa_hora").maybeSingle(),
     ]);
-  const esAdmin = yo?.rol === "admin";
+  const esAdmin = ["direccion", "admin"].includes(yo?.rol ?? "");
 
   return (
     <div className="space-y-5">

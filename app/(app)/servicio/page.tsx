@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hoyISO, fechaCorta, dinero } from "@/lib/format";
-import { TIPOS_OT } from "@/lib/constants";
+import { TIPOS_OT, ESTADOS_OT_ACTIVOS } from "@/lib/constants";
 import { EstadoOTBadge } from "@/components/Badges";
 import FilaOT from "@/components/FilaOT";
 import type { OrdenTrabajo, Usuario } from "@/lib/types";
@@ -32,26 +32,31 @@ export default async function ServicioPage({
     .select("*")
     .eq("id", user!.id)
     .single();
-  const rol = (yo as Usuario | null)?.rol ?? "vendedor";
+  const rol = (yo as Usuario | null)?.rol ?? "comercial";
 
   let query = supabase
     .from("ordenes_trabajo")
     .select(
-      "*, cliente:clientes(*), equipo:equipos_instalados(*, producto:productos(*)), tecnico:usuarios!ordenes_trabajo_tecnico_id_fkey(id, nombre)"
+      "*, cliente:clientes(*), equipo:equipos(*, producto:productos(*)), tecnico:usuarios!ordenes_trabajo_tecnico_id_fkey(id, nombre)"
     )
     .order("fecha_programada", { ascending: true, nullsFirst: false })
     .limit(200);
 
   if (filtro === "agenda") {
     query = query
-      .in("estado", ["abierta", "en_proceso"])
+      .in("estado", [...ESTADOS_OT_ACTIVOS])
       .or(`fecha_programada.lte.${hoy},fecha_programada.is.null`);
   } else if (filtro === "abiertas") {
-    query = query.in("estado", ["abierta", "en_proceso"]);
+    query = query.in("estado", [
+      "solicitud_recibida",
+      "pendiente_revision",
+      "pendiente_asignacion",
+      ...ESTADOS_OT_ACTIVOS,
+    ]);
   } else if (filtro === "revisar") {
-    query = query.eq("estado", "cerrada_tecnico");
+    query = query.in("estado", ["finalizado_tecnico", "revision_admin"]);
   } else if (filtro === "facturar") {
-    query = query.eq("estado", "facturable");
+    query = query.eq("estado", "aprobado_facturar");
   }
   // Técnico ve lo suyo (salvo en "todas")
   if (rol === "tecnico" && filtro !== "todas") {
@@ -137,7 +142,7 @@ export default async function ServicioPage({
             const atrasada =
               ot.fecha_programada &&
               ot.fecha_programada < hoy &&
-              ["abierta", "en_proceso"].includes(ot.estado);
+              (ESTADOS_OT_ACTIVOS as readonly string[]).includes(ot.estado);
             return (
               <Link
                 key={ot.id}
@@ -161,7 +166,7 @@ export default async function ServicioPage({
                 </p>
                 <p className="text-xs text-piedra">
                   {ot.equipo
-                    ? (ot.equipo.producto?.nombre ?? ot.equipo.marca_modelo) +
+                    ? (ot.equipo.producto?.nombre ?? ot.equipo.marca_modelo_libre) +
                       (ot.equipo.numero_serie ? ` · ${ot.equipo.numero_serie}` : "")
                     : "Sin equipo asignado"}
                   {ot.fecha_programada ? ` · ${fechaCorta(ot.fecha_programada)}` : ""}

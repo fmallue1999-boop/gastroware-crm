@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { buscarClientes, listarEquiposCliente, crearOT } from "@/lib/actions";
-import { TIPOS_OT } from "@/lib/constants";
+import { TIPOS_OT, PRIORIDADES_OT } from "@/lib/constants";
 import type { Cliente, Usuario } from "@/lib/types";
 
 const inputCls =
@@ -17,6 +17,7 @@ export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
   const [equipos, setEquipos] = useState<{ id: string; etiqueta: string }[]>([]);
   const [equipoId, setEquipoId] = useState("");
   const [tipo, setTipo] = useState("correctivo");
+  const [prioridad, setPrioridad] = useState("normal");
   const [fecha, setFecha] = useState("");
   const [tecnicoId, setTecnicoId] = useState("");
   const [problema, setProblema] = useState("");
@@ -46,6 +47,7 @@ export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
         clienteId: cliente.id,
         equipoId: equipoId || null,
         tipo,
+        prioridad,
         fechaProgramada: fecha || null,
         tecnicoId: tecnicoId || null,
         problema,
@@ -135,13 +137,20 @@ export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
                 </option>
               ))}
             </select>
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className={inputCls}
-            />
+            <select value={prioridad} onChange={(e) => setPrioridad(e.target.value)} className={inputCls}>
+              {PRIORIDADES_OT.map((p) => (
+                <option key={p.value} value={p.value}>
+                  Prioridad {p.label.toLowerCase()}
+                </option>
+              ))}
+            </select>
           </div>
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={`${inputCls} w-full`}
+          />
 
           <select
             value={tecnicoId}

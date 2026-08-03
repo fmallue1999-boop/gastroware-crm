@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Sun,
   BarChart3,
+  Bell,
   Users,
   Wrench,
   Search,
@@ -12,6 +13,7 @@ import {
   Citrus,
   BookOpen,
   Settings,
+  ShieldCheck,
   Plus,
   type LucideIcon,
 } from "lucide-react";
@@ -41,6 +43,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       items: [
         { href: "/calculadora", label: "Calculadora Zumex", icono: Citrus },
         { href: "/biblioteca", label: "Biblioteca", icono: BookOpen },
+        { href: "/admin", label: "Administración", icono: ShieldCheck },
         { href: "/mas", label: "Configuración", icono: Settings },
       ],
     },
@@ -77,18 +80,25 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
     },
   ],
 };
+// Mapeo de roles nuevos a secciones
+SECCIONES.direccion = SECCIONES.admin;
+SECCIONES.comercial = SECCIONES.vendedor;
+SECCIONES.marketing = SECCIONES.vendedor;
+SECCIONES.distribuidor = SECCIONES.vendedor;
 
 export default function Sidebar({
-  rol = "vendedor",
+  rol = "comercial",
   nombre,
   email,
+  noLeidas = 0,
 }: {
   rol?: string;
   nombre?: string | null;
   email?: string | null;
+  noLeidas?: number;
 }) {
   const pathname = usePathname();
-  const secciones = SECCIONES[rol] ?? SECCIONES.vendedor;
+  const secciones = SECCIONES[rol] ?? SECCIONES.comercial;
   const crear =
     rol === "tecnico"
       ? { href: "/servicio/nueva", label: "Nueva orden" }
@@ -115,6 +125,19 @@ export default function Sidebar({
           className="mt-2 flex items-center gap-2 rounded-xl border border-borde px-3 py-2 text-sm text-piedra transition-colors hover:bg-crema"
         >
           <Search className="h-4 w-4" /> Buscar…
+        </Link>
+        <Link
+          href="/notificaciones"
+          className="mt-2 flex items-center justify-between rounded-xl border border-borde px-3 py-2 text-sm text-piedra transition-colors hover:bg-crema"
+        >
+          <span className="flex items-center gap-2">
+            <Bell className="h-4 w-4" /> Notificaciones
+          </span>
+          {noLeidas > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">
+              {noLeidas > 9 ? "9+" : noLeidas}
+            </span>
+          )}
         </Link>
       </div>
 

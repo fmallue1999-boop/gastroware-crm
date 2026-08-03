@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     supabase.from("push_subs").select("*"),
     supabase
       .from("tareas")
-      .select("vendedor_id, vence_el, cliente:clientes(nombre_comercial)")
+      .select("usuario_id, vence_el, cliente:clientes(nombre_comercial)")
       .is("completada_at", null)
       .eq("cancelada", false)
       .lte("vence_el", hoy),
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
   let enviadas = 0;
   for (const sub of subs ?? []) {
-    const mias = (tareas ?? []).filter((t) => t.vendedor_id === sub.usuario_id);
+    const mias = (tareas ?? []).filter((t) => t.usuario_id === sub.usuario_id);
     const vencidas = mias.filter((t) => t.vence_el < hoy).length;
     const paraHoy = mias.filter((t) => t.vence_el === hoy).length;
     if (vencidas + paraHoy === 0) continue;

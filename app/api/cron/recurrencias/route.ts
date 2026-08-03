@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
   const { data: recurrencias } = await supabase
     .from("recurrencias")
-    .select("*, producto:productos(nombre), cliente:clientes(nombre_comercial, vendedor_id)")
+    .select("*, producto:productos(nombre), cliente:clientes(nombre_comercial, comercial_id)")
     .eq("activa", true)
     .lte("proxima_alerta", hoy);
 
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     await supabase.from("tareas").insert({
       cliente_id: rec.cliente_id,
       recurrencia_id: rec.id,
-      vendedor_id: rec.cliente?.vendedor_id ?? null,
+      usuario_id: rec.cliente?.comercial_id ?? null,
       tipo: "recompra",
       titulo: `Ofrecer recompra: ${rec.producto?.nombre ?? "consumible"}`,
       vence_el: hoy,

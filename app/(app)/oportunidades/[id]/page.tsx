@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { firmarUrl } from "@/lib/core/storage";
 import { fechaCorta, dinero, rellenarPlantilla } from "@/lib/format";
 import { EtapaBadge } from "@/components/Badges";
 import EtapaControl from "@/components/EtapaControl";
@@ -44,9 +45,9 @@ export default async function OportunidadPage({
     await Promise.all([
       supabase
         .from("cotizaciones")
-        .select("*")
+        .select("*, versiones:cotizacion_versiones(*)")
         .eq("oportunidad_id", id)
-        .order("enviada_at", { ascending: false }),
+        .order("created_at", { ascending: false }),
       supabase
         .from("tareas")
         .select("*, plantilla:plantillas(*)")
@@ -68,6 +69,18 @@ export default async function OportunidadPage({
     ]);
 
   const cotizaciones = (cotizacionesRes.data ?? []) as Cotizacion[];
+  // Aplanar versiones (la más nueva primero) y firmar los PDFs del bucket privado
+  const versiones = await Promise.all(
+    cotizaciones
+      .flatMap((c) =>
+        (c.versiones ?? []).map((v) => ({ ...v, numeroCot: c.numero }))
+      )
+      .sort((a, b) => (b.created_at < a.created_at ? -1 : 1))
+      .map(async (v) => ({
+        ...v,
+        archivoUrl: await firmarUrl("documentos", v.archivo_path),
+      }))
+  );
   const tareas = (tareasRes.data ?? []) as unknown as Tarea[];
   const plantillas = (plantillasRes.data ?? []) as Plantilla[];
   const actividades = (actividadesRes.data ?? []) as Actividad[];
@@ -187,28 +200,31 @@ export default async function OportunidadPage({
         </details>
       )}
 
-      <details className="group" {...(cotizaciones.length === 0 && !cerrada && !faltaDiagnostico ? { open: true } : {})}>
+      <details className="group" {...(versiones.length === 0 && !cerrada && !faltaDiagnostico ? { open: true } : {})}>
         <summary className={sumario}>
           <span>
             Cotizaciones{" "}
-            <span className="font-normal text-piedra">({cotizaciones.length})</span>
+            <span className="font-normal text-piedra">({versiones.length})</span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-90" />
         </summary>
         <div className="mt-2 rounded-2xl border border-borde bg-white shadow-sm p-4">
-          {cotizaciones.map((c) => (
+          {versiones.map((v) => (
             <div
-              key={c.id}
+              key={v.id}
               className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-crema px-3 py-2 text-sm"
             >
               <span>
-                {dinero(c.monto, c.moneda)}
-                {c.forma_pago ? ` · ${c.forma_pago}` : ""}
-                <span className="text-piedra"> · {fechaCorta(c.enviada_at)}</span>
+                <span className="font-medium">
+                  COT-{v.numeroCot} v{v.version}
+                </span>{" "}
+                · {dinero(v.total ?? 0, v.moneda)}
+                {v.forma_pago ? ` · ${v.forma_pago}` : ""}
+                <span className="text-piedra"> · {fechaCorta(v.created_at)}</span>
               </span>
-              {c.archivo_url && (
+              {v.archivoUrl && (
                 <a
-                  href={c.archivo_url}
+                  href={v.archivoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 text-sky-700"

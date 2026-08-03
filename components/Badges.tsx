@@ -1,24 +1,5 @@
 import { ETAPAS, ESTADOS_OT } from "@/lib/constants";
 
-export function EstadoOTBadge({ estado }: { estado: string }) {
-  const estilos: Record<string, string> = {
-    abierta: "bg-celeste-soft text-sky-800",
-    en_proceso: "bg-amber-100 text-amber-700",
-    cerrada_tecnico: "bg-purple-100 text-purple-700",
-    facturable: "bg-orange-100 text-orange-700",
-    facturada: "bg-green-100 text-green-700",
-    anulada: "bg-crema-deep text-piedra",
-  };
-  const label = ESTADOS_OT.find((e) => e.value === estado)?.label ?? estado;
-  return (
-    <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${estilos[estado] ?? ""}`}
-    >
-      {label}
-    </span>
-  );
-}
-
 export function TempBadge({ temperatura }: { temperatura: string | null }) {
   if (!temperatura) return null;
   const estilos: Record<string, string> = {
@@ -65,6 +46,38 @@ export function ProductoBadge({ nombre }: { nombre?: string | null }) {
   return (
     <span className="inline-block rounded-full border border-borde px-2.5 py-0.5 text-xs text-tinta/70">
       {nombre}
+    </span>
+  );
+}
+
+export function EstadoOTBadge({ estado }: { estado: string }) {
+  const def = ESTADOS_OT.find((e) => e.value === estado);
+  return (
+    <span
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${def?.color ?? "bg-crema-deep text-piedra"}`}
+    >
+      {def?.label ?? estado}
+    </span>
+  );
+}
+
+export function PrioridadBadge({ prioridad }: { prioridad: string }) {
+  if (prioridad === "normal") return null;
+  const estilos: Record<string, string> = {
+    baja: "bg-crema-deep text-piedra",
+    alta: "bg-amber-100 text-amber-700",
+    urgente: "bg-red-100 text-red-700",
+  };
+  const labels: Record<string, string> = {
+    baja: "Baja",
+    alta: "Alta",
+    urgente: "Urgente",
+  };
+  return (
+    <span
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${estilos[prioridad] ?? ""}`}
+    >
+      {labels[prioridad] ?? prioridad}
     </span>
   );
 }

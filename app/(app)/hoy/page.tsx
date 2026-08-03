@@ -32,7 +32,7 @@ export default async function HoyPage({
   // "Mías" (default): las asignadas a mí + las sin asignar
   if (vista !== "todas" && user) {
     queryTareas = queryTareas.or(
-      `vendedor_id.eq.${user.id},vendedor_id.is.null`
+      `usuario_id.eq.${user.id},usuario_id.is.null`
     );
   }
 
@@ -70,9 +70,20 @@ export default async function HoyPage({
     supabase
       .from("ordenes_trabajo")
       .select("id", { count: "exact", head: true })
-      .in("estado", ["abierta", "en_proceso"])
+      .in("estado", [
+        "programado",
+        "asignado",
+        "en_camino",
+        "en_proceso",
+        "esperando_repuesto",
+        "esperando_cliente",
+        "devuelto_tecnico",
+      ])
       .or(`fecha_programada.lte.${hoy},fecha_programada.is.null`),
-    supabase.from("ordenes_trabajo").select("total").eq("estado", "facturable"),
+    supabase
+      .from("ordenes_trabajo")
+      .select("total")
+      .eq("estado", "aprobado_facturar"),
   ]);
 
   const tareas = (data ?? []) as unknown as Tarea[];
