@@ -55,6 +55,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // api/cron, api/lead-web y api/webhooks son públicos: se protegen solos
+    // (CRON_SECRET, honeypot+rate limit, firma de Meta respectivamente).
+    "/((?!_next/static|_next/image|favicon.ico|api/cron|api/lead-web|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
