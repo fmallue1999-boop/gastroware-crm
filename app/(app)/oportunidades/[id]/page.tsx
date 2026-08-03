@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl } from "@/lib/core/storage";
-import { fechaCorta, dinero, rellenarPlantilla } from "@/lib/format";
+import { fechaCorta, dinero, rellenarPlantilla, diasDesde, hoyISO } from "@/lib/format";
 import { EtapaBadge } from "@/components/Badges";
 import EtapaControl from "@/components/EtapaControl";
 import TemperaturaControl from "@/components/TemperaturaControl";
@@ -41,7 +41,7 @@ export default async function OportunidadPage({
   if (!data) notFound();
   const opp = data as unknown as Oportunidad;
 
-  const [cotizacionesRes, tareasRes, plantillasRes, actividadesRes, materialesRes] =
+  const [cotizacionesRes, tareasRes, plantillasRes, actividadesRes, materialesRes, equipoVendidoRes] =
     await Promise.all([
       supabase
         .from("cotizaciones")
@@ -66,21 +66,42 @@ export default async function OportunidadPage({
         .from("materiales")
         .select("id, nombre, tipo, url, producto_id")
         .order("nombre"),
+      supabase
+        .from("equipos")
+        .select("id, numero_serie, fecha_instalacion")
+        .eq("oportunidad_id", id)
+        .is("deleted_at", null)
+        .maybeSingle(),
     ]);
 
   const cotizaciones = (cotizacionesRes.data ?? []) as Cotizacion[];
-  // Aplanar versiones (la más nueva primero) y firmar los PDFs del bucket privado
+  // Aplanar versiones (la más nueva primero), con el total de la versión
+  // anterior para comparar, y firmar los PDFs del bucket privado
   const versiones = await Promise.all(
     cotizaciones
-      .flatMap((c) =>
-        (c.versiones ?? []).map((v) => ({ ...v, numeroCot: c.numero }))
-      )
+      .flatMap((c) => {
+        const ordenadas = [...(c.versiones ?? [])].sort(
+          (a, b) => a.version - b.version
+        );
+        return ordenadas.map((v, i) => ({
+          ...v,
+          numeroCot: c.numero,
+          totalAnterior: i > 0 ? ordenadas[i - 1].total : null,
+        }));
+      })
       .sort((a, b) => (b.created_at < a.created_at ? -1 : 1))
       .map(async (v) => ({
         ...v,
         archivoUrl: await firmarUrl("documentos", v.archivo_path),
       }))
   );
+  const versionVigenteId = versiones[0]?.id ?? null;
+
+  const equipoVendido = equipoVendidoRes.data as {
+    id: string;
+    numero_serie: string | null;
+    fecha_instalacion: string | null;
+  } | null;
   const tareas = (tareasRes.data ?? []) as unknown as Tarea[];
   const plantillas = (plantillasRes.data ?? []) as Plantilla[];
   const actividades = (actividadesRes.data ?? []) as Actividad[];
@@ -125,6 +146,31 @@ export default async function OportunidadPage({
   const mostrarDiagnosticoArriba =
     !cerrada && faltaDiagnostico && (esGX || esZumex);
 
+  // Situación comercial (reglas simples sobre los datos, sin IA)
+  const hoy = hoyISO();
+  const diasAbierta = diasDesde(opp.created_at);
+  const ultimaActividad = actividades[0] ?? null;
+  const diasSinMovimiento = ultimaActividad
+    ? diasDesde(ultimaActividad.created_at)
+    : diasAbierta;
+  const tareasVencidas = tareas.filter((t) => t.vence_el < hoy).length;
+  let consejo: string | null = null;
+  if (!cerrada) {
+    if (tareas.length === 0)
+      consejo = "Quedó sin próxima acción. Agendá el siguiente paso acá abajo.";
+    else if (tareasVencidas > 0)
+      consejo = `Tenés ${tareasVencidas} seguimiento${tareasVencidas > 1 ? "s" : ""} vencido${tareasVencidas > 1 ? "s" : ""}. Hacelo hoy o reprogramalo.`;
+    else if (opp.etapa === "cotizada" && diasSinMovimiento >= 7)
+      consejo = `La cotización lleva ${diasSinMovimiento} días sin movimiento. Mandá el guión de seguimiento.`;
+    else if (opp.temperatura === "caliente" && opp.etapa === "negociacion")
+      consejo = "Está caliente y en negociación: proponé fecha de cierre.";
+  }
+
+  const faltaDatosEquipo =
+    opp.etapa === "ganada" &&
+    equipoVendido &&
+    (!equipoVendido.numero_serie || !equipoVendido.fecha_instalacion);
+
   return (
     <div className="space-y-3">
       <header className="rounded-2xl border border-borde bg-white shadow-sm p-4">
@@ -143,6 +189,35 @@ export default async function OportunidadPage({
           {opp.monto_estimado ? ` · ${dinero(opp.monto_estimado, opp.moneda)}` : ""}
         </p>
       </header>
+
+      {faltaDatosEquipo && (
+        <Link
+          href={`/equipos/${equipoVendido!.id}`}
+          className="block rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm"
+        >
+          <span className="font-semibold">Venta ganada:</span> el equipo se
+          creó solo, pero le falta{" "}
+          {!equipoVendido!.numero_serie ? "el número de serie" : ""}
+          {!equipoVendido!.numero_serie && !equipoVendido!.fecha_instalacion
+            ? " y "
+            : ""}
+          {!equipoVendido!.fecha_instalacion ? "la fecha de instalación" : ""}
+          . Tocá acá para completarlo →
+        </Link>
+      )}
+
+      {!cerrada && consejo && (
+        <div className="rounded-2xl border border-borde bg-white px-4 py-3 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-piedra">
+            Situación
+          </p>
+          <p className="mt-0.5 text-sm">{consejo}</p>
+          <p className="mt-1 text-xs text-piedra">
+            Abierta hace {diasAbierta} días · última actividad hace{" "}
+            {diasSinMovimiento} días
+          </p>
+        </div>
+      )}
 
       {cerrada ? (
         <EtapaControl
@@ -209,31 +284,52 @@ export default async function OportunidadPage({
           <ChevronRight className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-90" />
         </summary>
         <div className="mt-2 rounded-2xl border border-borde bg-white shadow-sm p-4">
-          {versiones.map((v) => (
-            <div
-              key={v.id}
-              className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-crema px-3 py-2 text-sm"
-            >
-              <span>
-                <span className="font-medium">
-                  COT-{v.numeroCot} v{v.version}
-                </span>{" "}
-                · {dinero(v.total ?? 0, v.moneda)}
-                {v.forma_pago ? ` · ${v.forma_pago}` : ""}
-                <span className="text-piedra"> · {fechaCorta(v.created_at)}</span>
-              </span>
-              {v.archivoUrl && (
-                <a
-                  href={v.archivoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-sky-700"
-                >
-                  Ver PDF
-                </a>
-              )}
-            </div>
-          ))}
+          {versiones.map((v) => {
+            const delta =
+              v.totalAnterior != null && v.total != null && v.totalAnterior !== 0
+                ? ((v.total - v.totalAnterior) / v.totalAnterior) * 100
+                : null;
+            return (
+              <div
+                key={v.id}
+                className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-crema px-3 py-2 text-sm"
+              >
+                <span>
+                  <span className="font-medium">
+                    COT-{v.numeroCot} v{v.version}
+                  </span>
+                  {v.id === versionVigenteId && (
+                    <span className="ml-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                      vigente
+                    </span>
+                  )}{" "}
+                  · {dinero(v.total ?? 0, v.moneda)}
+                  {delta != null && delta !== 0 && (
+                    <span
+                      className={`ml-1 text-xs font-medium ${
+                        delta > 0 ? "text-red-600" : "text-green-700"
+                      }`}
+                    >
+                      {delta > 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(0)}% vs
+                      v{v.version - 1}
+                    </span>
+                  )}
+                  {v.forma_pago ? ` · ${v.forma_pago}` : ""}
+                  <span className="text-piedra"> · {fechaCorta(v.created_at)}</span>
+                </span>
+                {v.archivoUrl && (
+                  <a
+                    href={v.archivoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-sky-700"
+                  >
+                    Ver PDF
+                  </a>
+                )}
+              </div>
+            );
+          })}
           <CotizacionForm
             oportunidadId={opp.id}
             monedaDefault={opp.producto?.moneda ?? "ARS"}

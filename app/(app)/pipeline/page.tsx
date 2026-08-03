@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ETAPAS, ETAPAS_ABIERTAS } from "@/lib/constants";
-import { dinero, diasDesde } from "@/lib/format";
+import { dinero, diasDesde, hoyISO } from "@/lib/format";
 import { TempBadge, ProductoBadge } from "@/components/Badges";
 import type { Oportunidad, Producto } from "@/lib/types";
 
@@ -33,6 +33,28 @@ export default async function PipelinePage({
 
   const oportunidades = (data ?? []) as unknown as Oportunidad[];
   const productos = (prods ?? []) as Producto[];
+
+  // Próxima acción por oportunidad (para avisar cuáles quedaron sin seguimiento)
+  const hoy = hoyISO();
+  const ids = oportunidades.map((o) => o.id);
+  const { data: tareasAbiertas } = ids.length
+    ? await supabase
+        .from("tareas")
+        .select("oportunidad_id, vence_el")
+        .in("oportunidad_id", ids)
+        .is("completada_at", null)
+        .eq("cancelada", false)
+    : { data: [] };
+  const proximaAccion = new Map<string, string>();
+  for (const t of (tareasAbiertas ?? []) as {
+    oportunidad_id: string | null;
+    vence_el: string;
+  }[]) {
+    if (!t.oportunidad_id) continue;
+    const actual = proximaAccion.get(t.oportunidad_id);
+    if (!actual || t.vence_el < actual)
+      proximaAccion.set(t.oportunidad_id, t.vence_el);
+  }
   const columnas = ETAPAS.filter((e) =>
     (ETAPAS_ABIERTAS as readonly string[]).includes(e.value)
   );
@@ -98,6 +120,17 @@ export default async function PipelinePage({
                           : "Sin cotizar"}
                         {" · "}hace {diasDesde(o.created_at)} días
                       </p>
+                      {!proximaAccion.has(o.id) ? (
+                        <p className="mt-1 rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700">
+                          Sin próxima acción
+                        </p>
+                      ) : (
+                        proximaAccion.get(o.id)! < hoy && (
+                          <p className="mt-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+                            Seguimiento vencido
+                          </p>
+                        )
+                      )}
                     </Link>
                   ))}
                   {items.length === 0 && (
