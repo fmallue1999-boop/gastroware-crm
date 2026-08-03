@@ -5,6 +5,7 @@ import {
   TrendingUp,
   Citrus,
   BookOpen,
+  KeyRound,
   Smartphone,
   LogOut,
   ChevronRight,
@@ -114,6 +115,12 @@ export default async function MasPage() {
           icono={BookOpen}
           titulo="Biblioteca comercial"
           detalle="Fichas, videos, comparativas y casos"
+        />
+        <MenuLink
+          href="/password"
+          icono={KeyRound}
+          titulo="Cambiar contraseña"
+          detalle="Poné una contraseña tuya, sobre todo si te dieron una inicial"
         />
       </section>
 
