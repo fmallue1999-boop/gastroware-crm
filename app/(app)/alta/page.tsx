@@ -25,7 +25,7 @@ export default async function AltaPage({
 
   return (
     <div>
-      <h1 className="text-xl font-semibold mb-1">Nuevo lead</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Nuevo lead</h1>
       <p className="text-sm text-piedra mb-5">
         30 segundos: teléfono, nombre, producto y listo.
       </p>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { fechaCorta, dinero, rellenarPlantilla } from "@/lib/format";
 import { EtapaBadge } from "@/components/Badges";
@@ -21,7 +22,7 @@ import type {
 } from "@/lib/types";
 
 const sumario =
-  "flex cursor-pointer items-center justify-between rounded-xl border border-borde bg-white px-4 py-3 text-sm font-medium list-none [&::-webkit-details-marker]:hidden";
+  "flex cursor-pointer items-center justify-between rounded-2xl border border-borde bg-white shadow-sm px-4 py-3 text-sm font-medium list-none [&::-webkit-details-marker]:hidden";
 
 export default async function OportunidadPage({
   params,
@@ -113,7 +114,7 @@ export default async function OportunidadPage({
 
   return (
     <div className="space-y-3">
-      <header className="rounded-xl border border-borde bg-white p-4">
+      <header className="rounded-2xl border border-borde bg-white shadow-sm p-4">
         <Link href={`/clientes/${opp.cliente_id}`} className="text-sm text-sky-700">
           ← {opp.cliente?.nombre_comercial}
         </Link>
@@ -137,7 +138,7 @@ export default async function OportunidadPage({
           motivoPerdida={opp.motivo_perdida}
         />
       ) : mostrarDiagnosticoArriba ? (
-        <div className="rounded-xl border-2 border-celeste-deep bg-white p-4">
+        <div className="rounded-2xl border-2 border-celeste-deep bg-white shadow-sm p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 mb-1">
             Ahora toca
           </p>
@@ -174,9 +175,9 @@ export default async function OportunidadPage({
                 <span className="text-green-700 font-normal">✓ completo</span>
               ) : null}
             </span>
-            <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-90" />
           </summary>
-          <div className="mt-2 rounded-xl border border-borde bg-white p-4">
+          <div className="mt-2 rounded-2xl border border-borde bg-white shadow-sm p-4">
             <DiagnosticoForm
               oportunidadId={opp.id}
               categoria={categoria}
@@ -192,9 +193,9 @@ export default async function OportunidadPage({
             Cotizaciones{" "}
             <span className="font-normal text-piedra">({cotizaciones.length})</span>
           </span>
-          <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-90" />
         </summary>
-        <div className="mt-2 rounded-xl border border-borde bg-white p-4">
+        <div className="mt-2 rounded-2xl border border-borde bg-white shadow-sm p-4">
           {cotizaciones.map((c) => (
             <div
               key={c.id}
@@ -241,12 +242,12 @@ export default async function OportunidadPage({
               </span>
             )}
           </span>
-          <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-90" />
         </summary>
         <div className="mt-2 space-y-3">
           <ObjecionControl oportunidadId={opp.id} objecion={opp.objecion_principal} />
           {plantillasUtiles.length > 0 && (
-            <div className="rounded-xl border border-borde bg-white p-4 space-y-2">
+            <div className="rounded-2xl border border-borde bg-white shadow-sm p-4 space-y-2">
               {plantillasUtiles.map((p) => (
                 <PlantillaCopiar
                   key={p.id}
@@ -267,7 +268,7 @@ export default async function OportunidadPage({
               Material para mandar{" "}
               <span className="font-normal text-piedra">({materiales.length})</span>
             </span>
-            <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-90" />
           </summary>
           <div className="mt-2 space-y-2">
             {materiales.map((m) => (
@@ -284,9 +285,9 @@ export default async function OportunidadPage({
       <details className="group">
         <summary className={sumario}>
           <span>Historial y notas</span>
-          <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-90" />
         </summary>
-        <div className="mt-2 rounded-xl border border-borde bg-white p-4">
+        <div className="mt-2 rounded-2xl border border-borde bg-white shadow-sm p-4">
           {opp.mensaje_inicial && (
             <p className="mb-2 text-sm text-tinta/70 italic">
               “{opp.mensaje_inicial}”

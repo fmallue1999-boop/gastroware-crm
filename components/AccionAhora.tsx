@@ -43,7 +43,7 @@ export function AccionAhora({
   }
 
   return (
-    <div className="rounded-xl border-2 border-celeste-deep bg-white p-4">
+    <div className="rounded-2xl border-2 border-celeste-deep bg-white shadow-sm p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 mb-1">
         Ahora toca
       </p>
@@ -70,7 +70,7 @@ export function AccionAhora({
             href={linkWhatsApp(telefono, mensaje)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 rounded-xl bg-green-600 py-2.5 text-center text-sm font-medium text-white"
+            className="flex-1 rounded-2xl bg-green-600 py-2.5 text-center text-sm font-medium text-white"
           >
             Mandar por WhatsApp
           </a>
@@ -78,7 +78,7 @@ export function AccionAhora({
         {mensaje && (
           <button
             onClick={copiar}
-            className="rounded-xl border border-borde px-4 py-2.5 text-sm"
+            className="rounded-2xl border border-borde px-4 py-2.5 text-sm"
           >
             {copiado ? "¡Copiado!" : "Copiar"}
           </button>
@@ -164,7 +164,7 @@ export function CrearAccionRapida({
   }
 
   return (
-    <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">
         Ahora toca
       </p>

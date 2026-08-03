@@ -7,7 +7,7 @@ import { RUBROS, ORIGENES, TEMPERATURAS } from "@/lib/constants";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-xl border border-borde bg-white px-4 py-3 text-base outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3 text-base outline-none focus:border-tinta";
 
 /** Extrae un teléfono argentino plausible de un texto compartido. */
 function extraerTelefono(texto: string): string | null {
@@ -92,7 +92,7 @@ export default function AltaForm({
         <button
           type="button"
           onClick={pegarTelefono}
-          className="shrink-0 rounded-xl border border-borde bg-white px-3 text-sm text-piedra"
+          className="shrink-0 rounded-2xl border border-borde bg-white shadow-sm px-3 text-sm text-piedra"
           title="Pegar del portapapeles"
         >
           Pegar
@@ -100,7 +100,7 @@ export default function AltaForm({
       </div>
 
       {existente && (
-        <div className="rounded-xl border border-celeste bg-celeste-soft p-3 text-sm text-tinta">
+        <div className="rounded-2xl border border-celeste bg-celeste-soft p-3 text-sm text-tinta">
           <p className="font-medium">
             Este teléfono ya existe: {existente.nombre_comercial}
           </p>
@@ -199,7 +199,7 @@ export default function AltaForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-xl bg-tinta py-3.5 font-medium text-white disabled:opacity-60"
+        className="w-full rounded-2xl bg-tinta py-3.5 font-medium text-white disabled:opacity-60"
       >
         {pending ? "Creando…" : "Crear lead"}
       </button>

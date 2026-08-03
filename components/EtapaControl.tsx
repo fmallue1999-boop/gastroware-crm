@@ -33,14 +33,14 @@ export default function EtapaControl({
   if (cerrada) {
     return (
       <div
-        className={`rounded-xl p-3 text-sm font-medium ${
+        className={`rounded-2xl p-3 text-sm font-medium ${
           etapa === "ganada"
             ? "bg-green-100 text-green-800"
             : "bg-crema-deep text-tinta/70"
         }`}
       >
         {etapa === "ganada"
-          ? "✅ Venta ganada"
+          ? "Venta ganada"
           : `Perdida: ${motivoPerdida ?? "sin motivo"}`}
         <button
           onClick={() => mover("seguimiento")}
@@ -54,7 +54,7 @@ export default function EtapaControl({
   }
 
   return (
-    <div className="rounded-xl border border-borde bg-white p-3">
+    <div className="rounded-2xl border border-borde bg-white shadow-sm p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-piedra/80 mb-2">
         Etapa
       </p>
@@ -85,14 +85,14 @@ export default function EtapaControl({
         <button
           onClick={() => mover("ganada")}
           disabled={pending}
-          className="flex-1 rounded-xl bg-green-600 py-2.5 text-sm font-medium text-white"
+          className="flex-1 rounded-2xl bg-green-600 py-2.5 text-sm font-medium text-white"
         >
-          Ganada 🎉
+          Ganada
         </button>
         <button
           onClick={() => setEligiendoMotivo(!eligiendoMotivo)}
           disabled={pending}
-          className="flex-1 rounded-xl border border-borde py-2.5 text-sm text-tinta/70"
+          className="flex-1 rounded-2xl border border-borde py-2.5 text-sm text-tinta/70"
         >
           Perdida
         </button>
@@ -102,7 +102,7 @@ export default function EtapaControl({
           <select
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
-            className="flex-1 rounded-xl border border-borde px-3 py-2 text-sm"
+            className="flex-1 rounded-2xl border border-borde px-3 py-2 text-sm"
           >
             <option value="">Motivo de pérdida (obligatorio)…</option>
             {MOTIVOS_PERDIDA.map((m) => (
@@ -114,7 +114,7 @@ export default function EtapaControl({
           <button
             onClick={() => motivo && mover("perdida", motivo)}
             disabled={pending || !motivo}
-            className="rounded-xl bg-tinta px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="rounded-2xl bg-tinta px-4 py-2 text-sm text-white disabled:opacity-50"
           >
             Confirmar
           </button>

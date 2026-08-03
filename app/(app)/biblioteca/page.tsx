@@ -39,7 +39,7 @@ export default async function BibliotecaPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold mb-1">Biblioteca comercial</h1>
+        <h1 className="text-2xl font-bold tracking-tight mb-1">Biblioteca comercial</h1>
         <p className="text-sm text-piedra">
           Fichas, videos, comparativas y casos — listos para mandar desde cada
           oportunidad.
@@ -49,7 +49,7 @@ export default async function BibliotecaPage() {
       <MaterialForm productos={productos} />
 
       {materiales.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-borde p-5 text-sm text-piedra">
+        <div className="rounded-2xl border border-dashed border-borde p-5 text-sm text-piedra">
           <p className="font-medium text-tinta/80 mb-1">
             Todavía no hay materiales cargados.
           </p>

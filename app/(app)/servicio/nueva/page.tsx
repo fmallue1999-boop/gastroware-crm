@@ -12,7 +12,7 @@ export default async function NuevaOTPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold mb-1">Nueva orden de trabajo</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Nueva orden de trabajo</h1>
       <p className="text-sm text-piedra mb-5">
         Buscá el cliente, elegí el equipo y asignala.
       </p>

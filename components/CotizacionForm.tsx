@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { FORMAS_PAGO } from "@/lib/constants";
 
 const inputCls =
-  "rounded-xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
 export default function CotizacionForm({
   oportunidadId,
@@ -69,12 +69,12 @@ export default function CotizacionForm({
       <div>
         {advertencia && (
           <p className="mb-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-            ⚠️ {advertencia}
+            {advertencia}
           </p>
         )}
         <button
           onClick={() => setAbierto(true)}
-          className="w-full rounded-xl border border-dashed border-borde py-2.5 text-sm text-piedra"
+          className="w-full rounded-2xl border border-dashed border-borde py-2.5 text-sm text-piedra"
         >
           + Registrar cotización enviada
         </button>
@@ -86,7 +86,7 @@ export default function CotizacionForm({
     <form onSubmit={enviar} className="space-y-2">
       {advertencia && (
         <p className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-          ⚠️ {advertencia}
+          {advertencia}
         </p>
       )}
       <div className="grid grid-cols-3 gap-2">
@@ -133,14 +133,14 @@ export default function CotizacionForm({
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 rounded-xl bg-tinta py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="flex-1 rounded-2xl bg-tinta py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
           {pending ? "Guardando…" : "Guardar y activar seguimiento"}
         </button>
         <button
           type="button"
           onClick={() => setAbierto(false)}
-          className="rounded-xl border border-borde px-4 py-2.5 text-sm"
+          className="rounded-2xl border border-borde px-4 py-2.5 text-sm"
         >
           Cancelar
         </button>

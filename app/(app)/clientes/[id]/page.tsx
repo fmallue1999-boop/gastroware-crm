@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { fechaCorta, linkWhatsApp, dinero, diasDesde, hoyISO } from "@/lib/format";
 import { EtapaBadge, TempBadge, ProductoBadge } from "@/components/Badges";
@@ -81,7 +82,7 @@ export default async function ClientePage({
       <header>
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h1 className="text-xl font-semibold">{c.nombre_comercial}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{c.nombre_comercial}</h1>
             <p className="text-sm text-piedra">
               {c.rubro}
               {c.ciudad ? ` · ${c.ciudad}` : ""}
@@ -95,7 +96,7 @@ export default async function ClientePage({
               href={linkWhatsApp(c.telefono)}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 rounded-xl bg-green-600 px-3 py-2 text-sm font-medium text-white"
+              className="shrink-0 rounded-2xl bg-green-600 px-3 py-2 text-sm font-medium text-white"
             >
               WhatsApp
             </a>
@@ -104,7 +105,7 @@ export default async function ClientePage({
         {c.notas && <p className="mt-2 text-sm text-tinta/70">{c.notas}</p>}
       </header>
 
-      <section className="rounded-xl border border-borde bg-white p-4">
+      <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
         <h2 className="text-sm font-semibold mb-2">Equipos y consumibles</h2>
         <div className="space-y-2 mb-3">
           {equipos.map((e) => {
@@ -134,7 +135,8 @@ export default async function ClientePage({
           })}
           {recurrencias.map((r) => (
             <p key={r.id} className="text-sm text-amber-700">
-              🔔 {r.producto?.nombre}: cada {r.frecuencia_dias} días — próximo
+              <Bell className="mr-1 -mt-0.5 inline h-3.5 w-3.5" />
+              {r.producto?.nombre}: cada {r.frecuencia_dias} días — próximo
               aviso {fechaCorta(r.proxima_alerta)}
               {r.ultima_compra
                 ? ` (última compra hace ${diasDesde(r.ultima_compra)} días)`
@@ -165,7 +167,7 @@ export default async function ClientePage({
               <Link
                 key={o.id}
                 href={`/oportunidades/${o.id}`}
-                className="block rounded-xl border border-borde bg-white p-3"
+                className="block rounded-2xl border border-borde bg-white shadow-sm p-3"
               >
                 <div className="flex flex-wrap items-center gap-1.5">
                   <EtapaBadge etapa={o.etapa} />

@@ -50,11 +50,11 @@ export default function BuscadorGlobal() {
           defaultValue={q}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Nombre o teléfono…"
-          className="flex-1 rounded-xl border border-borde bg-white px-4 py-3 text-base outline-none focus:border-tinta"
+          className="flex-1 rounded-2xl border border-borde bg-white shadow-sm px-4 py-3 text-base outline-none focus:border-tinta"
         />
         <button
           onClick={pegar}
-          className="rounded-xl border border-borde bg-white px-3 text-sm text-piedra"
+          className="rounded-2xl border border-borde bg-white shadow-sm px-3 text-sm text-piedra"
           title="Pegar del portapapeles"
         >
           Pegar
@@ -64,7 +64,7 @@ export default function BuscadorGlobal() {
       <div className="mt-3 space-y-2">
         {buscando && <p className="text-sm text-piedra">Buscando…</p>}
         {!buscando && q.trim().length >= 2 && resultados.length === 0 && (
-          <div className="rounded-xl border border-dashed border-borde p-4 text-sm text-piedra">
+          <div className="rounded-2xl border border-dashed border-borde p-4 text-sm text-piedra">
             No existe todavía.{" "}
             <Link href="/alta" className="text-sky-700 underline">
               Crear lead nuevo
@@ -75,7 +75,7 @@ export default function BuscadorGlobal() {
           <Link
             key={c.id}
             href={`/clientes/${c.id}`}
-            className="block rounded-xl border border-borde bg-white p-3"
+            className="block rounded-2xl border border-borde bg-white shadow-sm p-3"
           >
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-sm font-medium">{c.nombre_comercial}</p>

@@ -7,7 +7,7 @@ import { TIPOS_OT } from "@/lib/constants";
 import type { Cliente, Usuario } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
 export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
   const [pending, startTransition] = useTransition();
@@ -72,7 +72,7 @@ export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
                 key={c.id}
                 type="button"
                 onClick={() => elegirCliente(c)}
-                className="block w-full rounded-xl border border-borde bg-white p-3 text-left text-sm"
+                className="block w-full rounded-2xl border border-borde bg-white shadow-sm p-3 text-left text-sm"
               >
                 <span className="font-medium">{c.nombre_comercial}</span>
                 <span className="text-piedra">
@@ -83,7 +83,7 @@ export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
               </button>
             ))}
             {q.trim().length >= 2 && resultados.length === 0 && (
-              <p className="rounded-xl border border-dashed border-borde p-3 text-sm text-piedra">
+              <p className="rounded-2xl border border-dashed border-borde p-3 text-sm text-piedra">
                 No aparece.{" "}
                 <Link href="/alta" className="text-sky-700 underline">
                   Crear cliente nuevo
@@ -95,7 +95,7 @@ export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between rounded-xl bg-celeste-soft px-4 py-3">
+          <div className="flex items-center justify-between rounded-2xl bg-celeste-soft px-4 py-3">
             <p className="text-sm font-medium">{cliente.nombre_comercial}</p>
             <button
               type="button"
@@ -174,7 +174,7 @@ export default function OTForm({ usuarios }: { usuarios: Usuario[] }) {
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
+            className="w-full rounded-2xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
           >
             {pending ? "Creando…" : "Crear orden de trabajo"}
           </button>

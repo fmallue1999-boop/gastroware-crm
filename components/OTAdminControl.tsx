@@ -28,15 +28,15 @@ export default function OTAdminControl({
 
   if (ot.estado === "facturada") {
     return (
-      <div className="rounded-xl bg-green-100 p-3 text-sm font-medium text-green-800">
-        ✅ Facturada — factura {ot.nro_factura}
+      <div className="rounded-2xl bg-green-100 p-3 text-sm font-medium text-green-800">
+        Facturada — factura {ot.nro_factura}
       </div>
     );
   }
 
   if (ot.estado === "anulada") {
     return (
-      <div className="rounded-xl bg-crema-deep p-3 text-sm text-piedra">
+      <div className="rounded-2xl bg-crema-deep p-3 text-sm text-piedra">
         Orden anulada.{" "}
         <button onClick={() => mover("abierta")} className="underline" disabled={pending}>
           Reabrir
@@ -48,7 +48,7 @@ export default function OTAdminControl({
   const esAdmin = rol === "admin";
 
   return (
-    <div className="rounded-xl border border-borde bg-white p-4 space-y-2">
+    <div className="rounded-2xl border border-borde bg-white shadow-sm p-4 space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wide text-piedra">
         Administración
       </p>
@@ -57,7 +57,7 @@ export default function OTAdminControl({
         <button
           onClick={() => mover("facturable")}
           disabled={pending}
-          className="w-full rounded-xl bg-tinta py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="w-full rounded-2xl bg-tinta py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
           Aprobar → lista para facturar (calcula el total)
         </button>
@@ -75,12 +75,12 @@ export default function OTAdminControl({
             placeholder="N° de factura en ZEUS"
             value={nroFactura}
             onChange={(e) => setNroFactura(e.target.value)}
-            className="flex-1 rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta"
+            className="flex-1 rounded-2xl border border-borde bg-white shadow-sm px-3 py-2 text-sm outline-none focus:border-tinta"
           />
           <button
             onClick={() => mover("facturada", nroFactura)}
             disabled={pending || !nroFactura.trim()}
-            className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-2xl bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Facturada
           </button>

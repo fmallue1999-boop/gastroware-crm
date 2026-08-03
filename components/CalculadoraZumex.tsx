@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const inputCls =
-  "w-full rounded-xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
 const fmt = (n: number) =>
   "$" + new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(n);
@@ -65,7 +65,7 @@ Más que el precio del equipo, lo importante es el negocio que genera todos los 
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-borde bg-white p-4 space-y-2">
+      <div className="rounded-2xl border border-borde bg-white shadow-sm p-4 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <label className="text-sm text-piedra">
             Vasos por día (estimado)
@@ -100,7 +100,7 @@ Más que el precio del equipo, lo importante es el negocio que genera todos los 
             {escenarios.map((e) => (
               <div
                 key={e.nombre}
-                className={`rounded-xl border p-3 ${
+                className={`rounded-2xl border p-3 ${
                   e.nombre === "Base"
                     ? "border-celeste-deep bg-celeste-soft"
                     : "border-borde bg-white"
@@ -122,7 +122,7 @@ Más que el precio del equipo, lo importante es el negocio que genera todos los 
             ))}
           </div>
 
-          <div className="rounded-xl border border-borde bg-white p-4">
+          <div className="rounded-2xl border border-borde bg-white shadow-sm p-4">
             <p className="text-sm font-semibold mb-2">
               Resumen listo para el cliente
             </p>
@@ -132,7 +132,7 @@ Más que el precio del equipo, lo importante es el negocio que genera todos los 
             <div className="mt-3 flex gap-2">
               <button
                 onClick={copiar}
-                className="flex-1 rounded-xl bg-tinta py-2.5 text-sm font-medium text-white"
+                className="flex-1 rounded-2xl bg-tinta py-2.5 text-sm font-medium text-white"
               >
                 {copiado ? "¡Copiado!" : "Copiar resumen"}
               </button>
@@ -140,7 +140,7 @@ Más que el precio del equipo, lo importante es el negocio que genera todos los 
                 href={`https://wa.me/?text=${encodeURIComponent(resumen)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 rounded-xl bg-green-600 py-2.5 text-center text-sm font-medium text-white"
+                className="flex-1 rounded-2xl bg-green-600 py-2.5 text-center text-sm font-medium text-white"
               >
                 Mandar por WhatsApp
               </a>

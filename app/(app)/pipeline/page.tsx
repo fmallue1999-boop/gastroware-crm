@@ -45,7 +45,7 @@ export default async function PipelinePage({
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-1">
-        <h1 className="text-xl font-semibold">Pipeline</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Pipeline</h1>
         <span className="text-sm text-piedra">
           {oportunidades.length} abiertas · {dinero(totalPipeline)}
         </span>
@@ -55,7 +55,7 @@ export default async function PipelinePage({
         <select
           name="producto"
           defaultValue={producto ?? ""}
-          className="rounded-xl border border-borde bg-white px-3 py-2 text-sm"
+          className="rounded-2xl border border-borde bg-white shadow-sm px-3 py-2 text-sm"
         >
           <option value="">Todos los productos</option>
           {productos.map((p) => (
@@ -64,7 +64,7 @@ export default async function PipelinePage({
             </option>
           ))}
         </select>
-        <button className="ml-2 rounded-xl border border-borde px-3 py-2 text-sm">
+        <button className="ml-2 rounded-2xl border border-borde px-3 py-2 text-sm">
           Filtrar
         </button>
       </form>
@@ -83,7 +83,7 @@ export default async function PipelinePage({
                     <Link
                       key={o.id}
                       href={`/oportunidades/${o.id}`}
-                      className="block rounded-xl border border-borde bg-white p-3"
+                      className="block rounded-2xl border border-borde bg-white shadow-sm p-3"
                     >
                       <div className="flex flex-wrap items-center gap-1.5">
                         <TempBadge temperatura={o.temperatura} />
@@ -101,7 +101,7 @@ export default async function PipelinePage({
                     </Link>
                   ))}
                   {items.length === 0 && (
-                    <p className="rounded-xl border border-dashed border-borde p-3 text-center text-xs text-piedra/50">
+                    <p className="rounded-2xl border border-dashed border-borde p-3 text-center text-xs text-piedra/50">
                       Vacío
                     </p>
                   )}

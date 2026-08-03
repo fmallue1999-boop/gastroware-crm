@@ -75,7 +75,7 @@ export default function PushToggle() {
   }
 
   return (
-    <section className="rounded-xl border border-borde bg-white p-4">
+    <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
       <p className="text-sm font-semibold">Resumen matutino</p>
       <p className="mt-0.5 text-xs text-piedra">
         Todos los días a las 8:30: cuántos seguimientos vencidos y para hoy
@@ -98,7 +98,7 @@ export default function PushToggle() {
         {estado === "inactivo" && (
           <button
             onClick={activar}
-            className="rounded-xl bg-tinta px-4 py-2 text-sm font-medium text-white"
+            className="rounded-2xl bg-tinta px-4 py-2 text-sm font-medium text-white"
           >
             Activar notificaciones
           </button>

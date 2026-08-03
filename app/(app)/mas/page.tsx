@@ -1,4 +1,15 @@
 import Link from "next/link";
+import {
+  Wrench,
+  BarChart3,
+  TrendingUp,
+  Citrus,
+  BookOpen,
+  Smartphone,
+  LogOut,
+  ChevronRight,
+  type LucideIcon,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { cerrarSesion } from "@/lib/actions";
 import PushToggle from "@/components/PushToggle";
@@ -6,27 +17,28 @@ import ConfigForm from "@/components/ConfigForm";
 
 function MenuLink({
   href,
-  icono,
+  icono: Icono,
   titulo,
   detalle,
 }: {
   href: string;
-  icono: string;
+  icono: LucideIcon;
   titulo: string;
   detalle: string;
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-xl border border-borde bg-white p-3.5"
+      className="flex items-center gap-3 rounded-2xl border border-borde bg-white p-3.5 shadow-sm transition-colors hover:border-celeste-deep"
     >
-      <span className="text-xl" aria-hidden>
-        {icono}
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-crema text-tinta/80">
+        <Icono className="h-5 w-5" strokeWidth={2} />
       </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-medium">{titulo}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{titulo}</span>
         <span className="block text-xs text-piedra">{detalle}</span>
       </span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-piedra/60" />
     </Link>
   );
 }
@@ -48,36 +60,26 @@ export default async function MasPage() {
         .from("oportunidades")
         .select("id", { count: "exact", head: true })
         .eq("etapa", "ganada"),
-      supabase.from("usuarios").select("rol").eq("id", user!.id).single(),
+      supabase.from("usuarios").select("rol, nombre").eq("id", user!.id).single(),
       supabase.from("config").select("valor").eq("clave", "tarifa_hora").maybeSingle(),
     ]);
   const esAdmin = yo?.rol === "admin";
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-semibold">Más</h1>
-
-      <section className="rounded-xl border border-borde bg-white p-4">
-        <p className="text-sm text-piedra">Sesión</p>
-        <p className="text-sm font-medium">{user?.email}</p>
-        <form action={cerrarSesion} className="mt-3">
-          <button className="rounded-xl border border-borde px-4 py-2 text-sm text-tinta/70">
-            Cerrar sesión
-          </button>
-        </form>
-      </section>
+      <h1 className="text-2xl font-bold tracking-tight">Más</h1>
 
       <section className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl border border-borde bg-white p-3 text-center">
-          <p className="text-2xl font-semibold">{clientes.count ?? 0}</p>
+        <div className="rounded-2xl border border-borde bg-white p-3 text-center shadow-sm">
+          <p className="text-2xl font-bold tracking-tight">{clientes.count ?? 0}</p>
           <p className="text-xs text-piedra">Clientes</p>
         </div>
-        <div className="rounded-xl border border-borde bg-white p-3 text-center">
-          <p className="text-2xl font-semibold">{abiertas.count ?? 0}</p>
+        <div className="rounded-2xl border border-borde bg-white p-3 text-center shadow-sm">
+          <p className="text-2xl font-bold tracking-tight">{abiertas.count ?? 0}</p>
           <p className="text-xs text-piedra">Abiertas</p>
         </div>
-        <div className="rounded-xl border border-borde bg-white p-3 text-center">
-          <p className="text-2xl font-semibold">{ganadas.count ?? 0}</p>
+        <div className="rounded-2xl border border-borde bg-white p-3 text-center shadow-sm">
+          <p className="text-2xl font-bold tracking-tight">{ganadas.count ?? 0}</p>
           <p className="text-xs text-piedra">Ganadas</p>
         </div>
       </section>
@@ -85,33 +87,33 @@ export default async function MasPage() {
       <section className="space-y-2">
         <MenuLink
           href="/servicio"
-          icono="🔧"
+          icono={Wrench}
           titulo="Servicio técnico"
           detalle="Órdenes de trabajo, agenda y facturación"
         />
         <MenuLink
           href="/pipeline"
-          icono="📊"
+          icono={BarChart3}
           titulo="Pipeline de ventas"
           detalle="Kanban de oportunidades por etapa"
         />
         <MenuLink
           href="/reportes"
-          icono="📈"
+          icono={TrendingUp}
           titulo="Reportes"
-          detalle="Embudo, canales, rubros, motivos de pérdida y seguimientos vencidos"
+          detalle="Embudo, canales, rubros y motivos de pérdida"
         />
         <MenuLink
           href="/calculadora"
-          icono="🍊"
+          icono={Citrus}
           titulo="Calculadora Zumex"
-          detalle="La cuenta de recupero, con resumen listo para mandar al cliente"
+          detalle="Recupero de inversión, lista para mandar al cliente"
         />
         <MenuLink
           href="/biblioteca"
-          icono="📚"
+          icono={BookOpen}
           titulo="Biblioteca comercial"
-          detalle="Fichas, videos, comparativas y casos para cada producto"
+          detalle="Fichas, videos, comparativas y casos"
         />
       </section>
 
@@ -119,14 +121,25 @@ export default async function MasPage() {
 
       {esAdmin && <ConfigForm tarifaActual={cfgTarifa?.valor ?? "0"} />}
 
-      <section className="rounded-xl border border-dashed border-borde p-4 text-sm text-piedra">
-        <p className="font-medium text-tinta/70 mb-1">
-          💡 Instalala en el celular
-        </p>
+      <section className="flex items-start gap-3 rounded-2xl border border-dashed border-borde p-4 text-sm text-piedra">
+        <Smartphone className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2} />
         <p>
-          Abrí esta página desde el navegador del teléfono y elegí “Agregar a
-          pantalla de inicio”. Queda como una app.
+          <span className="font-medium text-tinta/70">
+            Instalala en el celular:
+          </span>{" "}
+          abrí esta página desde el navegador del teléfono y elegí “Agregar a
+          pantalla de inicio”.
         </p>
+      </section>
+
+      <section className="rounded-2xl border border-borde bg-white p-4 shadow-sm">
+        <p className="text-sm font-semibold">{yo?.nombre ?? "Usuario"}</p>
+        <p className="text-xs text-piedra">{user?.email}</p>
+        <form action={cerrarSesion} className="mt-3">
+          <button className="flex items-center gap-1.5 rounded-2xl border border-borde px-3.5 py-2 text-sm text-tinta/70">
+            <LogOut className="h-4 w-4" /> Cerrar sesión
+          </button>
+        </form>
       </section>
     </div>
   );

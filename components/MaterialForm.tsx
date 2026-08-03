@@ -5,7 +5,7 @@ import { crearMaterial } from "@/lib/actions";
 import type { Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
 const TIPOS = [
   "ficha",
@@ -29,7 +29,7 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
     return (
       <button
         onClick={() => setAbierto(true)}
-        className="w-full rounded-xl border border-dashed border-borde py-2.5 text-sm text-piedra"
+        className="w-full rounded-2xl border border-dashed border-borde py-2.5 text-sm text-piedra"
       >
         + Agregar material (link a video, PDF, foto…)
       </button>
@@ -57,7 +57,7 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
   }
 
   return (
-    <form onSubmit={enviar} className="rounded-xl border border-borde bg-white p-4 space-y-2">
+    <form onSubmit={enviar} className="rounded-2xl border border-borde bg-white shadow-sm p-4 space-y-2">
       <input
         type="text"
         required
@@ -100,14 +100,14 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 rounded-xl bg-tinta py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="flex-1 rounded-2xl bg-tinta py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
           {pending ? "Guardando…" : "Guardar material"}
         </button>
         <button
           type="button"
           onClick={() => setAbierto(false)}
-          className="rounded-xl border border-borde px-4 py-2.5 text-sm"
+          className="rounded-2xl border border-borde px-4 py-2.5 text-sm"
         >
           Cancelar
         </button>

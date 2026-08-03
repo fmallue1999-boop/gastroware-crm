@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MessageCircle, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hoyISO, sumarDias } from "@/lib/format";
 import TareaItem from "@/components/TareaItem";
@@ -66,8 +67,10 @@ export default async function HoyPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Hoy</h1>
-          <p className="text-sm text-piedra capitalize">{fecha}</p>
+          <h1 className="text-2xl font-bold tracking-tight">Hoy</h1>
+          <p className="text-sm text-piedra">
+            {fecha.charAt(0).toUpperCase() + fecha.slice(1)}
+          </p>
         </div>
         <div className="flex gap-1">
           <Link
@@ -95,9 +98,12 @@ export default async function HoyPage({
 
       {guiones.length > 0 && (
         <details className="group mt-3">
-          <summary className="flex cursor-pointer items-center justify-between rounded-xl border border-borde bg-white px-4 py-2.5 text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
-            <span>💬 Guiones rápidos para el chat</span>
-            <span className="text-piedra transition-transform group-open:rotate-90">▸</span>
+          <summary className="flex cursor-pointer items-center justify-between rounded-2xl border border-borde bg-white shadow-sm px-4 py-2.5 text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-piedra" /> Guiones rápidos
+              para el chat
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-90" />
           </summary>
           <div className="mt-2 space-y-2">
             {guiones.map((g) => (
@@ -130,8 +136,8 @@ export default async function HoyPage({
           Para hoy ({deHoy.length})
         </h2>
         {deHoy.length === 0 ? (
-          <p className="text-sm text-piedra/80 rounded-xl border border-dashed border-borde p-4 text-center">
-            Nada pendiente para hoy. Cargá un lead nuevo desde ➕.
+          <p className="text-sm text-piedra/80 rounded-2xl border border-dashed border-borde p-4 text-center">
+            Nada pendiente para hoy. Cargá un lead nuevo con el botón central.
           </p>
         ) : (
           <div className="space-y-2">

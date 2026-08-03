@@ -62,10 +62,10 @@ export default async function ServicioPage({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Servicio técnico</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Servicio técnico</h1>
         <Link
           href="/servicio/nueva"
-          className="rounded-xl bg-tinta px-3 py-2 text-sm font-medium text-white"
+          className="rounded-2xl bg-tinta px-3 py-2 text-sm font-medium text-white"
         >
           + Nueva orden
         </Link>
@@ -88,7 +88,7 @@ export default async function ServicioPage({
       </div>
 
       {ordenes.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-borde p-6 text-center text-sm text-piedra">
+        <p className="rounded-2xl border border-dashed border-borde p-6 text-center text-sm text-piedra">
           {filtro === "agenda"
             ? "Nada pendiente para hoy."
             : "No hay órdenes acá."}
@@ -104,7 +104,7 @@ export default async function ServicioPage({
               <Link
                 key={ot.id}
                 href={`/servicio/${ot.id}`}
-                className="block rounded-xl border border-borde bg-white p-3"
+                className="block rounded-2xl border border-borde bg-white shadow-sm p-3"
               >
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-sm font-semibold">OT-{ot.numero}</span>

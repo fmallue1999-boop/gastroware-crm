@@ -5,7 +5,7 @@ import { agregarEquipo } from "@/lib/actions";
 import type { Producto } from "@/lib/types";
 
 const inputCls =
-  "rounded-xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
 export default function EquipoForm({
   clienteId,
@@ -28,7 +28,7 @@ export default function EquipoForm({
     return (
       <button
         onClick={() => setAbierto(true)}
-        className="w-full rounded-xl border border-dashed border-borde py-2 text-sm text-piedra"
+        className="w-full rounded-2xl border border-dashed border-borde py-2 text-sm text-piedra"
       >
         + Cargar equipo (propio o de otra marca, con n° de serie)
       </button>
@@ -61,7 +61,7 @@ export default function EquipoForm({
   }
 
   return (
-    <form onSubmit={enviar} className="space-y-2 rounded-xl border border-borde bg-white p-3">
+    <form onSubmit={enviar} className="space-y-2 rounded-2xl border border-borde bg-white shadow-sm p-3">
       <label className="flex items-center gap-2 text-sm text-tinta/80">
         <input
           type="checkbox"
@@ -131,14 +131,14 @@ export default function EquipoForm({
         <button
           type="submit"
           disabled={pending || (!esAjeno && !productoId)}
-          className="flex-1 rounded-xl bg-tinta py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="flex-1 rounded-2xl bg-tinta py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {pending ? "Guardando…" : "Cargar"}
         </button>
         <button
           type="button"
           onClick={() => setAbierto(false)}
-          className="rounded-xl border border-borde px-4 py-2 text-sm"
+          className="rounded-2xl border border-borde px-4 py-2 text-sm"
         >
           Cancelar
         </button>

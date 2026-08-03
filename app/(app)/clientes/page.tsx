@@ -4,7 +4,7 @@ import { RUBROS } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
 
 const inputCls =
-  "rounded-xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
 export default async function ClientesPage({
   searchParams,
@@ -29,7 +29,7 @@ export default async function ClientesPage({
 
   return (
     <div>
-      <h1 className="text-xl font-semibold mb-4">Clientes</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-4">Clientes</h1>
 
       <form className="flex flex-wrap gap-2 mb-4" method="get">
         <input
@@ -53,14 +53,14 @@ export default async function ClientesPage({
           <option value="cliente_activo">Clientes activos</option>
           <option value="inactivo">Inactivos</option>
         </select>
-        <button className="rounded-xl bg-tinta px-4 py-2.5 text-sm text-white">
+        <button className="rounded-2xl bg-tinta px-4 py-2.5 text-sm text-white">
           Filtrar
         </button>
       </form>
 
       {clientes.length === 0 ? (
-        <p className="text-sm text-piedra/80 rounded-xl border border-dashed border-borde p-6 text-center">
-          Sin resultados. Cargá el primero desde ➕.
+        <p className="text-sm text-piedra/80 rounded-2xl border border-dashed border-borde p-6 text-center">
+          Sin resultados. Cargá el primero con el botón central.
         </p>
       ) : (
         <div className="space-y-2">
@@ -68,7 +68,7 @@ export default async function ClientesPage({
             <Link
               key={c.id}
               href={`/clientes/${c.id}`}
-              className="block rounded-xl border border-borde bg-white p-3"
+              className="block rounded-2xl border border-borde bg-white shadow-sm p-3"
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="font-medium text-sm truncate">

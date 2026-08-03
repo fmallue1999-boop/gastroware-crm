@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { fechaCorta, dinero, hoyISO } from "@/lib/format";
 import { TIPOS_OT } from "@/lib/constants";
@@ -70,7 +71,7 @@ export default async function OTPage({
 
   return (
     <div className="space-y-3">
-      <header className="rounded-xl border border-borde bg-white p-4">
+      <header className="rounded-2xl border border-borde bg-white shadow-sm p-4">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-lg font-semibold">OT-{ot.numero}</h1>
           <EstadoOTBadge estado={ot.estado} />
@@ -115,7 +116,7 @@ export default async function OTPage({
         editable={editable}
       />
 
-      <section className="rounded-xl border border-borde bg-white p-4">
+      <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
         <h2 className="text-sm font-semibold mb-2">Cuenta</h2>
         <div className="space-y-1 text-sm">
           <p className="flex justify-between">
@@ -135,7 +136,7 @@ export default async function OTPage({
           </p>
           {tarifa === 0 && !ot.es_garantia && (
             <p className="text-xs text-amber-700">
-              ⚠️ La tarifa por hora está en $0 — configurala en Más.
+              La tarifa por hora está en $0 — configurala en Más.
             </p>
           )}
         </div>
@@ -148,9 +149,9 @@ export default async function OTPage({
         ot.estado === "facturada") && (
         <Link
           href={`/comprobante/${ot.id}`}
-          className="block rounded-xl border border-borde bg-white py-3 text-center text-sm font-medium"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-borde bg-white py-3 text-center text-sm font-medium shadow-sm"
         >
-          📄 Ver comprobante de service
+          <FileText className="h-4 w-4" /> Ver comprobante de service
         </Link>
       )}
     </div>

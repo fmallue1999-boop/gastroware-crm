@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { guardarDiagnostico } from "@/lib/actions";
 
 const inputCls =
-  "w-full rounded-xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
 type Diag = Record<string, string | number | null>;
 
@@ -119,7 +119,7 @@ export default function DiagnosticoForm({
         />
 
         {margenMensual > 0 && (
-          <div className="rounded-xl bg-green-50 border border-green-200 p-3 text-sm text-green-900">
+          <div className="rounded-2xl bg-green-50 border border-green-200 p-3 text-sm text-green-900">
             <p>
               Margen bruto mensual:{" "}
               <strong>
@@ -159,7 +159,7 @@ function BotonGuardar({
     <button
       onClick={onClick}
       disabled={pending}
-      className="w-full rounded-xl border border-tinta py-2.5 text-sm font-medium disabled:opacity-50"
+      className="w-full rounded-2xl border border-tinta py-2.5 text-sm font-medium disabled:opacity-50"
     >
       {guardado ? "✓ Guardado" : pending ? "Guardando…" : "Guardar diagnóstico"}
     </button>

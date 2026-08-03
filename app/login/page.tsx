@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,16 +42,21 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-dvh flex items-center justify-center p-6">
+    <main className="flex min-h-dvh items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold text-center">GastroWare CRM</h1>
-        <p className="text-sm text-piedra text-center mt-1 mb-8">
-          Cockpit de ventas
-        </p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <Logo tamano="lg" />
+          <h1 className="mt-4 text-2xl font-bold tracking-tight">
+            GastroWare <span className="font-medium text-piedra">CRM</span>
+          </h1>
+          <p className="mt-1 text-sm text-piedra">
+            Ventas, servicio técnico y clientes en un solo lugar
+          </p>
+        </div>
 
         {!configurado ? (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="font-medium mb-1">Falta configurar Supabase</p>
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm">
+            <p className="mb-1 font-medium">Falta configurar Supabase</p>
             <p>
               Copiá <code>.env.example</code> a <code>.env.local</code>,
               completá las claves del proyecto y reiniciá el servidor. Los
@@ -58,14 +64,17 @@ export default function LoginPage() {
             </p>
           </div>
         ) : (
-          <form onSubmit={entrar} className="space-y-3">
+          <form
+            onSubmit={entrar}
+            className="space-y-3 rounded-3xl border border-borde bg-white p-6 shadow-sm"
+          >
             <input
               type="email"
               required
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-borde bg-white px-4 py-3 text-base outline-none focus:border-tinta"
+              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-tinta"
             />
             <input
               type="password"
@@ -73,13 +82,13 @@ export default function LoginPage() {
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-borde bg-white px-4 py-3 text-base outline-none focus:border-tinta"
+              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-tinta"
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button
               type="submit"
               disabled={cargando}
-              className="w-full rounded-xl bg-tinta text-white py-3 font-medium disabled:opacity-60"
+              className="w-full rounded-2xl bg-tinta py-3.5 font-semibold text-white transition-transform active:scale-[0.99] disabled:opacity-60"
             >
               {cargando ? "Entrando…" : "Entrar"}
             </button>

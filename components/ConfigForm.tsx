@@ -28,7 +28,7 @@ export default function ConfigForm({
   }
 
   return (
-    <section className="rounded-xl border border-borde bg-white p-4">
+    <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
       <p className="text-sm font-semibold">Tarifa de servicio técnico</p>
       <p className="mt-0.5 text-xs text-piedra">
         Precio por hora de mano de obra. Se usa para calcular el total de cada
@@ -41,11 +41,11 @@ export default function ConfigForm({
           value={tarifa}
           onChange={(e) => setTarifa(e.target.value)}
           placeholder="$ por hora"
-          className="flex-1 rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta"
+          className="flex-1 rounded-2xl border border-borde bg-white shadow-sm px-3 py-2 text-sm outline-none focus:border-tinta"
         />
         <button
           disabled={pending}
-          className="rounded-xl bg-tinta px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-2xl bg-tinta px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {guardado ? "✓" : "Guardar"}
         </button>

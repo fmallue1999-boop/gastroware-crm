@@ -109,7 +109,7 @@ export default async function ReportesPage({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Reportes</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Reportes</h1>
         <div className="flex gap-1">
           {[30, 90, 365].map((d) => (
             <Link
@@ -144,7 +144,7 @@ export default async function ReportesPage({
         <Barras titulo="Motivos de pérdida" datos={motivos.map((m) => ({ label: m.motivo, valor: m.count, extra: "" }))} color="bg-red-300" />
       )}
 
-      <section className="rounded-xl border border-borde bg-white p-4">
+      <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
         <h2 className="text-sm font-semibold mb-2">
           Seguimientos vencidos {vencidas.length > 0 && (
             <span className="text-red-600">({vencidas.length})</span>
@@ -172,7 +172,7 @@ function pct(parte: number, total: number) {
 
 function Metrica({ label, valor }: { label: string; valor: string }) {
   return (
-    <div className="rounded-xl border border-borde bg-white p-3">
+    <div className="rounded-2xl border border-borde bg-white shadow-sm p-3">
       <p className="text-lg font-semibold truncate">{valor}</p>
       <p className="text-xs text-piedra">{label}</p>
     </div>
@@ -181,7 +181,7 @@ function Metrica({ label, valor }: { label: string; valor: string }) {
 
 function Seccion({ titulo }: { titulo: string }) {
   return (
-    <p className="rounded-xl bg-celeste-soft px-4 py-2.5 text-sm text-tinta/80">
+    <p className="rounded-2xl bg-celeste-soft px-4 py-2.5 text-sm text-tinta/80">
       {titulo}
     </p>
   );
@@ -198,7 +198,7 @@ function Barras({
 }) {
   const max = Math.max(...datos.map((d) => d.valor), 1);
   return (
-    <section className="rounded-xl border border-borde bg-white p-4">
+    <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
       <h2 className="text-sm font-semibold mb-3">{titulo}</h2>
       {datos.length === 0 ? (
         <p className="text-sm text-piedra/80">Sin datos todavía.</p>

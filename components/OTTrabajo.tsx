@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Camera, Cog, Receipt } from "lucide-react";
 import {
   actualizarOT,
   cambiarEstadoOT,
@@ -15,7 +16,7 @@ import { dinero } from "@/lib/format";
 import type { OrdenTrabajo, OTFoto, OTItem, Producto } from "@/lib/types";
 
 const inputCls =
-  "rounded-xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
 
 async function subirArchivo(otId: string, archivo: File, carpeta: string) {
   const supabase = createClient();
@@ -140,7 +141,7 @@ export default function OTTrabajo({
 
   if (!editable) {
     return (
-      <section className="rounded-xl border border-borde bg-white p-4 space-y-3">
+      <section className="rounded-2xl border border-borde bg-white shadow-sm p-4 space-y-3">
         <div>
           <h2 className="text-sm font-semibold">Trabajo realizado</h2>
           <p className="mt-1 text-sm text-tinta/80 whitespace-pre-wrap">
@@ -166,7 +167,7 @@ export default function OTTrabajo({
   }
 
   return (
-    <section className="rounded-xl border-2 border-celeste-deep bg-white p-4 space-y-4">
+    <section className="rounded-2xl border-2 border-celeste-deep bg-white shadow-sm p-4 space-y-4">
       <div>
         <h2 className="text-sm font-semibold mb-2">Carga del técnico</h2>
         <textarea
@@ -188,7 +189,7 @@ export default function OTTrabajo({
           <button
             onClick={guardarTrabajo}
             disabled={pending}
-            className="rounded-xl border border-tinta px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="rounded-2xl border border-tinta px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {guardado ? "✓" : "Guardar"}
           </button>
@@ -276,8 +277,9 @@ export default function OTTrabajo({
         </h3>
         {fotos.length > 0 && <GrillaFotos fotos={fotos} />}
         <label className="mt-2 block">
-          <span className="block w-full cursor-pointer rounded-lg border border-dashed border-borde py-2 text-center text-sm text-piedra">
-            📷 {subiendo ? "Subiendo…" : "Sacar o subir foto"}
+          <span className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-borde py-2 text-center text-sm text-piedra">
+            <Camera className="h-4 w-4" />
+            {subiendo ? "Subiendo…" : "Sacar o subir foto"}
           </span>
           <input
             type="file"
@@ -296,7 +298,7 @@ export default function OTTrabajo({
       <button
         onClick={cerrar}
         disabled={pending}
-        className="w-full rounded-xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
+        className="w-full rounded-2xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
       >
         Cerrar orden (pasa a administración)
       </button>
@@ -317,7 +319,11 @@ function ListaItems({
     <div className="space-y-1.5">
       {items.map((i) => (
         <div key={i.id} className="flex items-center gap-2 text-sm">
-          <span className="text-xs">{i.tipo === "gasto" ? "🧾" : "🔩"}</span>
+          {i.tipo === "gasto" ? (
+            <Receipt className="h-4 w-4 shrink-0 text-piedra" />
+          ) : (
+            <Cog className="h-4 w-4 shrink-0 text-piedra" />
+          )}
           <span className="min-w-0 flex-1 truncate">
             {i.descripcion}
             {Number(i.cantidad) !== 1 ? ` × ${i.cantidad}` : ""}
@@ -434,7 +440,7 @@ function Firma({ ot }: { ot: OrdenTrabajo }) {
         placeholder="Nombre de quien firma"
         value={firmante}
         onChange={(e) => setFirmante(e.target.value)}
-        className="mb-2 w-full rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta"
+        className="mb-2 w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2 text-sm outline-none focus:border-tinta"
       />
       <canvas
         ref={canvasRef}
@@ -443,7 +449,7 @@ function Firma({ ot }: { ot: OrdenTrabajo }) {
         onPointerDown={empezar}
         onPointerMove={mover}
         onPointerUp={() => (dibujando.current = false)}
-        className="w-full touch-none rounded-xl border border-borde bg-white"
+        className="w-full touch-none rounded-2xl border border-borde bg-white shadow-sm"
       />
       <div className="mt-2 flex gap-2">
         <button

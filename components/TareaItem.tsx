@@ -81,7 +81,7 @@ export default function TareaItem({
 
   if (pedirProxima) {
     return (
-      <div className="rounded-xl border border-amber-300 bg-amber-50 p-3">
+      <div className="rounded-2xl border border-amber-300 bg-amber-50 p-3">
         <p className="text-sm font-medium text-amber-900">
           {cliente?.nombre_comercial}: la oportunidad quedó sin próxima acción.
         </p>
@@ -109,7 +109,7 @@ export default function TareaItem({
   }
 
   return (
-    <div className={`rounded-xl border bg-white p-3 ${vencida ? "border-red-200" : "border-borde"}`}>
+    <div className={`rounded-2xl border bg-white p-3 ${vencida ? "border-red-200" : "border-borde"}`}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
