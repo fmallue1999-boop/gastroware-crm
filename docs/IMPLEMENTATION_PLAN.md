@@ -50,12 +50,20 @@
 - Nota: el embudo configurable se pospuso a propósito — las etapas fijas
   funcionan y configurarlas hoy es complejidad sin retorno.
 
-## Etapa 4 — Integraciones (M + decisiones externas)
-- Formularios web: endpoint firmado + honeypot/rate-limit → lead + tarea + notificación.
-- Email: adaptador (Resend recomendado) — requiere DNS de gastroware.com.ar.
-- WhatsApp Business API oficial: webhooks entrantes → conversaciones/mensajes,
-  vínculo con clientes, tareas sugeridas. BLOQUEANTE EXTERNO: número a usar,
-  verificación de Meta Business y costos por conversación. Sin scraping.
+## Etapa 4 — Integraciones (M + decisiones externas) ✅ lo construible / ⏸ lo bloqueado
+- ✅ Formulario web → lead: `/api/lead-web` (honeypot + rate limit 20/hora en DB
+  vía `fn_lead_web` security definer, dedup por teléfono, tarea que vence hoy,
+  notificación a gestores). Código para el sitio en docs/FORMULARIO_WEB.md.
+- ✅ Webhook WhatsApp Business oficial (`/api/webhooks/whatsapp`): verificación
+  de Meta + firma HMAC + `fn_webhook_wa` (conversaciones/mensajes con dedup,
+  vínculo por teléfono, aviso si el número es desconocido). DORMIDO hasta
+  configurar WHATSAPP_VERIFY_TOKEN y WHATSAPP_APP_SECRET (decisión: número y
+  verificación Meta Business). Sin scraping; no lee histórico.
+- ✅ Adaptador de email (Resend) en lib/core/email.ts: se activa con
+  RESEND_API_KEY + dominio verificado (DNS de gastroware.com.ar). Hasta
+  entonces devuelve error claro; nada simula enviarse.
+- ⏸ UI de conversaciones: se hace cuando el canal de WhatsApp esté activo y
+  haya datos reales (regla: sin pantallas vacías simuladas).
 
 ## Etapa 5 — Marketing (M)
 - Segmentos dinámicos, plantillas, campañas con outbox (límites, dedup, pausa),
