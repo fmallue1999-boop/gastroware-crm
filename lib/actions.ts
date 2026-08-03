@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { hoyISO, sumarDias, normalizarTelefono } from "@/lib/format";
+import { hoyISO, sumarDias, sumarMeses, normalizarTelefono } from "@/lib/format";
 import { CADENCIA_COTIZACION } from "@/lib/constants";
 import type { Cliente, Etapa } from "@/lib/types";
 
@@ -285,9 +285,18 @@ export async function cambiarEtapa(
       .eq("id", opp.cliente_id);
 
     if (opp.producto_id) {
+      const { data: prodVendido } = await supabase
+        .from("productos")
+        .select("garantia_meses")
+        .eq("id", opp.producto_id)
+        .single();
       await supabase.from("equipos_instalados").insert({
         cliente_id: opp.cliente_id,
         producto_id: opp.producto_id,
+        origen: "vendido",
+        garantia_hasta: prodVendido?.garantia_meses
+          ? sumarMeses(prodVendido.garantia_meses)
+          : null,
         cantidad: 1,
         fecha_compra: hoyISO(),
         oportunidad_id: oportunidadId,
@@ -448,12 +457,46 @@ export async function agregarNota(
 
 export async function agregarEquipo(input: {
   clienteId: string;
-  productoId: string;
+  productoId?: string | null;
+  marcaModelo?: string | null;
+  numeroSerie?: string | null;
+  garantiaHasta?: string | null;
   fecha?: string | null;
   cantidad?: number;
 }) {
   const supabase = await createClient();
   const user = await usuarioActual();
+
+  const fecha = input.fecha || hoyISO();
+
+  // Equipo ajeno (no está en nuestro catálogo)
+  if (!input.productoId) {
+    if (!input.marcaModelo?.trim())
+      return { error: "Indicá la marca y modelo del equipo" };
+    await supabase.from("equipos_instalados").insert({
+      cliente_id: input.clienteId,
+      producto_id: null,
+      marca_modelo: input.marcaModelo.trim(),
+      numero_serie: input.numeroSerie?.trim() || null,
+      origen: "externo",
+      garantia_hasta: input.garantiaHasta || null,
+      cantidad: input.cantidad ?? 1,
+      fecha_compra: input.fecha || null,
+    });
+    await supabase
+      .from("clientes")
+      .update({ estado: "cliente_activo" })
+      .eq("id", input.clienteId)
+      .eq("estado", "prospecto");
+    await supabase.from("actividades").insert({
+      cliente_id: input.clienteId,
+      tipo: "nota",
+      contenido: `Se cargó equipo externo: ${input.marcaModelo.trim()}${input.numeroSerie ? ` (serie ${input.numeroSerie.trim()})` : ""}`,
+      created_by: user?.id ?? null,
+    });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  }
 
   const { data: producto } = await supabase
     .from("productos")
@@ -461,8 +504,6 @@ export async function agregarEquipo(input: {
     .eq("id", input.productoId)
     .single();
   if (!producto) return { error: "Producto no encontrado" };
-
-  const fecha = input.fecha || hoyISO();
 
   if (producto.es_consumible) {
     // Consumible directo (ej. pastillas): activar o renovar el ciclo de recompra
@@ -496,6 +537,13 @@ export async function agregarEquipo(input: {
     await supabase.from("equipos_instalados").insert({
       cliente_id: input.clienteId,
       producto_id: producto.id,
+      numero_serie: input.numeroSerie?.trim() || null,
+      origen: "vendido",
+      garantia_hasta:
+        input.garantiaHasta ||
+        (producto.garantia_meses
+          ? sumarMeses(producto.garantia_meses, fecha)
+          : null),
       cantidad: input.cantidad ?? 1,
       fecha_compra: fecha,
     });
@@ -551,12 +599,22 @@ export async function buscarClientes(q: string): Promise<Cliente[]> {
   const digitos = t.replace(/\D/g, "");
   const filtros = [`nombre_comercial.ilike.%${t}%`];
   if (digitos.length >= 4) filtros.push(`telefono.ilike.%${digitos}%`);
-  const { data } = await supabase
-    .from("clientes")
-    .select("*")
-    .or(filtros.join(","))
-    .limit(10);
-  return (data ?? []) as Cliente[];
+
+  const [porNombre, porSerie] = await Promise.all([
+    supabase.from("clientes").select("*").or(filtros.join(",")).limit(10),
+    supabase
+      .from("equipos_instalados")
+      .select("cliente:clientes(*)")
+      .ilike("numero_serie", `%${t}%`)
+      .limit(5),
+  ]);
+
+  const resultado = new Map<string, Cliente>();
+  for (const c of (porNombre.data ?? []) as Cliente[]) resultado.set(c.id, c);
+  for (const e of (porSerie.data ?? []) as unknown as { cliente: Cliente | null }[]) {
+    if (e.cliente) resultado.set(e.cliente.id, e.cliente);
+  }
+  return Array.from(resultado.values()).slice(0, 10);
 }
 
 // ---------- Notificaciones push ----------

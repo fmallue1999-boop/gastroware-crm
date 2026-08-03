@@ -35,6 +35,7 @@ export interface Producto {
   precio_referencia: number | null;
   moneda: string;
   activo: boolean;
+  garantia_meses: number | null;
 }
 
 export interface Oportunidad {
@@ -99,12 +100,17 @@ export interface Cotizacion {
 export interface EquipoInstalado {
   id: string;
   cliente_id: string;
-  producto_id: string;
+  producto_id: string | null;
   cantidad: number;
   fecha_compra: string | null;
   oportunidad_id: string | null;
   notas: string | null;
-  producto?: Producto;
+  numero_serie: string | null;
+  marca_modelo: string | null;
+  origen: "vendido" | "externo";
+  garantia_hasta: string | null;
+  proximo_service: string | null;
+  producto?: Producto | null;
 }
 
 export interface Recurrencia {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { fechaCorta, linkWhatsApp, dinero, diasDesde } from "@/lib/format";
+import { fechaCorta, linkWhatsApp, dinero, diasDesde, hoyISO } from "@/lib/format";
 import { EtapaBadge, TempBadge, ProductoBadge } from "@/components/Badges";
 import NotaForm from "@/components/NotaForm";
 import EquipoForm from "@/components/EquipoForm";
@@ -21,6 +21,7 @@ export default async function ClientePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const hoy = hoyISO();
   const supabase = await createClient();
 
   const { data: cliente } = await supabase
@@ -106,16 +107,31 @@ export default async function ClientePage({
       <section className="rounded-xl border border-borde bg-white p-4">
         <h2 className="text-sm font-semibold mb-2">Equipos y consumibles</h2>
         <div className="space-y-2 mb-3">
-          {equipos.map((e) => (
-            <p key={e.id} className="text-sm">
-              {e.producto?.nombre}
-              {e.cantidad > 1 ? ` × ${e.cantidad}` : ""}
-              <span className="text-piedra/80">
-                {" "}
-                · comprado {fechaCorta(e.fecha_compra)}
-              </span>
-            </p>
-          ))}
+          {equipos.map((e) => {
+            const vigente = e.garantia_hasta && e.garantia_hasta >= hoy;
+            return (
+              <div key={e.id} className="text-sm">
+                <p>
+                  {e.producto?.nombre ?? e.marca_modelo}
+                  {e.cantidad > 1 ? ` × ${e.cantidad}` : ""}
+                  {e.origen === "externo" && (
+                    <span className="ml-1.5 rounded-full border border-borde px-2 py-0.5 text-xs text-piedra">
+                      otra marca
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-piedra">
+                  {e.numero_serie ? `Serie ${e.numero_serie} · ` : ""}
+                  {e.fecha_compra ? `comprado ${fechaCorta(e.fecha_compra)}` : "sin fecha"}
+                  {e.garantia_hasta && (
+                    <span className={vigente ? "text-green-700" : "text-red-600"}>
+                      {" "}· garantía {vigente ? "vigente" : "vencida"} ({fechaCorta(e.garantia_hasta)})
+                    </span>
+                  )}
+                </p>
+              </div>
+            );
+          })}
           {recurrencias.map((r) => (
             <p key={r.id} className="text-sm text-amber-700">
               🔔 {r.producto?.nombre}: cada {r.frecuencia_dias} días — próximo

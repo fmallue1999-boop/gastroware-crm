@@ -5,6 +5,14 @@ export function hoyISO(): string {
   });
 }
 
+export function sumarMeses(meses: number, desde?: string): string {
+  const base = desde ? new Date(desde + "T12:00:00") : new Date();
+  base.setMonth(base.getMonth() + meses);
+  return base.toLocaleDateString("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
+}
+
 export function sumarDias(dias: number, desde?: string): string {
   const base = desde ? new Date(desde + "T12:00:00") : new Date();
   base.setDate(base.getDate() + dias);
