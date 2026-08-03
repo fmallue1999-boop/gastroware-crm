@@ -96,6 +96,22 @@ export const ACCION_POR_OBJECION: Record<string, string> = {
     "Seguir la cadencia D+2/D+5/D+10 y cerrar con la reactivación D+20.",
 };
 
+export const ESTADOS_OT = [
+  { value: "abierta", label: "Abierta" },
+  { value: "en_proceso", label: "En proceso" },
+  { value: "cerrada_tecnico", label: "Cerrada por técnico" },
+  { value: "facturable", label: "Para facturar" },
+  { value: "facturada", label: "Facturada" },
+  { value: "anulada", label: "Anulada" },
+] as const;
+
+export const TIPOS_OT = [
+  { value: "correctivo", label: "Reparación" },
+  { value: "preventivo", label: "Mantenimiento" },
+  { value: "instalacion", label: "Instalación" },
+  { value: "garantia", label: "Garantía" },
+] as const;
+
 /** Cadencia automática al cotizar: días y uso de plantilla. */
 export const CADENCIA_COTIZACION = [
   { dias: 2, uso: "d2", titulo: "Seguimiento D+2: preguntar financiación o alternativas" },

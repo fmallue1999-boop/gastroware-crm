@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cerrarSesion } from "@/lib/actions";
 import PushToggle from "@/components/PushToggle";
+import ConfigForm from "@/components/ConfigForm";
 
 function MenuLink({
   href,
@@ -36,17 +37,21 @@ export default async function MasPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [clientes, abiertas, ganadas] = await Promise.all([
-    supabase.from("clientes").select("id", { count: "exact", head: true }),
-    supabase
-      .from("oportunidades")
-      .select("id", { count: "exact", head: true })
-      .in("etapa", ["nueva", "diagnostico", "cotizada", "seguimiento", "negociacion"]),
-    supabase
-      .from("oportunidades")
-      .select("id", { count: "exact", head: true })
-      .eq("etapa", "ganada"),
-  ]);
+  const [clientes, abiertas, ganadas, { data: yo }, { data: cfgTarifa }] =
+    await Promise.all([
+      supabase.from("clientes").select("id", { count: "exact", head: true }),
+      supabase
+        .from("oportunidades")
+        .select("id", { count: "exact", head: true })
+        .in("etapa", ["nueva", "diagnostico", "cotizada", "seguimiento", "negociacion"]),
+      supabase
+        .from("oportunidades")
+        .select("id", { count: "exact", head: true })
+        .eq("etapa", "ganada"),
+      supabase.from("usuarios").select("rol").eq("id", user!.id).single(),
+      supabase.from("config").select("valor").eq("clave", "tarifa_hora").maybeSingle(),
+    ]);
+  const esAdmin = yo?.rol === "admin";
 
   return (
     <div className="space-y-5">
@@ -79,6 +84,18 @@ export default async function MasPage() {
 
       <section className="space-y-2">
         <MenuLink
+          href="/servicio"
+          icono="🔧"
+          titulo="Servicio técnico"
+          detalle="Órdenes de trabajo, agenda y facturación"
+        />
+        <MenuLink
+          href="/pipeline"
+          icono="📊"
+          titulo="Pipeline de ventas"
+          detalle="Kanban de oportunidades por etapa"
+        />
+        <MenuLink
           href="/reportes"
           icono="📈"
           titulo="Reportes"
@@ -99,6 +116,8 @@ export default async function MasPage() {
       </section>
 
       <PushToggle />
+
+      {esAdmin && <ConfigForm tarifaActual={cfgTarifa?.valor ?? "0"} />}
 
       <section className="rounded-xl border border-dashed border-borde p-4 text-sm text-piedra">
         <p className="font-medium text-tinta/70 mb-1">

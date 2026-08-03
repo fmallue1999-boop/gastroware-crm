@@ -16,6 +16,13 @@ export default async function AppLayout({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: yo } = await supabase
+    .from("usuarios")
+    .select("rol")
+    .eq("id", user.id)
+    .single();
+  const rol = yo?.rol ?? "vendedor";
+
   return (
     <div className="mx-auto max-w-2xl min-h-dvh flex flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-borde bg-crema/95 px-4 py-2.5 backdrop-blur">
@@ -31,7 +38,7 @@ export default async function AppLayout({
         </Link>
       </header>
       <main className="flex-1 px-4 pt-4 pb-24">{children}</main>
-      <BottomNav />
+      <BottomNav rol={rol} />
     </div>
   );
 }

@@ -590,6 +590,222 @@ export async function agregarEquipo(input: {
   return { ok: true };
 }
 
+// ---------- Servicio técnico: órdenes de trabajo ----------
+
+export async function listarEquiposCliente(clienteId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("equipos_instalados")
+    .select("id, numero_serie, marca_modelo, producto:productos(nombre)")
+    .eq("cliente_id", clienteId)
+    .order("fecha_compra", { ascending: false });
+  return (data ?? []).map((e) => {
+    const prod = e.producto as unknown as { nombre: string } | null;
+    return {
+      id: e.id as string,
+      etiqueta: `${prod?.nombre ?? e.marca_modelo ?? "Equipo"}${e.numero_serie ? ` · serie ${e.numero_serie}` : ""}`,
+    };
+  });
+}
+
+export async function crearOT(input: {
+  clienteId: string;
+  equipoId?: string | null;
+  tipo: string;
+  fechaProgramada?: string | null;
+  tecnicoId?: string | null;
+  problema?: string;
+}) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const esGarantia = input.tipo === "garantia";
+  const { data: ot, error } = await supabase
+    .from("ordenes_trabajo")
+    .insert({
+      cliente_id: input.clienteId,
+      equipo_id: input.equipoId || null,
+      tecnico_id: input.tecnicoId || user?.id || null,
+      creado_por: user?.id ?? null,
+      tipo: input.tipo,
+      es_garantia: esGarantia,
+      fecha_programada: input.fechaProgramada || null,
+      problema: input.problema?.trim() || null,
+    })
+    .select("id, numero")
+    .single();
+  if (error || !ot) return { error: error?.message ?? "No se pudo crear" };
+
+  await supabase.from("actividades").insert({
+    cliente_id: input.clienteId,
+    tipo: "nota",
+    contenido: `Se abrió la orden de trabajo OT-${ot.numero}`,
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  redirect(`/servicio/${ot.id}`);
+}
+
+const CAMPOS_OT_EDITABLES = [
+  "trabajo_realizado",
+  "horas",
+  "problema",
+  "fecha_programada",
+  "tecnico_id",
+  "tipo",
+  "es_garantia",
+] as const;
+
+export async function actualizarOT(
+  otId: string,
+  patch: Record<string, string | number | boolean | null>
+) {
+  const supabase = await createClient();
+  const limpio: Record<string, unknown> = {};
+  for (const k of CAMPOS_OT_EDITABLES) {
+    if (k in patch) limpio[k] = patch[k];
+  }
+  if ("tipo" in limpio) limpio.es_garantia = limpio.tipo === "garantia";
+  const { error } = await supabase
+    .from("ordenes_trabajo")
+    .update(limpio)
+    .eq("id", otId);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function cambiarEstadoOT(
+  otId: string,
+  estado: string,
+  nroFactura?: string
+) {
+  const supabase = await createClient();
+  const { data: ot } = await supabase
+    .from("ordenes_trabajo")
+    .select("*")
+    .eq("id", otId)
+    .single();
+  if (!ot) return { error: "Orden no encontrada" };
+
+  const update: Record<string, unknown> = { estado };
+
+  if (estado === "cerrada_tecnico") {
+    if (!ot.trabajo_realizado?.trim())
+      return { error: "Cargá el trabajo realizado antes de cerrar" };
+    if (!ot.horas || ot.horas <= 0)
+      return { error: "Cargá las horas trabajadas antes de cerrar" };
+    update.cerrada_at = new Date().toISOString();
+  }
+
+  if (estado === "facturable") {
+    const [{ data: items }, { data: cfg }] = await Promise.all([
+      supabase.from("ot_items").select("*").eq("ot_id", otId),
+      supabase.from("config").select("valor").eq("clave", "tarifa_hora").single(),
+    ]);
+    const tarifa = Number(cfg?.valor) || 0;
+    const manoObra = ot.es_garantia ? 0 : (Number(ot.horas) || 0) * tarifa;
+    const itemsTotal = (items ?? [])
+      .filter((i) => i.refacturable)
+      .reduce((s, i) => s + Number(i.cantidad) * Number(i.precio_unit), 0);
+    update.total = Math.round((manoObra + itemsTotal) * 100) / 100;
+  }
+
+  if (estado === "facturada") {
+    if (!nroFactura?.trim())
+      return { error: "Cargá el número de factura de ZEUS" };
+    update.nro_factura = nroFactura.trim();
+    update.facturada_at = new Date().toISOString();
+  }
+
+  const { error } = await supabase
+    .from("ordenes_trabajo")
+    .update(update)
+    .eq("id", otId);
+  if (error) return { error: error.message };
+
+  await supabase.from("actividades").insert({
+    cliente_id: ot.cliente_id,
+    tipo: "nota",
+    contenido: `OT-${ot.numero}: ${estado.replace("_", " ")}${nroFactura ? ` (factura ${nroFactura})` : ""}`,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function agregarItemOT(input: {
+  otId: string;
+  tipo: "refaccion" | "gasto";
+  descripcion: string;
+  productoId?: string | null;
+  cantidad: number;
+  precioUnit: number;
+  refacturable: boolean;
+  comprobanteUrl?: string | null;
+}) {
+  if (!input.descripcion.trim()) return { error: "Falta la descripción" };
+  const supabase = await createClient();
+  const { error } = await supabase.from("ot_items").insert({
+    ot_id: input.otId,
+    tipo: input.tipo,
+    descripcion: input.descripcion.trim(),
+    producto_id: input.productoId || null,
+    cantidad: input.cantidad || 1,
+    precio_unit: input.precioUnit || 0,
+    refacturable: input.refacturable,
+    comprobante_url: input.comprobanteUrl ?? null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function borrarItemOT(itemId: string) {
+  const supabase = await createClient();
+  await supabase.from("ot_items").delete().eq("id", itemId);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function agregarFotoOT(otId: string, url: string) {
+  const supabase = await createClient();
+  await supabase.from("ot_fotos").insert({ ot_id: otId, url });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function guardarFirmaOT(
+  otId: string,
+  dataUrl: string,
+  firmante: string
+) {
+  const supabase = await createClient();
+  const base64 = dataUrl.split(",")[1];
+  if (!base64) return { error: "Firma vacía" };
+  const buffer = Buffer.from(base64, "base64");
+  const path = `firmas/${otId}-${Date.now()}.png`;
+  const { error: errUp } = await supabase.storage
+    .from("servicio")
+    .upload(path, buffer, { contentType: "image/png" });
+  if (errUp) return { error: "No se pudo guardar la firma: " + errUp.message };
+  const { data } = supabase.storage.from("servicio").getPublicUrl(path);
+  await supabase
+    .from("ordenes_trabajo")
+    .update({ firma_url: data.publicUrl, firmante: firmante.trim() || null })
+    .eq("id", otId);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function setConfigValor(clave: string, valor: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("config")
+    .upsert({ clave, valor }, { onConflict: "clave" });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 // ---------- Buscador global ----------
 
 export async function buscarClientes(q: string): Promise<Cliente[]> {

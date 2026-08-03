@@ -1,4 +1,23 @@
-import { ETAPAS } from "@/lib/constants";
+import { ETAPAS, ESTADOS_OT } from "@/lib/constants";
+
+export function EstadoOTBadge({ estado }: { estado: string }) {
+  const estilos: Record<string, string> = {
+    abierta: "bg-celeste-soft text-sky-800",
+    en_proceso: "bg-amber-100 text-amber-700",
+    cerrada_tecnico: "bg-purple-100 text-purple-700",
+    facturable: "bg-orange-100 text-orange-700",
+    facturada: "bg-green-100 text-green-700",
+    anulada: "bg-crema-deep text-piedra",
+  };
+  const label = ESTADOS_OT.find((e) => e.value === estado)?.label ?? estado;
+  return (
+    <span
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${estilos[estado] ?? ""}`}
+    >
+      {label}
+    </span>
+  );
+}
 
 export function TempBadge({ temperatura }: { temperatura: string | null }) {
   if (!temperatura) return null;

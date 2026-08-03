@@ -124,6 +124,65 @@ export interface Recurrencia {
   producto?: Producto;
 }
 
+export type EstadoOT =
+  | "abierta"
+  | "en_proceso"
+  | "cerrada_tecnico"
+  | "facturable"
+  | "facturada"
+  | "anulada";
+
+export interface OrdenTrabajo {
+  id: string;
+  numero: number;
+  cliente_id: string;
+  equipo_id: string | null;
+  tecnico_id: string | null;
+  creado_por: string | null;
+  estado: EstadoOT;
+  tipo: "correctivo" | "preventivo" | "instalacion" | "garantia";
+  es_garantia: boolean;
+  fecha_programada: string | null;
+  problema: string | null;
+  trabajo_realizado: string | null;
+  horas: number | null;
+  firma_url: string | null;
+  firmante: string | null;
+  total: number | null;
+  nro_factura: string | null;
+  facturada_at: string | null;
+  created_at: string;
+  cerrada_at: string | null;
+  cliente?: Cliente;
+  equipo?: EquipoInstalado | null;
+  tecnico?: { id: string; nombre: string } | null;
+}
+
+export interface OTItem {
+  id: string;
+  ot_id: string;
+  tipo: "refaccion" | "gasto";
+  descripcion: string;
+  producto_id: string | null;
+  cantidad: number;
+  precio_unit: number;
+  refacturable: boolean;
+  comprobante_url: string | null;
+}
+
+export interface OTFoto {
+  id: string;
+  ot_id: string;
+  url: string;
+}
+
+export interface Usuario {
+  id: string;
+  nombre: string;
+  rol: "admin" | "vendedor" | "tecnico";
+  activo: boolean;
+}
+
 export interface Actividad {
   id: string;
   cliente_id: string;
