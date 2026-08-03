@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hoyISO, fechaCorta, dinero } from "@/lib/format";
 import { TIPOS_OT } from "@/lib/constants";
 import { EstadoOTBadge } from "@/components/Badges";
+import FilaOT from "@/components/FilaOT";
 import type { OrdenTrabajo, Usuario } from "@/lib/types";
 
 const FILTROS = [
@@ -56,19 +58,31 @@ export default async function ServicioPage({
     query = query.eq("tecnico_id", user!.id);
   }
 
-  const { data } = await query;
+  const [{ data }, { data: tecnicosData }] = await Promise.all([
+    query,
+    supabase.from("usuarios").select("*").eq("activo", true).order("nombre"),
+  ]);
   const ordenes = (data ?? []) as unknown as OrdenTrabajo[];
+  const tecnicos = (tecnicosData ?? []) as Usuario[];
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Servicio técnico</h1>
-        <Link
-          href="/servicio/nueva"
-          className="rounded-2xl bg-tinta px-3 py-2 text-sm font-medium text-white"
-        >
-          + Nueva orden
-        </Link>
+        <div className="flex gap-2">
+          <a
+            href="/api/export?tipo=servicio"
+            className="hidden items-center gap-1.5 rounded-xl border border-borde bg-white px-3.5 py-2 text-sm shadow-sm lg:inline-flex"
+          >
+            <Download className="h-4 w-4" /> CSV
+          </a>
+          <Link
+            href="/servicio/nueva"
+            className="rounded-2xl bg-tinta px-3 py-2 text-sm font-medium text-white"
+          >
+            + Nueva orden
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
@@ -94,7 +108,31 @@ export default async function ServicioPage({
             : "No hay órdenes acá."}
         </p>
       ) : (
-        <div className="space-y-2">
+        <>
+          {/* Tabla de escritorio con edición en línea */}
+          <div className="hidden overflow-hidden rounded-2xl border border-borde bg-white shadow-sm lg:block">
+            <table className="w-full text-sm">
+              <thead className="border-b border-borde bg-crema/60">
+                <tr>
+                  {["Orden", "Cliente", "Equipo", "Tipo", "Fecha", "Técnico", "Total", "Estado"].map((h) => (
+                    <th
+                      key={h}
+                      className={`px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-piedra ${h === "Total" ? "text-right" : "text-left"}`}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ordenes.map((ot) => (
+                  <FilaOT key={ot.id} ot={ot} tecnicos={tecnicos} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="space-y-2 lg:hidden">
           {ordenes.map((ot) => {
             const atrasada =
               ot.fecha_programada &&
@@ -133,7 +171,8 @@ export default async function ServicioPage({
               </Link>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

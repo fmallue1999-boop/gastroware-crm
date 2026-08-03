@@ -5,8 +5,8 @@ export default function manifest() {
     description: "Cockpit de ventas GastroWare / Zumex",
     start_url: "/hoy",
     display: "standalone",
-    background_color: "#f1efe7",
-    theme_color: "#111111",
+    background_color: "#f5f6f8",
+    theme_color: "#101828",
     icons: [
       {
         src: "/icon.svg",

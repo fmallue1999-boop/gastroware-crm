@@ -36,17 +36,87 @@ export default async function HoyPage({
     );
   }
 
-  const [{ data }, { data: guionesData }] = await Promise.all([
+  const inicioMes = hoy.slice(0, 8) + "01";
+  const [
+    { data },
+    { data: guionesData },
+    { data: abiertasData },
+    { data: ganadasMes },
+    vencidasGlobal,
+    otsHoy,
+    { data: facturables },
+  ] = await Promise.all([
     queryTareas,
     supabase
       .from("plantillas")
       .select("*")
       .in("uso", ["diagnostico:gx", "diagnostico:zumex", "precio:gx", "precio:zumex"])
       .order("nombre"),
+    supabase
+      .from("oportunidades")
+      .select("monto_estimado")
+      .in("etapa", ["nueva", "diagnostico", "cotizada", "seguimiento", "negociacion"]),
+    supabase
+      .from("oportunidades")
+      .select("monto_estimado")
+      .eq("etapa", "ganada")
+      .gte("closed_at", inicioMes),
+    supabase
+      .from("tareas")
+      .select("id", { count: "exact", head: true })
+      .is("completada_at", null)
+      .eq("cancelada", false)
+      .lt("vence_el", hoy),
+    supabase
+      .from("ordenes_trabajo")
+      .select("id", { count: "exact", head: true })
+      .in("estado", ["abierta", "en_proceso"])
+      .or(`fecha_programada.lte.${hoy},fecha_programada.is.null`),
+    supabase.from("ordenes_trabajo").select("total").eq("estado", "facturable"),
   ]);
 
   const tareas = (data ?? []) as unknown as Tarea[];
   const guiones = (guionesData ?? []) as Plantilla[];
+
+  const fmtMonto = (n: number) =>
+    n >= 1000000
+      ? "$" + (Math.round(n / 100000) / 10).toLocaleString("es-AR") + " M"
+      : "$" + new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(n);
+
+  const kpis = [
+    {
+      label: "Pipeline abierto",
+      valor: fmtMonto((abiertasData ?? []).reduce((s, o) => s + (o.monto_estimado ?? 0), 0)),
+      detalle: `${(abiertasData ?? []).length} oportunidades`,
+      href: "/pipeline",
+    },
+    {
+      label: "Vendido este mes",
+      valor: fmtMonto((ganadasMes ?? []).reduce((s, o) => s + (o.monto_estimado ?? 0), 0)),
+      detalle: `${(ganadasMes ?? []).length} ventas`,
+      href: "/reportes",
+    },
+    {
+      label: "Seguimientos vencidos",
+      valor: String(vencidasGlobal.count ?? 0),
+      detalle: "de todo el equipo",
+      href: "/hoy?vista=todas",
+      alerta: (vencidasGlobal.count ?? 0) > 0,
+    },
+    {
+      label: "Services de hoy",
+      valor: String(otsHoy.count ?? 0),
+      detalle: "abiertas o en proceso",
+      href: "/servicio",
+    },
+    {
+      label: "Por facturar",
+      valor: fmtMonto((facturables ?? []).reduce((s, o) => s + (o.total ?? 0), 0)),
+      detalle: `${(facturables ?? []).length} órdenes`,
+      href: "/servicio?f=facturar",
+      alerta: (facturables ?? []).length > 0,
+    },
+  ];
   const orden = { caliente: 0, tibio: 1, frio: 2 } as Record<string, number>;
   const porTemp = (a: Tarea, b: Tarea) =>
     (orden[a.oportunidad?.temperatura ?? "frio"] ?? 3) -
@@ -67,7 +137,7 @@ export default async function HoyPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Hoy</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Inicio</h1>
           <p className="text-sm text-piedra">
             {fecha.charAt(0).toUpperCase() + fecha.slice(1)}
           </p>
@@ -94,6 +164,26 @@ export default async function HoyPage({
             Todas
           </Link>
         </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 lg:gap-3">
+        {kpis.map((k) => (
+          <Link
+            key={k.label}
+            href={k.href}
+            className="rounded-2xl border border-borde bg-white p-3.5 shadow-sm transition-colors hover:border-celeste"
+          >
+            <p className="text-xs text-piedra">{k.label}</p>
+            <p
+              className={`mt-1 text-xl font-bold tracking-tight ${
+                k.alerta ? "text-red-600" : ""
+              }`}
+            >
+              {k.valor}
+            </p>
+            <p className="mt-0.5 text-[11px] text-piedra/80">{k.detalle}</p>
+          </Link>
+        ))}
       </div>
 
       {guiones.length > 0 && (

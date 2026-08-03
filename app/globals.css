@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
-/* Paleta GastroWare (misma que gastroware-web) — siempre modo claro */
+/* Tema v3 "GastroWare OS" — claro corporativo.
+   Los nombres de tokens se conservan (crema, tinta, piedra, borde, celeste-*)
+   pero ahora mapean a la paleta corporativa: grises limpios + azul de acento. */
 @theme {
-  --color-crema: #f1efe7;
-  --color-crema-deep: #e6e2d4;
-  --color-celeste: #a4daee;
-  --color-celeste-soft: #cdeaf6;
-  --color-celeste-deep: #6fc3e2;
-  --color-piedra: #897e7e;
-  --color-tinta: #111111;
-  --color-borde: #dcd7c8;
+  --color-crema: #f5f6f8;        /* fondo de página (gris muy claro) */
+  --color-crema-deep: #eceef1;   /* fondos secundarios / hover */
+  --color-celeste: #bcd7f5;      /* acento suave (bordes activos) */
+  --color-celeste-soft: #e9f1fb; /* fondos de acento (pill activa, banners) */
+  --color-celeste-deep: #2f6fce; /* acento fuerte (focus, bordes destacados) */
+  --color-piedra: #64707d;       /* texto secundario */
+  --color-tinta: #101828;        /* texto principal y acciones */
+  --color-borde: #e2e5e9;        /* bordes hairline */
 }
 
 @theme inline {
@@ -21,11 +23,11 @@
 }
 
 html {
-  background: #f1efe7;
+  background: #f5f6f8;
 }
 
 body {
-  background: #f1efe7;
-  color: #111111;
+  background: #f5f6f8;
+  color: #101828;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
