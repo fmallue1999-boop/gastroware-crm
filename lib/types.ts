@@ -100,6 +100,19 @@ export interface Producto {
   moneda: string;
   garantia_meses: number | null;
   activo: boolean;
+  descripcion: string | null;
+  destacados: string[];
+  imagen_url: string | null;
+}
+
+export interface CotizacionItem {
+  id: string;
+  version_id: string;
+  producto_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  precio_unit: number;
+  descuento_pct: number;
 }
 
 export interface Repuesto {
@@ -181,6 +194,7 @@ export interface CotizacionVersion {
   moneda: string;
   forma_pago: string | null;
   vigencia_dias: number | null;
+  condiciones: string | null;
   archivo_path: string | null;
   created_at: string;
 }

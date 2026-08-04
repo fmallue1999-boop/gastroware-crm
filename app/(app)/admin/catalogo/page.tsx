@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import ProductoFila from "@/components/admin/ProductoFila";
+import FichaProducto from "@/components/admin/FichaProducto";
+import AltaProducto from "@/components/admin/AltaProducto";
 import type { Producto } from "@/lib/types";
 
 export default async function AdminCatalogoPage() {
@@ -15,11 +17,14 @@ export default async function AdminCatalogoPage() {
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-piedra">
-        Precio de referencia y garantía de cada producto del catálogo. Los
-        cambios impactan en cotizaciones nuevas y en el cálculo de garantía de
-        equipos nuevos (los ya cargados no cambian).
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="max-w-xl text-sm text-piedra">
+          Precio, garantía y ficha de venta de cada producto. La ficha
+          (descripción, argumentos, imagen) alimenta el cotizador, la IA y el
+          catálogo público para la web.
+        </p>
+        <AltaProducto />
+      </div>
       {categorias.map((cat) => (
         <section key={cat}>
           <h2 className="mb-2 text-sm font-semibold capitalize text-tinta/80">
@@ -29,7 +34,10 @@ export default async function AdminCatalogoPage() {
             {productos
               .filter((p) => p.categoria === cat)
               .map((p) => (
-                <ProductoFila key={p.id} producto={p} />
+                <div key={p.id}>
+                  <ProductoFila producto={p} />
+                  <FichaProducto producto={p} />
+                </div>
               ))}
           </div>
         </section>

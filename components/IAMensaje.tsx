@@ -7,6 +7,11 @@ import { linkWhatsApp } from "@/lib/format";
 
 const OBJETIVOS = [
   { value: "retomar el contacto sin presionar", label: "Retomar contacto" },
+  {
+    value:
+      "presentar la cotización recién armada, destacando los puntos fuertes del producto (garantía, respaldo, argumentos de la ficha) sin repetir el precio más de una vez",
+    label: "Presentar cotización",
+  },
   { value: "hacer seguimiento de la cotización enviada", label: "Seguir cotización" },
   { value: "empujar el cierre con una propuesta concreta", label: "Empujar cierre" },
 ];

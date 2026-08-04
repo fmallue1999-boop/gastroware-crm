@@ -474,6 +474,13 @@ export async function guardarDiagnostico(
   return { ok: true };
 }
 
+export type ItemCotizacion = {
+  productoId: string | null;
+  descripcion: string;
+  cantidad: number;
+  precioUnit: number;
+};
+
 /** Registra una cotización nueva (o una nueva versión de la última). */
 export async function registrarCotizacion(input: {
   oportunidadId: string;
@@ -482,6 +489,8 @@ export async function registrarCotizacion(input: {
   forma_pago?: string;
   archivoPath?: string | null;
   notas?: string;
+  items?: ItemCotizacion[];
+  vigenciaDias?: number | null;
 }) {
   const supabase = await createClient();
   const user = await usuarioActual();
@@ -509,21 +518,47 @@ export async function registrarCotizacion(input: {
     cotizacionId = nueva.id;
   }
 
-  const { error: errV } = await supabase.from("cotizacion_versiones").insert({
-    cotizacion_id: cotizacionId,
-    version,
-    total: input.monto,
-    moneda: input.moneda,
-    forma_pago: input.forma_pago || null,
-    archivo_path: input.archivoPath ?? null,
-    condiciones: input.notas?.trim() || null,
-    creado_por: user?.id ?? null,
-  });
-  if (errV) return { error: errV.message };
+  // Con ítems del catálogo, el total se calcula solo; si no, vale el monto a mano
+  const items = (input.items ?? []).filter(
+    (i) => i.descripcion.trim() && i.cantidad > 0
+  );
+  const total = items.length
+    ? items.reduce((s, i) => s + i.cantidad * i.precioUnit, 0)
+    : input.monto;
+
+  const { data: ver, error: errV } = await supabase
+    .from("cotizacion_versiones")
+    .insert({
+      cotizacion_id: cotizacionId,
+      version,
+      total,
+      moneda: input.moneda,
+      forma_pago: input.forma_pago || null,
+      vigencia_dias: input.vigenciaDias ?? null,
+      archivo_path: input.archivoPath ?? null,
+      condiciones: input.notas?.trim() || null,
+      creado_por: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+  if (errV || !ver) return { error: errV?.message ?? "No se pudo crear la versión" };
+
+  if (items.length) {
+    const { error: errI } = await supabase.from("cotizacion_items").insert(
+      items.map((i) => ({
+        version_id: ver.id,
+        producto_id: i.productoId,
+        descripcion: i.descripcion.trim(),
+        cantidad: i.cantidad,
+        precio_unit: i.precioUnit,
+      }))
+    );
+    if (errI) return { error: errI.message };
+  }
 
   await supabase
     .from("oportunidades")
-    .update({ monto_estimado: input.monto, moneda: input.moneda })
+    .update({ monto_estimado: total, moneda: input.moneda })
     .eq("id", input.oportunidadId);
 
   return cambiarEtapa(input.oportunidadId, "cotizada");
@@ -1458,7 +1493,7 @@ export async function iaRedactarMensaje(
     supabase
       .from("oportunidades")
       .select(
-        "etapa, temperatura, origen, monto_estimado, moneda, mensaje_inicial, objecion_principal, diagnostico, created_at, cliente:clientes(nombre_comercial, rubro), producto:productos(nombre, precio_referencia, moneda)"
+        "etapa, temperatura, origen, monto_estimado, moneda, mensaje_inicial, objecion_principal, diagnostico, created_at, cliente:clientes(nombre_comercial, rubro), producto:productos(nombre, precio_referencia, moneda, descripcion, destacados, garantia_meses)"
       )
       .eq("id", oportunidadId)
       .single(),
@@ -1921,6 +1956,9 @@ export async function guardarProducto(
     moneda?: string;
     garantia_meses?: number | null;
     activo?: boolean;
+    descripcion?: string | null;
+    destacados?: string[];
+    imagen_url?: string | null;
   }
 ) {
   const supabase = await createClient();
@@ -1931,6 +1969,31 @@ export async function guardarProducto(
       .eq("id", productoId);
     if (error) return { error: error.message };
   }
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function crearProducto(input: {
+  nombre: string;
+  marca?: string;
+  categoria: string;
+  moneda: string;
+  precio_referencia?: number | null;
+  garantia_meses?: number | null;
+}) {
+  const rol = await rolActual();
+  if (!["direccion", "admin"].includes(rol)) return { error: "Sin permiso" };
+  if (!input.nombre.trim()) return { error: "Falta el nombre" };
+  const supabase = await createClient();
+  const { error } = await supabase.from("productos").insert({
+    nombre: input.nombre.trim(),
+    marca: input.marca?.trim() || null,
+    categoria: input.categoria || "otro",
+    moneda: input.moneda || "ARS",
+    precio_referencia: input.precio_referencia ?? null,
+    garantia_meses: input.garantia_meses ?? null,
+  });
+  if (error) return { error: error.message };
   revalidatePath("/", "layout");
   return { ok: true };
 }

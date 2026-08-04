@@ -21,6 +21,7 @@ import type {
   Cotizacion,
   Oportunidad,
   Plantilla,
+  Producto,
   Tarea,
 } from "@/lib/types";
 
@@ -47,7 +48,7 @@ export default async function OportunidadPage({
   if (!data) notFound();
   const opp = data as unknown as Oportunidad;
 
-  const [cotizacionesRes, tareasRes, plantillasRes, actividadesRes, materialesRes, equipoVendidoRes] =
+  const [cotizacionesRes, tareasRes, plantillasRes, actividadesRes, materialesRes, equipoVendidoRes, productosRes] =
     await Promise.all([
       supabase
         .from("cotizaciones")
@@ -78,6 +79,11 @@ export default async function OportunidadPage({
         .eq("oportunidad_id", id)
         .is("deleted_at", null)
         .maybeSingle(),
+      supabase
+        .from("productos")
+        .select("*")
+        .eq("activo", true)
+        .order("nombre"),
     ]);
 
   const cotizaciones = (cotizacionesRes.data ?? []) as Cotizacion[];
@@ -108,6 +114,7 @@ export default async function OportunidadPage({
     numero_serie: string | null;
     fecha_instalacion: string | null;
   } | null;
+  const productosCatalogo = (productosRes.data ?? []) as Producto[];
   const tareas = (tareasRes.data ?? []) as unknown as Tarea[];
   const plantillas = (plantillasRes.data ?? []) as Plantilla[];
   const actividades = (actividadesRes.data ?? []) as Actividad[];
@@ -372,22 +379,31 @@ export default async function OportunidadPage({
                   {v.forma_pago ? ` · ${v.forma_pago}` : ""}
                   <span className="text-piedra"> · {fechaCorta(v.created_at)}</span>
                 </span>
-                {v.archivoUrl && (
-                  <a
-                    href={v.archivoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 text-sky-700"
+                <span className="flex shrink-0 gap-2">
+                  <Link
+                    href={`/cotizacion/${v.cotizacion_id}?v=${v.version}`}
+                    className="text-sky-700"
                   >
-                    Ver PDF
-                  </a>
-                )}
+                    Imprimir
+                  </Link>
+                  {v.archivoUrl && (
+                    <a
+                      href={v.archivoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-700"
+                    >
+                      PDF
+                    </a>
+                  )}
+                </span>
               </div>
             );
           })}
           <CotizacionForm
             oportunidadId={opp.id}
             monedaDefault={opp.producto?.moneda ?? "ARS"}
+            productos={productosCatalogo}
             advertencia={
               faltaDiagnostico
                 ? esZumex
