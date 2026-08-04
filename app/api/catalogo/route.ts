@@ -14,12 +14,9 @@ export async function GET() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const { data, error } = await supabase
-    .from("productos")
-    .select("nombre, marca, categoria, descripcion, destacados, imagen_url, garantia_meses, es_consumible")
-    .eq("activo", true)
-    .order("categoria")
-    .order("nombre");
+  // fn_catalogo es security definer: devuelve solo la ficha pública
+  // (la tabla productos sigue cerrada para anónimos, precios incluidos)
+  const { data, error } = await supabase.rpc("fn_catalogo");
 
   if (error) {
     return NextResponse.json({ error: "No disponible" }, { status: 500 });
