@@ -55,8 +55,11 @@ export default function EtapaControl({
 
   return (
     <div className="rounded-2xl border border-borde bg-white shadow-sm p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-piedra/80 mb-2">
-        Etapa
+      <p className="text-xs font-semibold uppercase tracking-wide text-piedra/80">
+        Consulta abierta — ¿en qué está?
+      </p>
+      <p className="mb-2 mt-0.5 text-xs text-piedra/80">
+        Mientras esté en una de estas etapas, sigue viva: ni ganada ni perdida.
       </p>
       <div className="flex flex-wrap gap-1.5">
         {ETAPAS.filter((e) =>
@@ -81,21 +84,26 @@ export default function EtapaControl({
           La cadencia D+2 / D+5 / D+10 / D+20 se generó automáticamente.
         </p>
       )}
-      <div className="mt-3 flex gap-2 border-t border-crema-deep pt-3">
-        <button
-          onClick={() => mover("ganada")}
-          disabled={pending}
-          className="flex-1 rounded-2xl bg-green-600 py-2.5 text-sm font-medium text-white"
-        >
-          Ganada
-        </button>
-        <button
-          onClick={() => setEligiendoMotivo(!eligiendoMotivo)}
-          disabled={pending}
-          className="flex-1 rounded-2xl border border-borde py-2.5 text-sm text-tinta/70"
-        >
-          Perdida
-        </button>
+      <div className="mt-3 border-t border-crema-deep pt-3">
+        <p className="text-xs text-piedra/80">
+          Recién cuando el cliente se decide, cerrala acá:
+        </p>
+        <div className="mt-1.5 flex gap-2">
+          <button
+            onClick={() => mover("ganada")}
+            disabled={pending}
+            className="flex-1 rounded-2xl bg-green-600 py-2.5 text-sm font-medium text-white"
+          >
+            ✓ Me compró
+          </button>
+          <button
+            onClick={() => setEligiendoMotivo(!eligiendoMotivo)}
+            disabled={pending}
+            className="flex-1 rounded-2xl border border-borde py-2.5 text-sm text-tinta/70"
+          >
+            ✗ No se dio
+          </button>
+        </div>
       </div>
       {eligiendoMotivo && (
         <div className="mt-2 flex gap-2">
