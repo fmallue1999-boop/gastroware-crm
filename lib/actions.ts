@@ -1899,7 +1899,9 @@ export async function crearUsuario(input: {
     return { error: "Solo dirección o administración pueden crear usuarios" };
   if (rol === "admin" && ["direccion", "admin"].includes(input.rol))
     return { error: "Solo dirección puede crear usuarios de dirección o administración" };
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Las claves nunca llevan espacios: si el copy/paste en Vercel metió un
+  // salto de línea o espacio, lo limpiamos en vez de fallar con un header inválido
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
   if (!serviceKey)
     return {
       error:

@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!.replace(/\s+/g, "")
   );
 
   const hoy = new Date().toLocaleDateString("en-CA", {
