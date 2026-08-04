@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileText, History } from "lucide-react";
+import { ClipboardCheck, FileText, History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl, firmarUrls } from "@/lib/core/storage";
 import { fechaCorta, dinero, hoyISO } from "@/lib/format";
@@ -231,6 +231,16 @@ export default async function OTPage({
           className="flex items-center justify-center gap-2 rounded-2xl border border-borde bg-white py-3 text-center text-sm font-medium shadow-sm"
         >
           <FileText className="h-4 w-4" /> Ver informe de service
+        </Link>
+      )}
+
+      {(checklists ?? []).length > 0 && (
+        <Link
+          href={`/inspeccion/${ot.id}`}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-borde bg-white py-3 text-center text-sm font-medium shadow-sm"
+        >
+          <ClipboardCheck className="h-4 w-4" /> Hoja de inspección para el
+          cliente
         </Link>
       )}
 

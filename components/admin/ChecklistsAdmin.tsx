@@ -87,7 +87,12 @@ function Formulario({
         />
         <p className="mt-1 text-xs text-piedra">
           Un paso por línea. Cuando se cree una orden para un equipo de ese
-          modelo, el técnico va a ver estos pasos para tildar.
+          modelo, el técnico va a ver estos pasos para tildar. Para listas de
+          inspección tipo Rational: empezá una línea con <b>##&nbsp;</b> para un
+          título de sección (los ítems pasan a responderse SÍ/NO con
+          comentario) y con <b>=&nbsp;</b> para un campo de medición (ej:
+          presión de agua). Esas listas se imprimen para el cliente desde la
+          orden.
         </p>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}

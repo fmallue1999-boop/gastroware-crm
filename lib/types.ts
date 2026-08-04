@@ -349,7 +349,7 @@ export interface OTChecklist {
   id: string;
   ot_id: string;
   plantilla_id: string | null;
-  respuestas: Record<string, boolean>;
+  respuestas: Record<string, import("./checklist").RespuestaChecklist>;
   plantilla?: ChecklistPlantilla | null;
 }
 
