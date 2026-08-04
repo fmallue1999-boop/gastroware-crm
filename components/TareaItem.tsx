@@ -5,6 +5,7 @@ import Link from "next/link";
 import { completarTarea, posponerTarea, crearTarea } from "@/lib/actions";
 import { linkWhatsApp, rellenarPlantilla, fechaCorta } from "@/lib/format";
 import { TempBadge, ProductoBadge } from "@/components/Badges";
+import PosponerPanel from "@/components/PosponerPanel";
 import type { Tarea } from "@/lib/types";
 
 export const RESULTADOS = [
@@ -13,11 +14,6 @@ export const RESULTADOS = [
   "Pidió financiación",
   "Quedó en avisar",
 ] as const;
-
-export function diasHastaLunes(): number {
-  const dow = new Date().getDay();
-  return (8 - dow) % 7 || 7;
-}
 
 export default function TareaItem({
   tarea,
@@ -65,9 +61,9 @@ export default function TareaItem({
     });
   }
 
-  function posponer(dias: number) {
+  function posponer(hasta: number | string, motivo?: string) {
     startTransition(async () => {
-      await posponerTarea(tarea.id, dias);
+      await posponerTarea(tarea.id, hasta, motivo);
       setPosponiendo(false);
     });
   }
@@ -164,20 +160,11 @@ export default function TareaItem({
           </button>
         </div>
       ) : posponiendo ? (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <button onClick={() => posponer(1)} disabled={pending} className="rounded-full border border-borde px-3 py-1.5 text-xs">
-            Mañana
-          </button>
-          <button onClick={() => posponer(2)} disabled={pending} className="rounded-full border border-borde px-3 py-1.5 text-xs">
-            En 2 días
-          </button>
-          <button onClick={() => posponer(diasHastaLunes())} disabled={pending} className="rounded-full border border-borde px-3 py-1.5 text-xs">
-            El lunes
-          </button>
-          <button onClick={() => setPosponiendo(false)} className="rounded-full px-2 py-1.5 text-xs text-piedra">
-            ✕
-          </button>
-        </div>
+        <PosponerPanel
+          pending={pending}
+          onElegir={posponer}
+          onCerrar={() => setPosponiendo(false)}
+        />
       ) : (
         <div className="mt-2 flex flex-wrap gap-2">
           {mensaje && cliente?.telefono && (

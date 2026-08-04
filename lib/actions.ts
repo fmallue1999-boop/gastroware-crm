@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
-import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde } from "@/lib/format";
+import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde, fechaCorta } from "@/lib/format";
 import { CADENCIA_COTIZACION } from "@/lib/constants";
 import type { Cliente, Etapa } from "@/lib/types";
 
@@ -373,12 +373,44 @@ export async function completarTarea(tareaId: string, resultado?: string) {
   };
 }
 
-export async function posponerTarea(tareaId: string, dias: number) {
+/**
+ * Pospone una tarea: `hasta` puede ser una cantidad de días (+3, +7…) o una
+ * fecha exacta "YYYY-MM-DD" elegida en el calendario. Si viene un motivo
+ * ("está de vacaciones"), queda registrado en el historial del cliente.
+ */
+export async function posponerTarea(
+  tareaId: string,
+  hasta: number | string,
+  motivo?: string
+) {
   const supabase = await createClient();
-  await supabase
+  const vence = typeof hasta === "number" ? sumarDias(hasta) : hasta;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(vence) || vence < hoyISO())
+    return { error: "Elegí una fecha de hoy en adelante" };
+
+  const { error } = await supabase
     .from("tareas")
-    .update({ vence_el: sumarDias(dias) })
+    .update({ vence_el: vence })
     .eq("id", tareaId);
+  if (error) return { error: error.message };
+
+  if (motivo?.trim()) {
+    const user = await usuarioActual();
+    const { data: tarea } = await supabase
+      .from("tareas")
+      .select("cliente_id, oportunidad_id, titulo")
+      .eq("id", tareaId)
+      .single();
+    if (tarea)
+      await supabase.from("actividades").insert({
+        cliente_id: tarea.cliente_id,
+        oportunidad_id: tarea.oportunidad_id,
+        tipo: "nota",
+        contenido: `Seguimiento pospuesto al ${fechaCorta(vence)}: ${motivo.trim()}`,
+        created_by: user?.id ?? null,
+      });
+  }
+
   revalidatePath("/", "layout");
   return { ok: true };
 }

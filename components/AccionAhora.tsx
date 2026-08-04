@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completarTarea, posponerTarea, crearTarea } from "@/lib/actions";
 import { linkWhatsApp, rellenarPlantilla, fechaCorta, hoyISO } from "@/lib/format";
-import { RESULTADOS, diasHastaLunes } from "@/components/TareaItem";
+import { RESULTADOS } from "@/components/TareaItem";
+import PosponerPanel from "@/components/PosponerPanel";
 import type { Tarea } from "@/lib/types";
 
 export function AccionAhora({
@@ -107,28 +108,17 @@ export function AccionAhora({
       </div>
 
       {posponiendo ? (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {[
-            { l: "Mañana", d: 1 },
-            { l: "En 2 días", d: 2 },
-            { l: "El lunes", d: diasHastaLunes() },
-          ].map((o) => (
-            <button
-              key={o.l}
-              onClick={() =>
-                startTransition(async () => {
-                  await posponerTarea(tarea.id, o.d);
-                  setPosponiendo(false);
-                  router.refresh();
-                })
-              }
-              disabled={pending}
-              className="rounded-full border border-borde px-3 py-1.5 text-xs"
-            >
-              {o.l}
-            </button>
-          ))}
-        </div>
+        <PosponerPanel
+          pending={pending}
+          onElegir={(hasta, motivo) =>
+            startTransition(async () => {
+              await posponerTarea(tarea.id, hasta, motivo);
+              setPosponiendo(false);
+              router.refresh();
+            })
+          }
+          onCerrar={() => setPosponiendo(false)}
+        />
       ) : (
         <button
           onClick={() => setPosponiendo(true)}
