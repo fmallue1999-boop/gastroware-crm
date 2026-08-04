@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrls } from "@/lib/core/storage";
+import { iaConfigurada } from "@/lib/core/ia";
+import IAResumenCliente from "@/components/IAResumenCliente";
 import { fechaCorta, linkWhatsApp, dinero, diasDesde, hoyISO } from "@/lib/format";
 import { ESTADOS_OT } from "@/lib/constants";
 import { EtapaBadge, TempBadge, ProductoBadge } from "@/components/Badges";
@@ -155,6 +157,8 @@ export default async function ClientePage({
         </div>
         {c.notas && <p className="mt-2 text-sm text-tinta/70">{c.notas}</p>}
       </header>
+
+      {iaConfigurada() && <IAResumenCliente clienteId={c.id} />}
 
       <DatosClienteForm cliente={c} />
 

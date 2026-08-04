@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl } from "@/lib/core/storage";
+import { iaConfigurada } from "@/lib/core/ia";
+import IAMensaje from "@/components/IAMensaje";
 import { fechaCorta, dinero, rellenarPlantilla, diasDesde, hoyISO } from "@/lib/format";
 import { EtapaBadge } from "@/components/Badges";
 import EtapaControl from "@/components/EtapaControl";
@@ -221,6 +223,13 @@ export default async function OportunidadPage({
             {diasSinMovimiento} días
           </p>
         </div>
+      )}
+
+      {!cerrada && iaConfigurada() && (
+        <IAMensaje
+          oportunidadId={opp.id}
+          telefono={opp.cliente?.telefono ?? null}
+        />
       )}
 
       {cerrada ? (

@@ -9,6 +9,8 @@ import { EstadoOTBadge, PrioridadBadge } from "@/components/Badges";
 import OTTrabajo from "@/components/OTTrabajo";
 import OTAdminControl from "@/components/OTAdminControl";
 import ChecklistsOT from "@/components/ChecklistsOT";
+import IAInformeOT from "@/components/IAInformeOT";
+import { iaConfigurada } from "@/lib/core/ia";
 import type {
   OrdenTrabajo,
   OTChecklist,
@@ -211,6 +213,10 @@ export default async function OTPage({
           )}
         </div>
       </section>
+
+      {iaConfigurada() && (esGestor || esTecnicoAsignado) && (
+        <IAInformeOT otId={ot.id} />
+      )}
 
       <OTAdminControl
         ot={ot}

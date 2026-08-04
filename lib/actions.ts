@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { hoyISO, sumarDias, sumarMeses, normalizarTelefono } from "@/lib/format";
+import { consultarIA } from "@/lib/core/ia";
+import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde } from "@/lib/format";
 import { CADENCIA_COTIZACION } from "@/lib/constants";
 import type { Cliente, Etapa } from "@/lib/types";
 
@@ -1439,6 +1440,188 @@ export async function setNoContactar(clienteId: string, valor: boolean) {
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+// =====================================================================
+// IA (borradores con vista previa; ver reglas en lib/core/ia.ts)
+// =====================================================================
+
+export async function iaRedactarMensaje(
+  oportunidadId: string,
+  objetivo: string
+) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  // Contexto acotado: SOLO esta oportunidad (RLS filtra por el usuario)
+  const [{ data: opp }, { data: actividades }] = await Promise.all([
+    supabase
+      .from("oportunidades")
+      .select(
+        "etapa, temperatura, origen, monto_estimado, moneda, mensaje_inicial, objecion_principal, diagnostico, created_at, cliente:clientes(nombre_comercial, rubro), producto:productos(nombre, precio_referencia, moneda)"
+      )
+      .eq("id", oportunidadId)
+      .single(),
+    supabase
+      .from("actividades")
+      .select("tipo, contenido, created_at")
+      .eq("oportunidad_id", oportunidadId)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+  if (!opp) return { error: "Oportunidad no encontrada" };
+
+  const contexto = JSON.stringify({
+    cliente: opp.cliente,
+    producto: opp.producto,
+    etapa: opp.etapa,
+    temperatura: opp.temperatura,
+    origen: opp.origen,
+    monto_cotizado: opp.monto_estimado
+      ? `${opp.moneda} ${opp.monto_estimado}`
+      : null,
+    objecion: opp.objecion_principal,
+    diagnostico: opp.diagnostico,
+    consulta_inicial: opp.mensaje_inicial,
+    dias_desde_alta: diasDesde(opp.created_at),
+    ultimas_actividades: actividades,
+  });
+
+  const res = await consultarIA<{ mensaje: string; fuentes: string[] }>({
+    supabase,
+    usuarioId: user?.id ?? null,
+    funcion: "mensaje_oportunidad",
+    instrucciones: `Redactá UN mensaje de WhatsApp corto (3 a 6 líneas) para este cliente, con objetivo: ${objetivo}. Personalizado con su nombre, su rubro y lo que se habló. Terminá con una pregunta concreta que invite a responder. Sin saludos larguísimos ni formalidad excesiva.`,
+    contexto,
+    esquema: {
+      type: "object",
+      properties: {
+        mensaje: { type: "string" },
+        fuentes: { type: "array", items: { type: "string" } },
+      },
+      required: ["mensaje", "fuentes"],
+      additionalProperties: false,
+    },
+  });
+  return res.ok ? { ok: true, ...res.datos } : { error: res.error };
+}
+
+export async function iaResumenCliente(clienteId: string) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  const [cliente, equipos, opps, acts, ots] = await Promise.all([
+    supabase
+      .from("clientes")
+      .select("nombre_comercial, rubro, estado, potencial, notas, created_at")
+      .eq("id", clienteId)
+      .single(),
+    supabase
+      .from("equipos")
+      .select("numero_serie, origen, estado, garantia_hasta, fecha_venta, producto:productos(nombre), marca_modelo_libre")
+      .eq("cliente_id", clienteId)
+      .is("deleted_at", null),
+    supabase
+      .from("oportunidades")
+      .select("etapa, monto_estimado, moneda, motivo_perdida, created_at, producto:productos(nombre)")
+      .eq("cliente_id", clienteId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("actividades")
+      .select("tipo, contenido, created_at")
+      .eq("cliente_id", clienteId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("ordenes_trabajo")
+      .select("numero, estado, tipo, problema, created_at")
+      .eq("cliente_id", clienteId)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+  if (!cliente.data) return { error: "Cliente no encontrado" };
+
+  const contexto = JSON.stringify({
+    cliente: cliente.data,
+    equipos: equipos.data,
+    oportunidades: opps.data,
+    actividades_recientes: acts.data,
+    ordenes_servicio: ots.data,
+    hoy: hoyISO(),
+  });
+
+  const res = await consultarIA<{
+    resumen: string[];
+    alertas: string[];
+    proxima_accion: string;
+    fuentes: string[];
+  }>({
+    supabase,
+    usuarioId: user?.id ?? null,
+    funcion: "resumen_cliente",
+    instrucciones: `Armá el resumen ejecutivo de este cliente para un vendedor que lo va a llamar en 2 minutos: "resumen" con 3 a 5 puntos clave de la relación (qué compró, qué consulta, cómo viene), "alertas" con riesgos u oportunidades concretas (garantías por vencer, consultas sin responder, servicio pendiente; lista vacía si no hay), y "proxima_accion" con UNA acción recomendada, específica.`,
+    contexto,
+    esquema: {
+      type: "object",
+      properties: {
+        resumen: { type: "array", items: { type: "string" } },
+        alertas: { type: "array", items: { type: "string" } },
+        proxima_accion: { type: "string" },
+        fuentes: { type: "array", items: { type: "string" } },
+      },
+      required: ["resumen", "alertas", "proxima_accion", "fuentes"],
+      additionalProperties: false,
+    },
+  });
+  return res.ok ? { ok: true, ...res.datos } : { error: res.error };
+}
+
+export async function iaInformeOT(otId: string) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  const [{ data: ot }, { data: items }, { data: tiempos }] = await Promise.all([
+    supabase
+      .from("ordenes_trabajo")
+      .select(
+        "numero, tipo, cobertura, problema, diagnostico, trabajo_realizado, equipo:equipos(numero_serie, marca_modelo_libre, producto:productos(nombre))"
+      )
+      .eq("id", otId)
+      .single(),
+    supabase.from("ot_items").select("descripcion, cantidad, estado").eq("ot_id", otId),
+    supabase.from("ot_tiempos").select("minutos, justificacion").eq("ot_id", otId),
+  ]);
+  if (!ot) return { error: "Orden no encontrada" };
+  if (!ot.diagnostico && !ot.trabajo_realizado && !ot.problema)
+    return { error: "La orden todavía no tiene notas del técnico para redactar." };
+
+  const contexto = JSON.stringify({
+    orden: ot,
+    repuestos_usados: items,
+    tiempos,
+  });
+
+  const res = await consultarIA<{
+    diagnostico: string;
+    trabajo_realizado: string;
+  }>({
+    supabase,
+    usuarioId: user?.id ?? null,
+    funcion: "informe_ot",
+    instrucciones: `Convertí las notas crudas del técnico en un informe profesional para el comprobante que ve el cliente: "diagnostico" (qué se encontró, 1-3 oraciones claras) y "trabajo_realizado" (qué se hizo, en orden, mencionando repuestos usados). Nada técnico-críptico: que el dueño del negocio lo entienda. No inventes trabajos ni repuestos que no estén en las notas.`,
+    contexto,
+    esquema: {
+      type: "object",
+      properties: {
+        diagnostico: { type: "string" },
+        trabajo_realizado: { type: "string" },
+      },
+      required: ["diagnostico", "trabajo_realizado"],
+      additionalProperties: false,
+    },
+  });
+  return res.ok ? { ok: true, ...res.datos } : { error: res.error };
 }
 
 // =====================================================================

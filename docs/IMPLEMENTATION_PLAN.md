@@ -80,7 +80,18 @@
 - Canal email: modelado en el esquema, se activa cuando exista RESEND_API_KEY
   + DNS (sin UI hasta entonces — regla de no simular).
 
-## Etapa 6 — IA (M + API key)
+## Etapa 6 — IA (M + API key) ✅ construida (se enciende al pegar ANTHROPIC_API_KEY)
+- lib/core/ia.ts (claude-opus-5, salidas validadas con json_schema, registro en
+  ia_usos, límite diario en config, migración 010). La IA solo recibe datos que
+  el usuario ya puede ver (queries con la sesión del usuario → RLS filtra),
+  contexto acotado por función (nunca la base entera), cita fuentes, y todo es
+  borrador con vista previa: nada se envía ni guarda sin aprobación humana.
+- Funciones: mensaje de WhatsApp a medida (oportunidad), resumen ejecutivo con
+  alertas (ficha cliente), informe técnico prolijo (OT, con aprobar-y-usar).
+- Admin → IA: estado, guía de activación, límite diario editable, uso y costo
+  estimado del mes por función.
+
+## (Referencia original Etapa 6)
 - Base de conocimiento (pgvector), asistente con permisos previos a la
   recuperación, citas de fuente obligatorias, acciones con vista previa y
   aprobación, límites de costo y registro. BLOQUEANTE: API key de Anthropic
