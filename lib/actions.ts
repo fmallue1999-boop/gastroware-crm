@@ -1221,6 +1221,227 @@ export async function importarClientes(
 }
 
 // =====================================================================
+// Marketing: segmentos dinámicos + campañas WhatsApp asistidas
+// =====================================================================
+
+export type FiltrosSegmento = {
+  estados?: string[];
+  rubros?: string[];
+  marca?: string;
+  ciudad?: string;
+  dormidoMeses?: number | null;
+  garantiaDias?: number | null;
+  conRecurrencia?: boolean;
+};
+
+type ClienteSegmento = {
+  id: string;
+  nombre_comercial: string;
+  telefono: string | null;
+  email: string | null;
+};
+
+async function evaluarSegmento(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filtros: FiltrosSegmento
+): Promise<ClienteSegmento[]> {
+  let q = supabase
+    .from("clientes")
+    .select("id, nombre_comercial, telefono, email, sucursales(ciudad)")
+    .is("deleted_at", null)
+    .eq("no_contactar", false)
+    .limit(5000);
+  if (filtros.estados?.length) q = q.in("estado", filtros.estados);
+  if (filtros.rubros?.length) q = q.in("rubro", filtros.rubros);
+
+  const { data } = await q;
+  type Fila = ClienteSegmento & { sucursales?: { ciudad: string | null }[] };
+  let lista = (data ?? []) as Fila[];
+
+  if (filtros.ciudad?.trim()) {
+    const c = filtros.ciudad.trim().toLowerCase();
+    lista = lista.filter((f) =>
+      (f.sucursales ?? []).some((s) => (s.ciudad ?? "").toLowerCase().includes(c))
+    );
+  }
+
+  if (filtros.marca?.trim()) {
+    const m = filtros.marca.trim().toLowerCase();
+    const { data: eqs } = await supabase
+      .from("equipos")
+      .select("cliente_id, marca_modelo_libre, producto:productos(marca, nombre), modelo:modelos(marca)")
+      .is("deleted_at", null)
+      .limit(10000);
+    const con = new Set(
+      (eqs ?? [])
+        .filter((e) => {
+          const marcas = [
+            (e.producto as unknown as { marca: string | null } | null)?.marca,
+            (e.producto as unknown as { nombre: string | null } | null)?.nombre,
+            (e.modelo as unknown as { marca: string | null } | null)?.marca,
+            e.marca_modelo_libre,
+          ];
+          return marcas.some((x) => (x ?? "").toLowerCase().includes(m));
+        })
+        .map((e) => e.cliente_id as string)
+    );
+    lista = lista.filter((f) => con.has(f.id));
+  }
+
+  if (filtros.garantiaDias) {
+    const { data: eqs } = await supabase
+      .from("equipos")
+      .select("cliente_id, garantia_hasta")
+      .is("deleted_at", null)
+      .gte("garantia_hasta", hoyISO())
+      .lte("garantia_hasta", sumarDias(filtros.garantiaDias))
+      .limit(10000);
+    const con = new Set((eqs ?? []).map((e) => e.cliente_id as string));
+    lista = lista.filter((f) => con.has(f.id));
+  }
+
+  if (filtros.conRecurrencia) {
+    const { data: recs } = await supabase
+      .from("recurrencias")
+      .select("cliente_id")
+      .eq("activa", true)
+      .limit(10000);
+    const con = new Set((recs ?? []).map((r) => r.cliente_id as string));
+    lista = lista.filter((f) => con.has(f.id));
+  }
+
+  if (filtros.dormidoMeses) {
+    const corte = sumarDias(-30 * filtros.dormidoMeses);
+    const { data: acts } = await supabase
+      .from("actividades")
+      .select("cliente_id")
+      .gte("created_at", corte)
+      .limit(20000);
+    const activos = new Set((acts ?? []).map((a) => a.cliente_id as string));
+    lista = lista.filter((f) => !activos.has(f.id));
+  }
+
+  return lista.map(({ id, nombre_comercial, telefono, email }) => ({
+    id,
+    nombre_comercial,
+    telefono,
+    email,
+  }));
+}
+
+export async function previewSegmento(filtros: FiltrosSegmento) {
+  const supabase = await createClient();
+  const lista = await evaluarSegmento(supabase, filtros);
+  const conTelefono = lista.filter((c) => c.telefono).length;
+  return {
+    total: lista.length,
+    conTelefono,
+    muestra: lista.slice(0, 5).map((c) => c.nombre_comercial),
+  };
+}
+
+export async function crearCampania(input: {
+  nombre: string;
+  filtros: FiltrosSegmento;
+  plantilla: string;
+}) {
+  const rol = await rolActual();
+  if (!["direccion", "admin", "marketing"].includes(rol))
+    return { error: "Sin permiso para crear campañas" };
+  if (!input.nombre.trim()) return { error: "Falta el nombre de la campaña" };
+  if (!input.plantilla.trim()) return { error: "Falta el mensaje" };
+
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const lista = (await evaluarSegmento(supabase, input.filtros)).filter(
+    (c) => c.telefono
+  );
+  if (lista.length === 0)
+    return { error: "El segmento no tiene clientes con teléfono. Ajustá los filtros." };
+
+  const { data: camp, error } = await supabase
+    .from("campanias")
+    .insert({
+      nombre: input.nombre.trim(),
+      canal: "whatsapp",
+      filtros: input.filtros,
+      plantilla: input.plantilla.trim(),
+      creado_por: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+  if (error || !camp) return { error: error?.message ?? "No se pudo crear" };
+
+  const { error: errDest } = await supabase.from("campania_destinatarios").insert(
+    lista.map((c) => ({ campania_id: camp.id, cliente_id: c.id }))
+  );
+  if (errDest) return { error: errDest.message };
+
+  revalidatePath("/", "layout");
+  redirect(`/marketing/${camp.id}`);
+}
+
+export async function marcarDestinatario(
+  destinatarioId: string,
+  estado: "enviado" | "salteado"
+) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: dest, error } = await supabase
+    .from("campania_destinatarios")
+    .update({
+      estado,
+      enviado_at: estado === "enviado" ? new Date().toISOString() : null,
+      enviado_por: user?.id ?? null,
+    })
+    .eq("id", destinatarioId)
+    .select("campania_id, cliente_id")
+    .single();
+  if (error || !dest) return { error: error?.message ?? "No se pudo marcar" };
+
+  if (estado === "enviado") {
+    const { data: camp } = await supabase
+      .from("campanias")
+      .select("nombre")
+      .eq("id", dest.campania_id)
+      .single();
+    await supabase.from("actividades").insert({
+      cliente_id: dest.cliente_id,
+      tipo: "nota",
+      contenido: `Campaña "${camp?.nombre ?? ""}": mensaje enviado por WhatsApp`,
+      created_by: user?.id ?? null,
+    });
+  }
+
+  // ¿Quedan pendientes? Si no, la campaña se cierra sola.
+  const { count } = await supabase
+    .from("campania_destinatarios")
+    .select("id", { count: "exact", head: true })
+    .eq("campania_id", dest.campania_id)
+    .eq("estado", "pendiente");
+  if ((count ?? 0) === 0) {
+    await supabase
+      .from("campanias")
+      .update({ estado: "terminada" })
+      .eq("id", dest.campania_id);
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function setNoContactar(clienteId: string, valor: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clientes")
+    .update({ no_contactar: valor })
+    .eq("id", clienteId);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// =====================================================================
 // Checklists
 // =====================================================================
 

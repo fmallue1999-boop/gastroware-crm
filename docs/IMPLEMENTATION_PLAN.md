@@ -65,10 +65,20 @@
 - ⏸ UI de conversaciones: se hace cuando el canal de WhatsApp esté activo y
   haya datos reales (regla: sin pantallas vacías simuladas).
 
-## Etapa 5 — Marketing (M)
-- Segmentos dinámicos, plantillas, campañas con outbox (límites, dedup, pausa),
-  automáticas (posventa, garantía por vencer, sin mantenimiento, dormidos),
-  métricas, consentimientos y baja con exclusión automática.
+## Etapa 5 — Marketing (M) ✅ (adaptada a WhatsApp manual)
+- Campañas WhatsApp ASISTIDAS (decisión de Franco: sin API, sin scraping): el
+  segmento se arma con filtros dinámicos (estado, rubro, marca de equipo,
+  dormidos según config, garantía por vencer 60d, consumibles, ciudad) con
+  preview de alcance; el mensaje con {nombre} se manda cliente por cliente
+  desde el WhatsApp del operario (cola con progreso, enviado/salteado,
+  actividad registrada, cierre automático). Migración 009.
+- Exclusión y baja: clientes.no_contactar (toggle en la ficha) excluye de todo
+  segmento, siempre.
+- Automáticas: garantía por vencer (30 días) crea tarea única por equipo
+  (tareas.equipo_id) en el cron diario; recompra de consumibles ya existía;
+  posventa ya existía (check-ins al ganar).
+- Canal email: modelado en el esquema, se activa cuando exista RESEND_API_KEY
+  + DNS (sin UI hasta entonces — regla de no simular).
 
 ## Etapa 6 — IA (M + API key)
 - Base de conocimiento (pgvector), asistente con permisos previos a la

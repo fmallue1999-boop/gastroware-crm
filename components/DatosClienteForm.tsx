@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil } from "lucide-react";
-import { actualizarCliente } from "@/lib/actions";
+import { BellOff, Pencil } from "lucide-react";
+import { actualizarCliente, setNoContactar } from "@/lib/actions";
 import { telefonoProlijo } from "@/lib/format";
 import { CONDICIONES_FISCALES } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
@@ -76,6 +76,26 @@ export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
             Faltan datos fiscales: los necesitás para facturar en ZEUS.
           </p>
         )}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            startTransition(
+              async () =>
+                void (await setNoContactar(cliente.id, !cliente.no_contactar))
+            )
+          }
+          className={`mt-2 inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs ${
+            cliente.no_contactar
+              ? "bg-red-100 font-medium text-red-700"
+              : "border border-borde text-piedra hover:bg-crema"
+          }`}
+        >
+          <BellOff className="h-3 w-3" />
+          {cliente.no_contactar
+            ? "No contactar (excluido de campañas) — tocá para reactivar"
+            : "Marcar como no contactar"}
+        </button>
       </section>
     );
   }

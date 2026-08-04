@@ -15,6 +15,7 @@ import {
   BookOpen,
   Settings,
   ShieldCheck,
+  Megaphone,
   Plus,
   type LucideIcon,
 } from "lucide-react";
@@ -38,6 +39,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       grupo: "Análisis",
       items: [
         { href: "/reportes", label: "Reportes", icono: TrendingUp },
+        { href: "/marketing", label: "Marketing", icono: Megaphone },
       ],
     },
     {
@@ -86,8 +88,24 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
 // Mapeo de roles nuevos a secciones
 SECCIONES.direccion = SECCIONES.admin;
 SECCIONES.comercial = SECCIONES.vendedor;
-SECCIONES.marketing = SECCIONES.vendedor;
 SECCIONES.distribuidor = SECCIONES.vendedor;
+SECCIONES.marketing = [
+  {
+    grupo: "Operación",
+    items: [
+      { href: "/hoy", label: "Inicio", icono: Sun },
+      { href: "/marketing", label: "Marketing", icono: Megaphone },
+      { href: "/clientes", label: "Clientes", icono: Users },
+    ],
+  },
+  {
+    grupo: "Herramientas",
+    items: [
+      { href: "/biblioteca", label: "Biblioteca", icono: BookOpen },
+      { href: "/mas", label: "Configuración", icono: Settings },
+    ],
+  },
+];
 
 export default function Sidebar({
   rol = "comercial",

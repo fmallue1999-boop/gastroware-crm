@@ -55,5 +55,47 @@ export async function GET(request: Request) {
     creadas++;
   }
 
-  return NextResponse.json({ ok: true, creadas });
+  // --- Garantías por vencer (30 días): una tarea por equipo, sin repetir ---
+  const en30 = new Date(hoy + "T12:00:00");
+  en30.setDate(en30.getDate() + 30);
+  const hasta = en30.toLocaleDateString("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
+
+  const { data: porVencer } = await supabase
+    .from("equipos")
+    .select(
+      "id, cliente_id, comercial_id, garantia_hasta, numero_serie, producto:productos(nombre), marca_modelo_libre"
+    )
+    .is("deleted_at", null)
+    .gte("garantia_hasta", hoy)
+    .lte("garantia_hasta", hasta);
+
+  let avisosGarantia = 0;
+  for (const eq of porVencer ?? []) {
+    // Dedup: ¿ya existe una tarea de garantía para este equipo?
+    const { count } = await supabase
+      .from("tareas")
+      .select("id", { count: "exact", head: true })
+      .eq("equipo_id", eq.id)
+      .eq("tipo", "garantia");
+    if ((count ?? 0) > 0) continue;
+
+    const nombreEq =
+      (eq.producto as unknown as { nombre: string } | null)?.nombre ??
+      eq.marca_modelo_libre ??
+      "equipo";
+    await supabase.from("tareas").insert({
+      cliente_id: eq.cliente_id,
+      equipo_id: eq.id,
+      usuario_id: eq.comercial_id ?? null,
+      tipo: "garantia",
+      titulo: `Garantía de ${nombreEq}${eq.numero_serie ? ` (serie ${eq.numero_serie})` : ""} vence el ${eq.garantia_hasta} — ofrecer service/plan`,
+      vence_el: hoy,
+      auto: true,
+    });
+    avisosGarantia++;
+  }
+
+  return NextResponse.json({ ok: true, creadas, avisosGarantia });
 }

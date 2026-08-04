@@ -47,6 +47,7 @@ export interface Cliente {
   comercial_id: string | null;
   distribuidor_id: string | null;
   notas: string | null;
+  no_contactar: boolean;
   deleted_at: string | null;
   created_at: string;
   /** Derivado en queries: ciudad de la sucursal principal (no es columna de la tabla) */

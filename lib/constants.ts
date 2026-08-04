@@ -12,6 +12,12 @@ export const RUBROS = [
   "Otro",
 ] as const;
 
+export const ESTADOS_CLIENTE = [
+  { value: "prospecto", label: "Prospectos" },
+  { value: "cliente_activo", label: "Clientes activos" },
+  { value: "inactivo", label: "Inactivos" },
+] as const;
+
 export const ORIGENES = [
   "WhatsApp",
   "Instagram",
