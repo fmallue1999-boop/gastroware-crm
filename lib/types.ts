@@ -180,6 +180,7 @@ export interface Oportunidad {
   mensaje_inicial: string | null;
   pedido_estado: PedidoEstado | null;
   entregado_at: string | null;
+  nro_factura: string | null;
   created_at: string;
   closed_at: string | null;
   cliente?: Cliente;

@@ -650,6 +650,68 @@ export async function avanzarPedido(
   return { ok: true };
 }
 
+/**
+ * Cierra el paso "Emitir factura" del pedido: guarda el número de factura
+ * en la venta y, si la venta incluye un equipo, su número de serie (queda
+ * anexado al equipo del cliente). Después pasa el pedido a pendiente de pago.
+ */
+export async function facturarPedido(
+  oportunidadId: string,
+  nroFactura: string,
+  numeroSerie?: string
+) {
+  if (!nroFactura.trim()) return { error: "Falta el número de factura" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: opp } = await supabase
+    .from("oportunidades")
+    .select("cliente_id, etapa")
+    .eq("id", oportunidadId)
+    .single();
+  if (!opp) return { error: "Oportunidad no encontrada" };
+  if (opp.etapa !== "ganada")
+    return { error: "El pedido se factura una vez ganada la venta" };
+
+  const serie = numeroSerie?.trim();
+  if (serie) {
+    const { data: equipo } = await supabase
+      .from("equipos")
+      .select("id, numero_serie")
+      .eq("oportunidad_id", oportunidadId)
+      .maybeSingle();
+    if (equipo && !equipo.numero_serie) {
+      const { error: errSerie } = await supabase
+        .from("equipos")
+        .update({ numero_serie: serie })
+        .eq("id", equipo.id);
+      if (errSerie)
+        return {
+          error:
+            errSerie.code === "23505"
+              ? `El número de serie ${serie} ya está cargado en otro equipo`
+              : errSerie.message,
+        };
+    }
+  }
+
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({ nro_factura: nroFactura.trim(), pedido_estado: "pendiente_pago" })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+
+  await supabase.from("actividades").insert({
+    cliente_id: opp.cliente_id,
+    oportunidad_id: oportunidadId,
+    tipo: "pedido",
+    contenido: `Facturada (${nroFactura.trim()})${serie ? ` — serie ${serie} anexada al equipo` : ""} → Pendiente de pago`,
+    created_by: user?.id ?? null,
+  });
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export type ItemCotizacion = {
   productoId: string | null;
   descripcion: string;
