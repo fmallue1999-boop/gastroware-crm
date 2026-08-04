@@ -11,6 +11,7 @@ import { EtapaBadge, TempBadge, ProductoBadge } from "@/components/Badges";
 import NotaForm from "@/components/NotaForm";
 import EquipoForm from "@/components/EquipoForm";
 import DatosClienteForm from "@/components/DatosClienteForm";
+import BorrarCliente from "@/components/BorrarCliente";
 import SucursalesCliente from "@/components/SucursalesCliente";
 import DocumentosEntidad from "@/components/DocumentosEntidad";
 import type {
@@ -33,12 +34,12 @@ export default async function ClientePage({
   const hoy = hoyISO();
   const supabase = await createClient();
 
-  const { data: cliente } = await supabase
-    .from("clientes")
-    .select("*, sucursales(*)")
-    .eq("id", id)
-    .single();
+  const [{ data: cliente }, { data: rol }] = await Promise.all([
+    supabase.from("clientes").select("*, sucursales(*)").eq("id", id).single(),
+    supabase.rpc("fn_rol"),
+  ]);
   if (!cliente) notFound();
+  const esGestor = ["direccion", "admin"].includes((rol as string) ?? "");
   const { sucursales: sucursalesData, ...restoCliente } = cliente as Cliente & {
     sucursales?: Sucursal[];
   };
@@ -311,6 +312,10 @@ export default async function ClientePage({
           )}
         </div>
       </section>
+
+      {esGestor && (
+        <BorrarCliente clienteId={c.id} nombre={c.nombre_comercial} />
+      )}
     </div>
   );
 }

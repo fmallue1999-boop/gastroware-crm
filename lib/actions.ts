@@ -190,6 +190,47 @@ export async function crearCliente(input: {
   return { ok: true, id: data.id };
 }
 
+/**
+ * Borrado de cliente (solo dirección/admin). Es borrado suave: la ficha y su
+ * historial quedan guardados en la base pero desaparecen de todos los listados.
+ * Cierra las consultas abiertas y cancela las tareas pendientes para que no
+ * queden colgadas en el pipeline ni en Hoy.
+ */
+export async function eliminarCliente(clienteId: string) {
+  const rol = await rolActual();
+  if (!["direccion", "admin"].includes(rol))
+    return { error: "Solo dirección o administración pueden borrar clientes" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  await supabase
+    .from("oportunidades")
+    .update({ etapa: "perdida", motivo_perdida: "Cliente eliminado" })
+    .eq("cliente_id", clienteId)
+    .not("etapa", "in", "(ganada,perdida)");
+  await supabase
+    .from("tareas")
+    .update({ cancelada: true })
+    .eq("cliente_id", clienteId)
+    .is("completada_at", null);
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", clienteId);
+  if (error) return { error: error.message };
+
+  await supabase.from("actividades").insert({
+    cliente_id: clienteId,
+    tipo: "nota",
+    contenido: "Cliente eliminado",
+    created_by: user?.id ?? null,
+  });
+
+  revalidatePath("/", "layout");
+  redirect("/clientes");
+}
+
 export async function actualizarCliente(
   clienteId: string,
   patch: Record<string, string | null>
