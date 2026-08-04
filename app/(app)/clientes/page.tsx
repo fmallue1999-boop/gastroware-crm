@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpDown, Download, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { RUBROS } from "@/lib/constants";
-import { fechaCorta } from "@/lib/format";
+import { fechaCorta, telefonoProlijo } from "@/lib/format";
 import type { Cliente } from "@/lib/types";
 
 const inputCls =
@@ -159,7 +159,9 @@ export default async function ClientesPage({
                     </td>
                     <td className="px-3 py-2.5 text-piedra">{c.rubro}</td>
                     <td className="px-3 py-2.5 text-piedra">{c.ciudad ?? "—"}</td>
-                    <td className="px-3 py-2.5 text-piedra">{c.telefono ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-piedra">
+                      {c.telefono ? telefonoProlijo(c.telefono) : "—"}
+                    </td>
                     <td className="px-3 py-2.5">
                       {c.estado === "cliente_activo" ? (
                         <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
@@ -205,7 +207,7 @@ export default async function ClientesPage({
                 <p className="mt-0.5 text-xs text-piedra">
                   {c.rubro}
                   {c.ciudad ? ` · ${c.ciudad}` : ""}
-                  {c.telefono ? ` · ${c.telefono}` : ""}
+                  {c.telefono ? ` · ${telefonoProlijo(c.telefono)}` : ""}
                 </p>
               </Link>
             ))}

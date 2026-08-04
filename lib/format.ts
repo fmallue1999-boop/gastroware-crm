@@ -50,6 +50,36 @@ export function normalizarTelefono(tel: string): string {
   return d;
 }
 
+// Códigos de área argentinos de 3 dígitos (los demás son de 2 u 4)
+const AREAS_3 = new Set([
+  "220", "221", "223", "230", "236", "237", "249", "260", "261", "263",
+  "264", "266", "280", "291", "294", "297", "298", "299", "336", "341",
+  "342", "343", "345", "348", "351", "353", "358", "362", "364", "370",
+  "376", "379", "380", "381", "383", "385", "387", "388",
+]);
+
+/**
+ * Deja un teléfono argentino entero y prolijo para mostrar/compartir:
+ * "+54 9 2243 43-4282" → "2243 43-4282" · "011 15 5555-0199" → "11 5555-0199".
+ * Si no parece un número argentino completo, devuelve los dígitos tal cual.
+ */
+export function telefonoProlijo(tel: string): string {
+  let d = normalizarTelefono(tel);
+  // "15" después del código de área (formato viejo del interior)
+  if (d.length === 12 && d.startsWith("11") && d.slice(2, 4) === "15")
+    d = d.slice(0, 2) + d.slice(4);
+  if (d.length === 12 && d.slice(3, 5) === "15" && AREAS_3.has(d.slice(0, 3)))
+    d = d.slice(0, 3) + d.slice(5);
+  if (d.length === 12 && d.slice(4, 6) === "15")
+    d = d.slice(0, 4) + d.slice(6);
+
+  if (d.length !== 10) return d;
+  if (d.startsWith("11")) return `11 ${d.slice(2, 6)}-${d.slice(6)}`;
+  if (AREAS_3.has(d.slice(0, 3)))
+    return `${d.slice(0, 3)} ${d.slice(3, 6)}-${d.slice(6)}`;
+  return `${d.slice(0, 4)} ${d.slice(4, 6)}-${d.slice(6)}`;
+}
+
 /** Link de WhatsApp con mensaje opcional. */
 export function linkWhatsApp(tel: string, texto?: string): string {
   const num = "549" + normalizarTelefono(tel);

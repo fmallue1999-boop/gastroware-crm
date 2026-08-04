@@ -27,10 +27,14 @@ const sumario =
 
 export default async function OportunidadPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ pidio?: string }>;
 }) {
   const { id } = await params;
+  const { pidio } = await searchParams;
+  const pidioPrecio = pidio === "precio";
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -231,8 +235,50 @@ export default async function OportunidadPage({
             Ahora toca
           </p>
           <p className="text-sm font-medium mb-2">
-            Diagnóstico antes de cotizar
-            {esZumex ? " — la cuenta de recupero es el argumento" : ""}
+            {pidioPrecio
+              ? "Pidió precio directo: respondé con el guión, no con el número solo"
+              : "Diagnóstico antes de cotizar"}
+            {esZumex && !pidioPrecio
+              ? " — la cuenta de recupero es el argumento"
+              : ""}
+          </p>
+
+          {/* Guiones listos para mandar: primero responder bien, después el diagnóstico */}
+          {(esGX || esZumex) && (
+            <div className="mb-3 space-y-2">
+              {pidioPrecio &&
+                plantillas
+                  .filter((p) => p.uso === (esZumex ? "precio:zumex" : "precio:gx"))
+                  .map((p) => (
+                    <PlantillaCopiar
+                      key={p.id}
+                      nombre="1. Responder el precio (con ancla de valor)"
+                      texto={rellenarPlantilla(p.contenido, vars)}
+                      telefono={opp.cliente?.telefono ?? null}
+                    />
+                  ))}
+              {plantillas
+                .filter(
+                  (p) =>
+                    p.uso === (esZumex ? "diagnostico:zumex" : "diagnostico:gx")
+                )
+                .map((p) => (
+                  <PlantillaCopiar
+                    key={p.id}
+                    nombre={
+                      pidioPrecio
+                        ? "2. Y en el mismo mensaje, estas preguntas"
+                        : "Preguntas de diagnóstico (mandalas por WhatsApp)"
+                    }
+                    texto={rellenarPlantilla(p.contenido, vars)}
+                    telefono={opp.cliente?.telefono ?? null}
+                  />
+                ))}
+            </div>
+          )}
+
+          <p className="mb-1.5 text-xs text-piedra">
+            Con lo que conteste, completá acá el diagnóstico:
           </p>
           <DiagnosticoForm
             oportunidadId={opp.id}

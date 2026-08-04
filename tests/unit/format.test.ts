@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   normalizarTelefono,
+  telefonoProlijo,
   sumarDias,
   sumarMeses,
   dinero,
@@ -18,6 +19,27 @@ describe("normalizarTelefono", () => {
   it("es idempotente", () => {
     const una = normalizarTelefono("+54 9 223 529-4974");
     expect(normalizarTelefono(una)).toBe(una);
+  });
+});
+
+describe("telefonoProlijo", () => {
+  it("deja prolijo el ejemplo real de Franco", () => {
+    expect(telefonoProlijo("+54 9 2243 43-4282")).toBe("2243 43-4282");
+  });
+  it("formatea CABA con área 11", () => {
+    expect(telefonoProlijo("+54 9 11 5555-0199")).toBe("11 5555-0199");
+    expect(telefonoProlijo("011 15 5555 0199")).toBe("11 5555-0199");
+  });
+  it("reconoce áreas de 3 dígitos (Mar del Plata, Córdoba)", () => {
+    expect(telefonoProlijo("54 9 223 598 1965")).toBe("223 598-1965");
+    expect(telefonoProlijo("0351 15 518-3222")).toBe("351 518-3222");
+  });
+  it("si no es un número completo devuelve solo los dígitos", () => {
+    expect(telefonoProlijo("4434282")).toBe("4434282");
+  });
+  it("es idempotente", () => {
+    const una = telefonoProlijo("+54 9 2243 43-4282");
+    expect(telefonoProlijo(una)).toBe(una);
   });
 });
 

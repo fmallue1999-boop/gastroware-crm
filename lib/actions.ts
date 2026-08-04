@@ -50,6 +50,7 @@ export async function crearLead(input: {
   origen: string;
   temperatura: string;
   mensaje_inicial?: string;
+  soloPrecio?: boolean;
 }) {
   const supabase = await createClient();
   const user = await usuarioActual();
@@ -104,7 +105,9 @@ export async function crearLead(input: {
     oportunidad_id: opp.id,
     usuario_id: user?.id ?? null,
     tipo: "seguimiento",
-    titulo: "Hacer diagnóstico: uso, volumen y equipo actual",
+    titulo: input.soloPrecio
+      ? "Responder precio CON el guión (ancla valor y repregunta)"
+      : "Hacer diagnóstico: uso, volumen y equipo actual",
     vence_el: hoyISO(),
     auto: true,
   });
@@ -113,12 +116,12 @@ export async function crearLead(input: {
     cliente_id: clienteId,
     oportunidad_id: opp.id,
     tipo: "nota",
-    contenido: `Lead creado (${input.origen})${input.mensaje_inicial ? `: ${input.mensaje_inicial}` : ""}`,
+    contenido: `Lead creado (${input.origen})${input.soloPrecio ? " — pidió precio directo" : ""}${input.mensaje_inicial ? `: ${input.mensaje_inicial}` : ""}`,
     created_by: user?.id ?? null,
   });
 
   revalidatePath("/", "layout");
-  redirect(`/oportunidades/${opp.id}`);
+  redirect(`/oportunidades/${opp.id}${input.soloPrecio ? "?pidio=precio" : ""}`);
 }
 
 export async function actualizarCliente(

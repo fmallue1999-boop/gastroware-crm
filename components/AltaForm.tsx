@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { ClipboardPaste } from "lucide-react";
 import { buscarClientePorTelefono, crearLead } from "@/lib/actions";
+import { telefonoProlijo, normalizarTelefono } from "@/lib/format";
 import { RUBROS, ORIGENES, TEMPERATURAS } from "@/lib/constants";
 import type { Cliente, Producto } from "@/lib/types";
 
@@ -27,7 +29,9 @@ export default function AltaForm({
   mensajeInicial?: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const [telefono, setTelefono] = useState(telefonoInicial ?? "");
+  const [telefono, setTelefono] = useState(
+    telefonoInicial ? telefonoProlijo(telefonoInicial) : ""
+  );
   const [existente, setExistente] = useState<Cliente | null>(null);
   const [nombre, setNombre] = useState("");
   const [rubro, setRubro] = useState("");
@@ -35,26 +39,52 @@ export default function AltaForm({
   const [productoId, setProductoId] = useState("");
   const [origen, setOrigen] = useState("WhatsApp");
   const [temperatura, setTemperatura] = useState("tibio");
+  const [soloPrecio, setSoloPrecio] = useState(false);
   const [mensaje, setMensaje] = useState(mensajeInicial ?? "");
   const [error, setError] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function pegarTelefono() {
+  // Verificación de duplicado automática (sin esperar a salir del campo)
+  useEffect(() => {
+    const digitos = normalizarTelefono(telefono);
+    if (digitos.length < 8) {
+      setExistente(null);
+      return;
+    }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      const cliente = await buscarClientePorTelefono(digitos);
+      setExistente(cliente);
+      if (cliente) {
+        setNombre(cliente.nombre_comercial);
+        setRubro(cliente.rubro);
+      }
+    }, 400);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [telefono]);
+
+  function tomarTelefono(crudo: string) {
+    // Deja el número entero y prolijo, venga como venga
+    setTelefono(telefonoProlijo(crudo));
+  }
+
+  async function pegarDelPortapapeles() {
     try {
       const texto = await navigator.clipboard.readText();
       if (!texto) return;
-      setTelefono(extraerTelefono(texto) ?? texto.trim());
+      const tel = extraerTelefono(texto);
+      if (tel) {
+        tomarTelefono(tel);
+        // Lo que no es número puede servir como nota inicial
+        const resto = texto.replace(tel, "").replace(/\s+/g, " ").trim();
+        if (resto.length >= 4 && !mensaje) setMensaje(resto.slice(0, 500));
+      } else {
+        tomarTelefono(texto);
+      }
     } catch {
       // sin permiso de portapapeles
-    }
-  }
-
-  async function verificarTelefono() {
-    if (telefono.trim().length < 6) return;
-    const cliente = await buscarClientePorTelefono(telefono);
-    setExistente(cliente);
-    if (cliente) {
-      setNombre(cliente.nombre_comercial);
-      setRubro(cliente.rubro);
     }
   }
 
@@ -64,7 +94,7 @@ export default function AltaForm({
     startTransition(async () => {
       const res = await crearLead({
         clienteId: existente?.id,
-        telefono,
+        telefono: normalizarTelefono(telefono),
         nombre_comercial: nombre,
         rubro,
         ciudad,
@@ -72,6 +102,7 @@ export default function AltaForm({
         origen,
         temperatura,
         mensaje_inicial: mensaje,
+        soloPrecio,
       });
       if (res && "error" in res) setError(res.error ?? "Error al crear");
     });
@@ -83,19 +114,23 @@ export default function AltaForm({
         <input
           type="tel"
           required
-          placeholder="Teléfono / WhatsApp"
+          placeholder="Teléfono / WhatsApp (pegalo como venga)"
           value={telefono}
           onChange={(e) => setTelefono(e.target.value)}
-          onBlur={verificarTelefono}
+          onBlur={() => tomarTelefono(telefono)}
+          onPaste={(e) => {
+            e.preventDefault();
+            tomarTelefono(e.clipboardData.getData("text"));
+          }}
           className={inputCls}
         />
         <button
           type="button"
-          onClick={pegarTelefono}
-          className="shrink-0 rounded-2xl border border-borde bg-white shadow-sm px-3 text-sm text-piedra"
+          onClick={pegarDelPortapapeles}
+          className="inline-flex shrink-0 items-center gap-1 rounded-2xl border border-borde bg-white shadow-sm px-3 text-sm text-piedra"
           title="Pegar del portapapeles"
         >
-          Pegar
+          <ClipboardPaste className="h-4 w-4" /> Pegar
         </button>
       </div>
 
@@ -152,30 +187,75 @@ export default function AltaForm({
         ))}
       </select>
 
-      <div className="grid grid-cols-2 gap-3">
-        <select
-          value={origen}
-          onChange={(e) => setOrigen(e.target.value)}
-          className={inputCls}
-        >
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
+          ¿Por dónde entró?
+        </p>
+        <div className="flex flex-wrap gap-1.5">
           {ORIGENES.map((o) => (
-            <option key={o} value={o}>
+            <button
+              key={o}
+              type="button"
+              onClick={() => setOrigen(o)}
+              className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
+                origen === o
+                  ? "bg-tinta text-white"
+                  : "border border-borde bg-white text-piedra"
+              }`}
+            >
               {o}
-            </option>
+            </button>
           ))}
-        </select>
-        <select
-          value={temperatura}
-          onChange={(e) => setTemperatura(e.target.value)}
-          className={inputCls}
-        >
-          {TEMPERATURAS.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+        </div>
       </div>
+
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
+          ¿Qué pidió?
+        </p>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSoloPrecio(false)}
+            className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
+              !soloPrecio
+                ? "bg-tinta text-white"
+                : "border border-borde bg-white text-piedra"
+            }`}
+          >
+            Consulta general
+          </button>
+          <button
+            type="button"
+            onClick={() => setSoloPrecio(true)}
+            className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
+              soloPrecio
+                ? "bg-amber-500 text-white"
+                : "border border-borde bg-white text-piedra"
+            }`}
+          >
+            Solo pide precio
+          </button>
+        </div>
+        {soloPrecio && (
+          <p className="mt-1.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
+            Al crear el lead te aparece el guión exacto para responder sin
+            quemar el precio, listo para mandar por WhatsApp.
+          </p>
+        )}
+      </div>
+
+      <select
+        value={temperatura}
+        onChange={(e) => setTemperatura(e.target.value)}
+        className={inputCls}
+      >
+        {TEMPERATURAS.map((t) => (
+          <option key={t.value} value={t.value}>
+            {t.label}
+          </option>
+        ))}
+      </select>
 
       <input
         type="text"

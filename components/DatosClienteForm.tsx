@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Pencil } from "lucide-react";
 import { actualizarCliente } from "@/lib/actions";
+import { telefonoProlijo } from "@/lib/format";
 import { CONDICIONES_FISCALES } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
 
@@ -48,7 +49,7 @@ export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
       { k: "CUIT", v: cliente.cuit },
       { k: "Cond. fiscal", v: etiquetaCondicion },
       { k: "Email", v: cliente.email },
-      { k: "Teléfono", v: cliente.telefono },
+      { k: "Teléfono", v: cliente.telefono ? telefonoProlijo(cliente.telefono) : null },
     ];
     return (
       <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
