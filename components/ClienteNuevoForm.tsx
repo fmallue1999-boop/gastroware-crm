@@ -22,6 +22,9 @@ export default function ClienteNuevoForm() {
   const [cuit, setCuit] = useState("");
   const [email, setEmail] = useState("");
   const [notas, setNotas] = useState("");
+  const [estado, setEstado] = useState<"cliente_activo" | "prospecto">(
+    "cliente_activo"
+  );
   const [duplicado, setDuplicado] = useState<Cliente | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,6 +59,7 @@ export default function ClienteNuevoForm() {
         cuit,
         email,
         notas,
+        estado,
       });
       if ("error" in res) {
         setError(res.error);
@@ -102,6 +106,36 @@ export default function ClienteNuevoForm() {
           </p>
         </div>
       )}
+
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
+          ¿Ya te compró alguna vez?
+        </p>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setEstado("cliente_activo")}
+            className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
+              estado === "cliente_activo"
+                ? "bg-tinta text-white"
+                : "border border-borde bg-white text-piedra"
+            }`}
+          >
+            Sí, es cliente
+          </button>
+          <button
+            type="button"
+            onClick={() => setEstado("prospecto")}
+            className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
+              estado === "prospecto"
+                ? "bg-tinta text-white"
+                : "border border-borde bg-white text-piedra"
+            }`}
+          >
+            Todavía no (prospecto)
+          </button>
+        </div>
+      </div>
 
       <select
         required

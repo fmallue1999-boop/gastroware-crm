@@ -135,6 +135,8 @@ export async function crearCliente(input: {
   cuit?: string;
   email?: string;
   notas?: string;
+  /** "cliente_activo" si ya compró alguna vez; "prospecto" si todavía no. */
+  estado?: "cliente_activo" | "prospecto";
 }): Promise<{ error: string } | { ok: true; id: string }> {
   const supabase = await createClient();
   const user = await usuarioActual();
@@ -158,6 +160,7 @@ export async function crearCliente(input: {
       cuit: input.cuit?.replace(/\D/g, "") || null,
       email: input.email?.trim() || null,
       notas: input.notas?.trim() || null,
+      estado: input.estado ?? "prospecto",
       comercial_id: user?.id ?? null,
     })
     .select("id")
