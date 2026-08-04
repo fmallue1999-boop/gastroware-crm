@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpDown, Download } from "lucide-react";
+import { ArrowUpDown, Download, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { RUBROS } from "@/lib/constants";
 import { fechaCorta } from "@/lib/format";
@@ -77,12 +77,20 @@ export default async function ClientesPage({
             ({clientes.length})
           </span>
         </h1>
-        <a
-          href="/api/export?tipo=clientes"
-          className="inline-flex items-center gap-1.5 rounded-xl border border-borde bg-white px-3.5 py-2 text-sm shadow-sm"
-        >
-          <Download className="h-4 w-4" /> Exportar CSV
-        </a>
+        <div className="flex gap-2">
+          <Link
+            href="/clientes/importar"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-borde bg-white px-3.5 py-2 text-sm shadow-sm"
+          >
+            <Upload className="h-4 w-4" /> Importar
+          </Link>
+          <a
+            href="/api/export?tipo=clientes"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-borde bg-white px-3.5 py-2 text-sm shadow-sm"
+          >
+            <Download className="h-4 w-4" /> Exportar CSV
+          </a>
+        </div>
       </div>
 
       <form className="mb-4 flex flex-wrap gap-2" method="get">

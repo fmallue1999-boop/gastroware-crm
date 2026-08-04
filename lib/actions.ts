@@ -1094,6 +1094,130 @@ export async function guardarFirmaOT(
 }
 
 // =====================================================================
+// Importación de clientes (Excel/CSV)
+// =====================================================================
+
+export type FilaImport = {
+  nombre_comercial: string;
+  razon_social?: string;
+  cuit?: string;
+  condicion_fiscal?: string;
+  rubro?: string;
+  telefono?: string;
+  email?: string;
+  ciudad?: string;
+  provincia?: string;
+  direccion?: string;
+  notas?: string;
+};
+
+const soloDigitos = (s: string | undefined | null) => {
+  let d = (s ?? "").replace(/\D/g, "");
+  if (d.startsWith("549")) d = d.slice(3);
+  else if (d.startsWith("54") && d.length > 10) d = d.slice(2);
+  return d;
+};
+
+/**
+ * Importa un lote de clientes (máx 200 por llamada; el cliente manda de a
+ * tandas). Dedup contra la base y dentro del archivo por teléfono y CUIT.
+ */
+export async function importarClientes(
+  filas: FilaImport[],
+  opciones: { estado: "cliente_activo" | "prospecto" }
+) {
+  const rol = await rolActual();
+  if (!["direccion", "admin"].includes(rol))
+    return { error: "Solo dirección o administración pueden importar" };
+  if (filas.length > 200) return { error: "Máximo 200 filas por tanda" };
+
+  const supabase = await createClient();
+
+  // Mapa de existentes para dedup (teléfonos y CUITs)
+  const { data: existentes } = await supabase
+    .from("clientes")
+    .select("telefono, cuit")
+    .is("deleted_at", null)
+    .limit(10000);
+  const telefonos = new Set(
+    (existentes ?? []).map((c) => soloDigitos(c.telefono)).filter((d) => d.length >= 8)
+  );
+  const cuits = new Set(
+    (existentes ?? []).map((c) => (c.cuit ?? "").replace(/\D/g, "")).filter(Boolean)
+  );
+
+  let creados = 0;
+  let salteados = 0;
+  const errores: string[] = [];
+
+  for (const fila of filas) {
+    const nombre = (fila.nombre_comercial ?? "").trim();
+    if (!nombre) {
+      salteados++;
+      continue;
+    }
+    const tel = soloDigitos(fila.telefono);
+    const cuit = (fila.cuit ?? "").replace(/\D/g, "");
+    if ((tel.length >= 8 && telefonos.has(tel)) || (cuit && cuits.has(cuit))) {
+      salteados++;
+      continue;
+    }
+
+    const condicion = (fila.condicion_fiscal ?? "")
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z_]/g, "");
+    const condicionValida = [
+      "responsable_inscripto",
+      "monotributo",
+      "exento",
+      "consumidor_final",
+    ].includes(condicion)
+      ? condicion
+      : null;
+
+    const { data: nuevo, error } = await supabase
+      .from("clientes")
+      .insert({
+        nombre_comercial: nombre.slice(0, 120),
+        razon_social: fila.razon_social?.trim() || null,
+        cuit: cuit ? cuit.slice(0, 11) : null,
+        condicion_fiscal: condicionValida,
+        rubro: fila.rubro?.trim() || "Otro",
+        telefono: fila.telefono?.trim() || null,
+        email: fila.email?.trim() || null,
+        estado: opciones.estado,
+        notas: fila.notas?.trim() || null,
+      })
+      .select("id")
+      .single();
+
+    if (error || !nuevo) {
+      errores.push(`${nombre}: ${error?.message ?? "error"}`);
+      if (errores.length >= 10) break;
+      continue;
+    }
+    if (tel.length >= 8) telefonos.add(tel);
+    if (cuit) cuits.add(cuit);
+    creados++;
+
+    if (fila.ciudad?.trim() || fila.direccion?.trim() || fila.provincia?.trim()) {
+      await supabase.from("sucursales").insert({
+        cliente_id: nuevo.id,
+        nombre: "Principal",
+        direccion: fila.direccion?.trim() || null,
+        ciudad: fila.ciudad?.trim() || null,
+        provincia: fila.provincia?.trim() || null,
+        es_principal: true,
+      });
+    }
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true, creados, salteados, errores };
+}
+
+// =====================================================================
 // Checklists
 // =====================================================================
 
