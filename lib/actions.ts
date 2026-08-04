@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde, fechaCorta } from "@/lib/format";
-import { CADENCIA_COTIZACION } from "@/lib/constants";
-import type { Cliente, Etapa } from "@/lib/types";
+import { CADENCIA_COTIZACION, PEDIDO_ESTADOS } from "@/lib/constants";
+import type { Cliente, Etapa, PedidoEstado } from "@/lib/types";
 
 async function usuarioActual() {
   const supabase = await createClient();
@@ -463,13 +463,15 @@ export async function cambiarEtapa(
   if (etapa === "ganada" || etapa === "perdida")
     update.closed_at = new Date().toISOString();
   if (etapa === "perdida") update.motivo_perdida = motivo;
+  // El circuito de pedido arranca al ganar; si se reabre o se pierde, se apaga
+  update.pedido_estado = etapa === "ganada" ? "facturar" : null;
   const { error: errUpd } = await supabase
     .from("oportunidades")
     .update(update)
     .eq("id", oportunidadId);
   if (errUpd) return { error: errUpd.message };
 
-  if (["negociacion", "ganada", "perdida"].includes(etapa)) {
+  if (["ganada", "perdida"].includes(etapa)) {
     await supabase
       .from("tareas")
       .update({ cancelada: true })
@@ -495,18 +497,6 @@ export async function cambiarEtapa(
         auto: true,
       }))
     );
-  }
-
-  if (etapa === "negociacion") {
-    await supabase.from("tareas").insert({
-      cliente_id: opp.cliente_id,
-      oportunidad_id: oportunidadId,
-      usuario_id: opp.comercial_id,
-      tipo: "seguimiento",
-      titulo: "Definir condición comercial y fecha de cierre",
-      vence_el: sumarDias(2),
-      auto: true,
-    });
   }
 
   if (etapa === "ganada") {
@@ -548,26 +538,16 @@ export async function cambiarEtapa(
       }
     }
 
-    await supabase.from("tareas").insert([
-      {
-        cliente_id: opp.cliente_id,
-        oportunidad_id: oportunidadId,
-        usuario_id: opp.comercial_id,
-        tipo: "postventa",
-        titulo: "Check-in de entrega e instalación",
-        vence_el: sumarDias(7),
-        auto: true,
-      },
-      {
-        cliente_id: opp.cliente_id,
-        oportunidad_id: oportunidadId,
-        usuario_id: opp.comercial_id,
-        tipo: "postventa",
-        titulo: "Check-in de uso y satisfacción",
-        vence_el: sumarDias(30),
-        auto: true,
-      },
-    ]);
+    // El circuito del pedido guía la post-venta; la primera parada es facturar
+    await supabase.from("tareas").insert({
+      cliente_id: opp.cliente_id,
+      oportunidad_id: oportunidadId,
+      usuario_id: opp.comercial_id,
+      tipo: "postventa",
+      titulo: "Emitir factura y coordinar el cobro",
+      vence_el: hoyISO(),
+      auto: true,
+    });
   }
 
   if (etapa === "perdida" && motivo === "No era el momento") {
@@ -609,8 +589,63 @@ export async function guardarDiagnostico(
   const update: Record<string, unknown> = {
     diagnostico: { ...opp.diagnostico, ...diagnostico },
   };
-  if (opp.etapa === "nueva") update.etapa = "diagnostico";
   await supabase.from("oportunidades").update(update).eq("id", oportunidadId);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Avanza el pedido de una venta ganada por su circuito:
+ * facturar → pendiente de pago → preparando envío → para entregar →
+ * entregado → finalizado. Al marcar entregado se agenda sola la tarea
+ * de seguimiento a los 7 días.
+ */
+export async function avanzarPedido(
+  oportunidadId: string,
+  estado: PedidoEstado
+) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: opp } = await supabase
+    .from("oportunidades")
+    .select("cliente_id, comercial_id, etapa, pedido_estado, entregado_at")
+    .eq("id", oportunidadId)
+    .single();
+  if (!opp) return { error: "Oportunidad no encontrada" };
+  if (opp.etapa !== "ganada")
+    return { error: "El pedido se sigue una vez ganada la venta" };
+
+  const update: Record<string, unknown> = { pedido_estado: estado };
+  if (estado === "entregado" && !opp.entregado_at)
+    update.entregado_at = new Date().toISOString();
+  const { error } = await supabase
+    .from("oportunidades")
+    .update(update)
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+
+  if (estado === "entregado" && !opp.entregado_at) {
+    await supabase.from("tareas").insert({
+      cliente_id: opp.cliente_id,
+      oportunidad_id: oportunidadId,
+      usuario_id: opp.comercial_id,
+      tipo: "postventa",
+      titulo: "Seguimiento post-entrega: ¿cómo va todo con el equipo?",
+      vence_el: sumarDias(7),
+      auto: true,
+    });
+  }
+
+  const label =
+    PEDIDO_ESTADOS.find((p) => p.value === estado)?.label ?? estado;
+  await supabase.from("actividades").insert({
+    cliente_id: opp.cliente_id,
+    oportunidad_id: oportunidadId,
+    tipo: "pedido",
+    contenido: `Pedido → ${label}`,
+    created_by: user?.id ?? null,
+  });
+
   revalidatePath("/", "layout");
   return { ok: true };
 }

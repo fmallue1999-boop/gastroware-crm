@@ -6,6 +6,7 @@ import {
   Citrus,
   BookOpen,
   KeyRound,
+  Package,
   Smartphone,
   LogOut,
   ChevronRight,
@@ -56,7 +57,7 @@ export default async function MasPage() {
       supabase
         .from("oportunidades")
         .select("id", { count: "exact", head: true })
-        .in("etapa", ["nueva", "diagnostico", "cotizada", "seguimiento", "negociacion"]),
+        .in("etapa", ["nueva", "cotizada", "seguimiento"]),
       supabase
         .from("oportunidades")
         .select("id", { count: "exact", head: true })
@@ -97,6 +98,12 @@ export default async function MasPage() {
           icono={BarChart3}
           titulo="Pipeline de ventas"
           detalle="Kanban de oportunidades por etapa"
+        />
+        <MenuLink
+          href="/pedidos"
+          icono={Package}
+          titulo="Pedidos"
+          detalle="De la venta ganada a la entrega: factura, pago y envío"
         />
         <MenuLink
           href="/reportes"

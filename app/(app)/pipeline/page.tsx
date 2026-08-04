@@ -72,6 +72,13 @@ export default async function PipelinePage({
           {oportunidades.length} abiertas · {dinero(totalPipeline)}
         </span>
       </div>
+      <p className="mb-3 text-sm text-piedra">
+        Las ventas ganadas siguen su entrega en{" "}
+        <Link href="/pedidos" className="text-sky-700 underline">
+          Pedidos
+        </Link>
+        .
+      </p>
 
       <form method="get" className="mb-4">
         <select

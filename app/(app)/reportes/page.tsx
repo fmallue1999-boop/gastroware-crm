@@ -57,7 +57,7 @@ export default async function ReportesPage({
     (o) => !["ganada", "perdida"].includes(o.etapa)
   );
   const cotizadas = opps.filter((o) =>
-    ["cotizada", "seguimiento", "negociacion", "ganada", "perdida"].includes(o.etapa)
+    ["cotizada", "seguimiento", "ganada", "perdida"].includes(o.etapa)
   );
 
   const montoGanado = ganadas.reduce((s, o) => s + (o.monto_estimado ?? 0), 0);

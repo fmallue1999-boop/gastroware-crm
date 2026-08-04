@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldCheck,
   Megaphone,
+  Package,
   Plus,
   type LucideIcon,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       items: [
         { href: "/hoy", label: "Inicio", icono: Sun },
         { href: "/pipeline", label: "Pipeline", icono: BarChart3 },
+        { href: "/pedidos", label: "Pedidos", icono: Package },
         { href: "/servicio", label: "Servicio técnico", icono: Wrench },
         { href: "/equipos", label: "Equipos", icono: HardDrive },
         { href: "/clientes", label: "Clientes", icono: Users },
@@ -58,6 +60,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       items: [
         { href: "/hoy", label: "Inicio", icono: Sun },
         { href: "/pipeline", label: "Pipeline", icono: BarChart3 },
+        { href: "/pedidos", label: "Pedidos", icono: Package },
         { href: "/clientes", label: "Clientes", icono: Users },
       ],
     },

@@ -8,6 +8,7 @@ import IAMensaje from "@/components/IAMensaje";
 import { fechaCorta, dinero, rellenarPlantilla, diasDesde, hoyISO } from "@/lib/format";
 import { EtapaBadge } from "@/components/Badges";
 import EtapaControl from "@/components/EtapaControl";
+import PedidoControl from "@/components/PedidoControl";
 import TemperaturaControl from "@/components/TemperaturaControl";
 import DiagnosticoForm from "@/components/DiagnosticoForm";
 import CotizacionForm from "@/components/CotizacionForm";
@@ -175,8 +176,8 @@ export default async function OportunidadPage({
       consejo = `Tenés ${tareasVencidas} seguimiento${tareasVencidas > 1 ? "s" : ""} vencido${tareasVencidas > 1 ? "s" : ""}. Hacelo hoy o reprogramalo.`;
     else if (opp.etapa === "cotizada" && diasSinMovimiento >= 7)
       consejo = `La cotización lleva ${diasSinMovimiento} días sin movimiento. Mandá el guión de seguimiento.`;
-    else if (opp.temperatura === "caliente" && opp.etapa === "negociacion")
-      consejo = "Está caliente y en negociación: proponé fecha de cierre.";
+    else if (opp.temperatura === "caliente" && opp.etapa === "seguimiento")
+      consejo = "Está caliente: proponé fecha de cierre o condición para definir.";
   }
 
   const faltaDatosEquipo =
@@ -240,11 +241,20 @@ export default async function OportunidadPage({
       )}
 
       {cerrada ? (
-        <EtapaControl
-          oportunidadId={opp.id}
-          etapa={opp.etapa}
-          motivoPerdida={opp.motivo_perdida}
-        />
+        <>
+          <EtapaControl
+            oportunidadId={opp.id}
+            etapa={opp.etapa}
+            motivoPerdida={opp.motivo_perdida}
+          />
+          {opp.etapa === "ganada" && (
+            <PedidoControl
+              oportunidadId={opp.id}
+              estado={opp.pedido_estado}
+              entregadoAt={opp.entregado_at}
+            />
+          )}
+        </>
       ) : mostrarDiagnosticoArriba ? (
         <div className="rounded-2xl border-2 border-celeste-deep bg-white shadow-sm p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 mb-1">

@@ -55,7 +55,7 @@ export default async function HoyPage({
     supabase
       .from("oportunidades")
       .select("monto_estimado")
-      .in("etapa", ["nueva", "diagnostico", "cotizada", "seguimiento", "negociacion"]),
+      .in("etapa", ["nueva", "cotizada", "seguimiento"]),
     supabase
       .from("oportunidades")
       .select("monto_estimado")

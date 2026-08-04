@@ -8,12 +8,19 @@ export type Rol =
 
 export type Etapa =
   | "nueva"
-  | "diagnostico"
   | "cotizada"
   | "seguimiento"
-  | "negociacion"
   | "ganada"
   | "perdida";
+
+/** Circuito del pedido después de ganar la venta. */
+export type PedidoEstado =
+  | "facturar"
+  | "pendiente_pago"
+  | "preparar_envio"
+  | "para_entregar"
+  | "entregado"
+  | "finalizado";
 
 export interface Usuario {
   id: string;
@@ -171,6 +178,8 @@ export interface Oportunidad {
   motivo_perdida: string | null;
   fecha_cierre_estimada: string | null;
   mensaje_inicial: string | null;
+  pedido_estado: PedidoEstado | null;
+  entregado_at: string | null;
   created_at: string;
   closed_at: string | null;
   cliente?: Cliente;

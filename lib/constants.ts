@@ -47,20 +47,22 @@ export const CONDICIONES_FISCALES = [
 
 export const ETAPAS = [
   { value: "nueva", label: "Nueva" },
-  { value: "diagnostico", label: "Diagnóstico" },
   { value: "cotizada", label: "Cotizada" },
   { value: "seguimiento", label: "Seguimiento" },
-  { value: "negociacion", label: "Negociación" },
   { value: "ganada", label: "Ganada" },
   { value: "perdida", label: "Perdida" },
 ] as const;
 
-export const ETAPAS_ABIERTAS = [
-  "nueva",
-  "diagnostico",
-  "cotizada",
-  "seguimiento",
-  "negociacion",
+export const ETAPAS_ABIERTAS = ["nueva", "cotizada", "seguimiento"] as const;
+
+/** Circuito del pedido una vez ganada la venta, en orden. */
+export const PEDIDO_ESTADOS = [
+  { value: "facturar", label: "Emitir factura" },
+  { value: "pendiente_pago", label: "Pendiente de pago" },
+  { value: "preparar_envio", label: "Preparando envío" },
+  { value: "para_entregar", label: "Para entregar" },
+  { value: "entregado", label: "Entregado" },
+  { value: "finalizado", label: "Finalizado" },
 ] as const;
 
 export const TEMPERATURAS = [
