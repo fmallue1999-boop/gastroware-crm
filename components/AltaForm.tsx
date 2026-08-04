@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ClipboardPaste } from "lucide-react";
-import { buscarClientePorTelefono, crearLead } from "@/lib/actions";
+import { ClipboardPaste, UserSearch } from "lucide-react";
+import { buscarClientePorTelefono, buscarClientes, crearLead } from "@/lib/actions";
 import { telefonoProlijo, normalizarTelefono } from "@/lib/format";
 import { RUBROS, ORIGENES, TEMPERATURAS } from "@/lib/constants";
 import type { Cliente, Producto } from "@/lib/types";
@@ -33,6 +33,11 @@ export default function AltaForm({
     telefonoInicial ? telefonoProlijo(telefonoInicial) : ""
   );
   const [existente, setExistente] = useState<Cliente | null>(null);
+  // Cliente elegido a mano con el buscador (no lo pisa la detección por teléfono)
+  const [elegidoManual, setElegidoManual] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+  const [q, setQ] = useState("");
+  const [resultados, setResultados] = useState<Cliente[]>([]);
   const [nombre, setNombre] = useState("");
   const [rubro, setRubro] = useState("");
   const [ciudad, setCiudad] = useState("");
@@ -46,6 +51,7 @@ export default function AltaForm({
 
   // Verificación de duplicado automática (sin esperar a salir del campo)
   useEffect(() => {
+    if (elegidoManual) return;
     const digitos = normalizarTelefono(telefono);
     if (digitos.length < 8) {
       setExistente(null);
@@ -63,7 +69,34 @@ export default function AltaForm({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [telefono]);
+  }, [telefono, elegidoManual]);
+
+  async function buscarPorNombre(valor: string) {
+    setQ(valor);
+    if (valor.trim().length < 2) {
+      setResultados([]);
+      return;
+    }
+    setResultados(await buscarClientes(valor));
+  }
+
+  function elegirCliente(c: Cliente) {
+    setExistente(c);
+    setElegidoManual(true);
+    setNombre(c.nombre_comercial);
+    setRubro(c.rubro);
+    if (c.telefono) setTelefono(telefonoProlijo(c.telefono));
+    setBuscando(false);
+    setQ("");
+    setResultados([]);
+  }
+
+  function quitarCliente() {
+    setExistente(null);
+    setElegidoManual(false);
+    setNombre("");
+    setRubro("");
+  }
 
   function tomarTelefono(crudo: string) {
     // Deja el número entero y prolijo, venga como venga
@@ -113,7 +146,7 @@ export default function AltaForm({
       <div className="flex gap-2">
         <input
           type="tel"
-          required
+          required={!existente}
           placeholder="Teléfono / WhatsApp (pegalo como venga)"
           value={telefono}
           onChange={(e) => setTelefono(e.target.value)}
@@ -134,11 +167,72 @@ export default function AltaForm({
         </button>
       </div>
 
+      {!existente && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setBuscando(!buscando)}
+            className="inline-flex items-center gap-1.5 text-sm text-sky-800 underline"
+          >
+            <UserSearch className="h-4 w-4" />
+            ¿Cliente ya cargado? Buscalo por nombre
+          </button>
+          {buscando && (
+            <div className="mt-2">
+              <input
+                type="search"
+                autoFocus
+                placeholder="Nombre, teléfono, CUIT o n° de serie…"
+                value={q}
+                onChange={(e) => buscarPorNombre(e.target.value)}
+                className={inputCls}
+              />
+              <div className="mt-2 space-y-1.5">
+                {resultados.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => elegirCliente(c)}
+                    className="block w-full rounded-2xl border border-borde bg-white p-3 text-left text-sm shadow-sm"
+                  >
+                    <span className="font-medium">{c.nombre_comercial}</span>
+                    <span className="text-piedra">
+                      {" "}
+                      · {c.rubro}
+                      {c.ciudad ? ` · ${c.ciudad}` : ""}
+                    </span>
+                  </button>
+                ))}
+                {q.trim().length >= 2 && resultados.length === 0 && (
+                  <p className="rounded-2xl border border-dashed border-borde p-3 text-sm text-piedra">
+                    No aparece: seguí completando abajo y se crea como cliente
+                    nuevo.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {existente && (
         <div className="rounded-2xl border border-celeste bg-celeste-soft p-3 text-sm text-tinta">
-          <p className="font-medium">
-            Este teléfono ya existe: {existente.nombre_comercial}
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-medium">
+              {elegidoManual
+                ? `Cliente: ${existente.nombre_comercial}`
+                : `Este teléfono ya existe: ${existente.nombre_comercial}`}
+            </p>
+            {elegidoManual && (
+              <button
+                type="button"
+                onClick={quitarCliente}
+                className="shrink-0 text-xs text-sky-800 underline"
+              >
+                Cambiar
+              </button>
+            )}
+          </div>
           <p className="mt-0.5">
             Se creará una consulta nueva en su ficha.{" "}
             <Link href={`/clientes/${existente.id}`} className="underline">

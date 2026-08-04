@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpDown, Download, Upload } from "lucide-react";
+import { ArrowUpDown, Download, Plus, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { RUBROS } from "@/lib/constants";
 import { fechaCorta, telefonoProlijo } from "@/lib/format";
@@ -78,6 +78,12 @@ export default async function ClientesPage({
           </span>
         </h1>
         <div className="flex gap-2">
+          <Link
+            href="/clientes/nuevo"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-tinta px-3.5 py-2 text-sm font-medium text-white shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> Nuevo cliente
+          </Link>
           <Link
             href="/clientes/importar"
             className="inline-flex items-center gap-1.5 rounded-xl border border-borde bg-white px-3.5 py-2 text-sm shadow-sm"

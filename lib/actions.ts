@@ -125,6 +125,71 @@ export async function crearLead(input: {
   redirect(`/oportunidades/${opp.id}${input.soloPrecio ? "?pidio=precio" : ""}`);
 }
 
+/** Alta de cliente directo, sin crear una consulta (para cargar la cartera). */
+export async function crearCliente(input: {
+  nombre_comercial: string;
+  telefono?: string;
+  rubro: string;
+  ciudad?: string;
+  razon_social?: string;
+  cuit?: string;
+  email?: string;
+  notas?: string;
+}): Promise<{ error: string } | { ok: true; id: string }> {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  const telefono = input.telefono?.replace(/\D/g, "") || null;
+  if (telefono) {
+    const dup = await buscarClientePorTelefono(telefono);
+    if (dup)
+      return {
+        error: `Ese teléfono ya está cargado como "${dup.nombre_comercial}". Buscalo en Clientes en vez de crearlo de nuevo.`,
+      };
+  }
+
+  const { data, error } = await supabase
+    .from("clientes")
+    .insert({
+      nombre_comercial: input.nombre_comercial.trim(),
+      rubro: input.rubro,
+      telefono,
+      razon_social: input.razon_social?.trim() || null,
+      cuit: input.cuit?.replace(/\D/g, "") || null,
+      email: input.email?.trim() || null,
+      notas: input.notas?.trim() || null,
+      comercial_id: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+  if (error || !data)
+    return {
+      error:
+        error?.code === "23505"
+          ? "Ya existe un cliente con ese CUIT"
+          : error?.message ?? "No se pudo crear el cliente",
+    };
+
+  if (input.ciudad?.trim()) {
+    await supabase.from("sucursales").insert({
+      cliente_id: data.id,
+      nombre: "Principal",
+      ciudad: input.ciudad.trim(),
+      es_principal: true,
+    });
+  }
+
+  await supabase.from("actividades").insert({
+    cliente_id: data.id,
+    tipo: "nota",
+    contenido: "Cliente cargado manualmente",
+    created_by: user?.id ?? null,
+  });
+
+  revalidatePath("/", "layout");
+  return { ok: true, id: data.id };
+}
+
 export async function actualizarCliente(
   clienteId: string,
   patch: Record<string, string | null>
