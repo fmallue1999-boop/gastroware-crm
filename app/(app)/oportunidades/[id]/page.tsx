@@ -6,7 +6,7 @@ import { firmarUrl } from "@/lib/core/storage";
 import { iaConfigurada } from "@/lib/core/ia";
 import IAMensaje from "@/components/IAMensaje";
 import { fechaCorta, dinero, rellenarPlantilla, diasDesde, hoyISO } from "@/lib/format";
-import { EtapaBadge } from "@/components/Badges";
+import { EtapaBadge, ProductoBadge } from "@/components/Badges";
 import EtapaControl from "@/components/EtapaControl";
 import PedidoControl from "@/components/PedidoControl";
 import TemperaturaControl from "@/components/TemperaturaControl";
@@ -38,7 +38,6 @@ export default async function OportunidadPage({
 }) {
   const { id } = await params;
   const { pidio } = await searchParams;
-  const pidioPrecio = pidio === "precio";
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -127,7 +126,17 @@ export default async function OportunidadPage({
       url: string | null;
       producto_id: string | null;
     }[]
-  ).filter((m) => !m.producto_id || m.producto_id === opp.producto_id);
+  ).filter(
+    (m) =>
+      !m.producto_id ||
+      m.producto_id === opp.producto_id ||
+      (opp.productos_extra ?? []).includes(m.producto_id)
+  );
+
+  const pidioPrecio = pidio === "precio" || opp.pedido === "precio";
+  const extraNombres = (opp.productos_extra ?? [])
+    .map((pid) => productosCatalogo.find((p) => p.id === pid)?.nombre)
+    .filter(Boolean) as string[];
 
   const categoria = opp.producto?.categoria ?? "otro";
   const esZumex = categoria === "exprimidora";
@@ -195,6 +204,9 @@ export default async function OportunidadPage({
           <h1 className="text-lg font-semibold">
             {opp.producto?.nombre ?? "Consulta"}
           </h1>
+          {extraNombres.map((n) => (
+            <ProductoBadge key={n} nombre={n} />
+          ))}
           <EtapaBadge etapa={opp.etapa} />
           <TemperaturaControl oportunidadId={opp.id} temperatura={opp.temperatura} />
         </div>
@@ -203,6 +215,23 @@ export default async function OportunidadPage({
           {opp.monto_estimado ? ` · ${dinero(opp.monto_estimado, opp.moneda)}` : ""}
         </p>
       </header>
+
+      {/* La etapa vive siempre arriba: al marcar Me compró, el circuito del
+          pedido aparece acá mismo, sin saltar de pantalla */}
+      <EtapaControl
+        oportunidadId={opp.id}
+        etapa={opp.etapa}
+        motivoPerdida={opp.motivo_perdida}
+      />
+      {opp.etapa === "ganada" && (
+        <PedidoControl
+          oportunidadId={opp.id}
+          estado={opp.pedido_estado}
+          entregadoAt={opp.entregado_at}
+          nroFactura={opp.nro_factura}
+          pedirSerie={!!equipoVendido && !equipoVendido.numero_serie}
+        />
+      )}
 
       {faltaDatosEquipo && (
         <Link
@@ -233,32 +262,8 @@ export default async function OportunidadPage({
         </div>
       )}
 
-      {!cerrada && iaConfigurada() && (
-        <IAMensaje
-          oportunidadId={opp.id}
-          telefono={opp.cliente?.telefono ?? null}
-        />
-      )}
-
-      {cerrada ? (
-        <>
-          <EtapaControl
-            oportunidadId={opp.id}
-            etapa={opp.etapa}
-            motivoPerdida={opp.motivo_perdida}
-          />
-          {opp.etapa === "ganada" && (
-            <PedidoControl
-              oportunidadId={opp.id}
-              estado={opp.pedido_estado}
-              entregadoAt={opp.entregado_at}
-              nroFactura={opp.nro_factura}
-              pedirSerie={!!equipoVendido && !equipoVendido.numero_serie}
-            />
-          )}
-        </>
-      ) : mostrarDiagnosticoArriba ? (
-        <div className="rounded-2xl border-2 border-celeste-deep bg-white shadow-sm p-4">
+      {cerrada ? null : mostrarDiagnosticoArriba ? (
+        <div className="rounded-2xl border border-borde bg-white shadow-sm p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 mb-1">
             Ahora toca
           </p>
@@ -305,14 +310,18 @@ export default async function OportunidadPage({
             </div>
           )}
 
-          <p className="mb-1.5 text-xs text-piedra">
-            Con lo que conteste, completá acá el diagnóstico:
-          </p>
-          <DiagnosticoForm
-            oportunidadId={opp.id}
-            categoria={categoria}
-            diagnostico={diag}
-          />
+          <details className="group/diag">
+            <summary className="cursor-pointer text-xs text-sky-700 underline list-none [&::-webkit-details-marker]:hidden">
+              Con lo que conteste, anotá acá el diagnóstico →
+            </summary>
+            <div className="mt-2">
+              <DiagnosticoForm
+                oportunidadId={opp.id}
+                categoria={categoria}
+                diagnostico={diag}
+              />
+            </div>
+          </details>
         </div>
       ) : proximaTarea ? (
         <AccionAhora
@@ -427,6 +436,13 @@ export default async function OportunidadPage({
         </div>
       </details>
 
+      {!cerrada && iaConfigurada() && (
+        <IAMensaje
+          oportunidadId={opp.id}
+          telefono={opp.cliente?.telefono ?? null}
+        />
+      )}
+
       <details className="group">
         <summary className={sumario}>
           <span>
@@ -512,14 +528,6 @@ export default async function OportunidadPage({
           </div>
         </div>
       </details>
-
-      {!cerrada && (
-        <EtapaControl
-          oportunidadId={opp.id}
-          etapa={opp.etapa}
-          motivoPerdida={opp.motivo_perdida}
-        />
-      )}
     </div>
   );
 }

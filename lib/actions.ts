@@ -47,11 +47,13 @@ export async function crearLead(input: {
   nombre_comercial: string;
   rubro: string;
   ciudad?: string;
-  producto_id: string;
+  /** Productos consultados: el primero queda como principal. */
+  productoIds: string[];
   origen: string;
   temperatura: string;
   mensaje_inicial?: string;
-  soloPrecio?: boolean;
+  /** Qué pidió: precio / info / general — define el guión y la 1ª tarea. */
+  pedido?: "precio" | "info" | "general";
 }) {
   const supabase = await createClient();
   const user = await usuarioActual();
@@ -86,11 +88,14 @@ export async function crearLead(input: {
     }
   }
 
+  const pedido = input.pedido ?? "general";
   const { data: opp, error: errOpp } = await supabase
     .from("oportunidades")
     .insert({
       cliente_id: clienteId,
-      producto_id: input.producto_id || null,
+      producto_id: input.productoIds[0] || null,
+      productos_extra: input.productoIds.slice(1),
+      pedido,
       comercial_id: user?.id ?? null,
       origen: input.origen,
       temperatura: input.temperatura || null,
@@ -101,28 +106,36 @@ export async function crearLead(input: {
   if (errOpp || !opp)
     return { error: errOpp?.message ?? "No se pudo crear la oportunidad" };
 
+  const TITULO_PRIMERA_TAREA: Record<string, string> = {
+    precio: "Responder precio CON el guión (ancla valor y repregunta)",
+    info: "Mandar la ficha del producto y hacer 2 preguntas para calificar",
+    general: "Hacer diagnóstico: uso, volumen y equipo actual",
+  };
   await supabase.from("tareas").insert({
     cliente_id: clienteId,
     oportunidad_id: opp.id,
     usuario_id: user?.id ?? null,
     tipo: "seguimiento",
-    titulo: input.soloPrecio
-      ? "Responder precio CON el guión (ancla valor y repregunta)"
-      : "Hacer diagnóstico: uso, volumen y equipo actual",
+    titulo: TITULO_PRIMERA_TAREA[pedido],
     vence_el: hoyISO(),
     auto: true,
   });
 
+  const ETIQUETA_PEDIDO: Record<string, string> = {
+    precio: " — pidió precio directo",
+    info: " — pidió info",
+    general: "",
+  };
   await supabase.from("actividades").insert({
     cliente_id: clienteId,
     oportunidad_id: opp.id,
     tipo: "nota",
-    contenido: `Lead creado (${input.origen})${input.soloPrecio ? " — pidió precio directo" : ""}${input.mensaje_inicial ? `: ${input.mensaje_inicial}` : ""}`,
+    contenido: `Lead creado (${input.origen})${ETIQUETA_PEDIDO[pedido]}${input.mensaje_inicial ? `: ${input.mensaje_inicial}` : ""}`,
     created_by: user?.id ?? null,
   });
 
   revalidatePath("/", "layout");
-  redirect(`/oportunidades/${opp.id}${input.soloPrecio ? "?pidio=precio" : ""}`);
+  redirect(`/oportunidades/${opp.id}${pedido === "precio" ? "?pidio=precio" : ""}`);
 }
 
 /** Alta de cliente directo, sin crear una consulta (para cargar la cartera). */
@@ -472,11 +485,11 @@ export async function cambiarEtapa(
   if (errUpd) return { error: errUpd.message };
 
   if (["ganada", "perdida"].includes(etapa)) {
+    // Venta cerrada: no queda ninguna tarea colgada (ni las cargadas a mano)
     await supabase
       .from("tareas")
       .update({ cancelada: true })
       .eq("oportunidad_id", oportunidadId)
-      .eq("auto", true)
       .is("completada_at", null);
   }
 

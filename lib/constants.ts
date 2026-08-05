@@ -21,6 +21,7 @@ export const ESTADOS_CLIENTE = [
 export const ORIGENES = [
   "WhatsApp",
   "Instagram",
+  "Pauta Meta",
   "Web",
   "Mercado Libre",
   "Referido",
@@ -28,6 +29,24 @@ export const ORIGENES = [
   "Visita",
   "Otro",
 ] as const;
+
+/** Qué pidió el cliente al entrar: define el guión y la primera tarea. */
+export const PEDIDOS = [
+  { value: "precio", label: "Pide precio" },
+  { value: "info", label: "Pide info" },
+  { value: "general", label: "Consulta general" },
+] as const;
+
+/** Etiquetas de categoría de producto (para agrupar el selector del alta). */
+export const CATEGORIAS_PRODUCTO: Record<string, string> = {
+  exprimidora: "Exprimidoras",
+  licuadora: "Licuadoras",
+  maquina_cafe: "Café automático",
+  horno: "Hornos",
+  consumible: "Consumibles",
+  repuesto: "Repuestos",
+  otro: "Otros",
+};
 
 export const ROLES = [
   { value: "direccion", label: "Dirección" },

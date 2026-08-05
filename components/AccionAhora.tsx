@@ -44,7 +44,7 @@ export function AccionAhora({
   }
 
   return (
-    <div className="rounded-2xl border-2 border-celeste-deep bg-white shadow-sm p-4">
+    <div className="rounded-2xl border border-borde bg-white shadow-sm p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 mb-1">
         Ahora toca
       </p>

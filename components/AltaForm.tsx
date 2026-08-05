@@ -2,10 +2,16 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ClipboardPaste, UserSearch } from "lucide-react";
+import { ClipboardPaste, UserSearch, X } from "lucide-react";
 import { buscarClientePorTelefono, buscarClientes, crearLead } from "@/lib/actions";
 import { telefonoProlijo, normalizarTelefono } from "@/lib/format";
-import { RUBROS, ORIGENES, TEMPERATURAS } from "@/lib/constants";
+import {
+  RUBROS,
+  ORIGENES,
+  TEMPERATURAS,
+  PEDIDOS,
+  CATEGORIAS_PRODUCTO,
+} from "@/lib/constants";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
@@ -41,10 +47,10 @@ export default function AltaForm({
   const [nombre, setNombre] = useState("");
   const [rubro, setRubro] = useState("");
   const [ciudad, setCiudad] = useState("");
-  const [productoId, setProductoId] = useState("");
+  const [productoIds, setProductoIds] = useState<string[]>([]);
   const [origen, setOrigen] = useState("WhatsApp");
   const [temperatura, setTemperatura] = useState("tibio");
-  const [soloPrecio, setSoloPrecio] = useState(false);
+  const [pedido, setPedido] = useState<"precio" | "info" | "general">("general");
   const [mensaje, setMensaje] = useState(mensajeInicial ?? "");
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,9 +127,32 @@ export default function AltaForm({
     }
   }
 
+  function agregarProducto(id: string) {
+    if (id && !productoIds.includes(id)) setProductoIds([...productoIds, id]);
+  }
+
+  function quitarProducto(id: string) {
+    setProductoIds(productoIds.filter((p) => p !== id));
+  }
+
+  // Productos agrupados por categoría para el desplegable
+  const grupos = Object.entries(CATEGORIAS_PRODUCTO)
+    .map(([cat, label]) => ({
+      label,
+      items: productos.filter((p) => p.categoria === cat),
+    }))
+    .filter((g) => g.items.length > 0);
+  const sinCategoria = productos.filter(
+    (p) => !(p.categoria in CATEGORIAS_PRODUCTO)
+  );
+
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (productoIds.length === 0) {
+      setError("Agregá al menos un producto consultado");
+      return;
+    }
     startTransition(async () => {
       const res = await crearLead({
         clienteId: existente?.id,
@@ -131,11 +160,11 @@ export default function AltaForm({
         nombre_comercial: nombre,
         rubro,
         ciudad,
-        producto_id: productoId,
+        productoIds,
         origen,
         temperatura,
         mensaje_inicial: mensaje,
-        soloPrecio,
+        pedido,
       });
       if (res && "error" in res) setError(res.error ?? "Error al crear");
     });
@@ -267,19 +296,67 @@ export default function AltaForm({
         ))}
       </select>
 
-      <select
-        required
-        value={productoId}
-        onChange={(e) => setProductoId(e.target.value)}
-        className={inputCls}
-      >
-        <option value="">Producto consultado…</option>
-        {productos.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.nombre}
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
+          ¿Qué consultó? (podés agregar varios)
+        </p>
+        {productoIds.length > 0 && (
+          <div className="mb-1.5 flex flex-wrap gap-1.5">
+            {productoIds.map((id, i) => {
+              const p = productos.find((x) => x.id === id);
+              return (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-tinta px-3 py-1.5 text-sm text-white"
+                >
+                  {p?.nombre ?? "Producto"}
+                  {i === 0 && productoIds.length > 1 && (
+                    <span className="text-[10px] uppercase tracking-wide opacity-70">
+                      principal
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => quitarProducto(id)}
+                    aria-label="Quitar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
+        <select
+          value=""
+          onChange={(e) => agregarProducto(e.target.value)}
+          className={inputCls}
+        >
+          <option value="">
+            {productoIds.length === 0
+              ? "Agregar producto consultado…"
+              : "Agregar otro producto…"}
           </option>
-        ))}
-      </select>
+          {grupos.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.items.map((p) => (
+                <option key={p.id} value={p.id} disabled={productoIds.includes(p.id)}>
+                  {p.nombre}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+          {sinCategoria.length > 0 && (
+            <optgroup label="Otros">
+              {sinCategoria.map((p) => (
+                <option key={p.id} value={p.id} disabled={productoIds.includes(p.id)}>
+                  {p.nombre}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+      </div>
 
       <div>
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
@@ -308,33 +385,33 @@ export default function AltaForm({
           ¿Qué pidió?
         </p>
         <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => setSoloPrecio(false)}
-            className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
-              !soloPrecio
-                ? "bg-tinta text-white"
-                : "border border-borde bg-white text-piedra"
-            }`}
-          >
-            Consulta general
-          </button>
-          <button
-            type="button"
-            onClick={() => setSoloPrecio(true)}
-            className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
-              soloPrecio
-                ? "bg-amber-500 text-white"
-                : "border border-borde bg-white text-piedra"
-            }`}
-          >
-            Solo pide precio
-          </button>
+          {PEDIDOS.map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => setPedido(p.value)}
+              className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
+                pedido === p.value
+                  ? p.value === "precio"
+                    ? "bg-amber-500 text-white"
+                    : "bg-tinta text-white"
+                  : "border border-borde bg-white text-piedra"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
-        {soloPrecio && (
+        {pedido === "precio" && (
           <p className="mt-1.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
             Al crear el lead te aparece el guión exacto para responder sin
             quemar el precio, listo para mandar por WhatsApp.
+          </p>
+        )}
+        {pedido === "info" && (
+          <p className="mt-1.5 rounded-lg bg-celeste-soft border border-celeste px-3 py-1.5 text-xs text-sky-800">
+            Típico de web y pauta: la primera tarea va a ser mandarle la ficha
+            del producto y hacerle 2 preguntas para calificarlo.
           </p>
         )}
       </div>

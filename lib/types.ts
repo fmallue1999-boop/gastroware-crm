@@ -178,6 +178,10 @@ export interface Oportunidad {
   motivo_perdida: string | null;
   fecha_cierre_estimada: string | null;
   mensaje_inicial: string | null;
+  /** Qué pidió al entrar: precio / info / general. */
+  pedido: "precio" | "info" | "general" | null;
+  /** Ids de productos consultados además del principal (producto_id). */
+  productos_extra: string[];
   pedido_estado: PedidoEstado | null;
   entregado_at: string | null;
   nro_factura: string | null;

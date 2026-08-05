@@ -117,6 +117,11 @@ export default async function PipelinePage({
                       <div className="flex flex-wrap items-center gap-1.5">
                         <TempBadge temperatura={o.temperatura} />
                         <ProductoBadge nombre={o.producto?.nombre} />
+                        {(o.productos_extra?.length ?? 0) > 0 && (
+                          <span className="rounded-full border border-borde px-1.5 py-0.5 text-[11px] text-piedra">
+                            +{o.productos_extra.length}
+                          </span>
+                        )}
                       </div>
                       <p className="mt-1.5 text-sm font-medium truncate">
                         {o.cliente?.nombre_comercial}
