@@ -6,6 +6,7 @@ import {
   Citrus,
   BookOpen,
   KeyRound,
+  Landmark,
   Package,
   Smartphone,
   LogOut,
@@ -116,6 +117,12 @@ export default async function MasPage() {
           icono={Citrus}
           titulo="Calculadora Zumex"
           detalle="Recupero de inversión, lista para mandar al cliente"
+        />
+        <MenuLink
+          href="/financiacion"
+          icono={Landmark}
+          titulo="Financiación bancaria"
+          detalle="Planes BNA en cuotas: hoja con todas las opciones para el cliente"
         />
         <MenuLink
           href="/biblioteca"

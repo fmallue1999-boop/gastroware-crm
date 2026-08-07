@@ -7,6 +7,7 @@ import {
   BarChart3,
   Bell,
   HardDrive,
+  Landmark,
   Users,
   Wrench,
   Search,
@@ -48,6 +49,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       grupo: "Herramientas",
       items: [
         { href: "/calculadora", label: "Calculadora Zumex", icono: Citrus },
+        { href: "/financiacion", label: "Financiación", icono: Landmark },
         { href: "/biblioteca", label: "Biblioteca", icono: BookOpen },
         { href: "/admin", label: "Administración", icono: ShieldCheck },
         { href: "/mas", label: "Configuración", icono: Settings },
@@ -68,6 +70,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       grupo: "Herramientas",
       items: [
         { href: "/calculadora", label: "Calculadora Zumex", icono: Citrus },
+        { href: "/financiacion", label: "Financiación", icono: Landmark },
         { href: "/biblioteca", label: "Biblioteca", icono: BookOpen },
         { href: "/mas", label: "Configuración", icono: Settings },
       ],
