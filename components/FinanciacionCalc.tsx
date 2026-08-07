@@ -23,12 +23,16 @@ export default function FinanciacionCalc({ tnaDefault }: { tnaDefault: number })
   const [tna, setTna] = useState(String(tnaDefault));
   const [cliente, setCliente] = useState("");
   const [equipo, setEquipo] = useState("");
+  const [excluidos, setExcluidos] = useState<string[]>([]);
+  const [conDetalle, setConDetalle] = useState(true);
 
   const montoUsd = numero(usd);
   const tipoCambio = numero(tc);
   const monto = modo === "usd" ? montoUsd * tipoCambio : numero(pesos);
   const tasa = numero(tna);
   const opciones = calcularOpciones(monto, tasa);
+
+  const incluidas = opciones.filter((o) => !excluidos.includes(o.clave));
 
   const paramsPdf = new URLSearchParams();
   paramsPdf.set("monto", String(Math.round(monto * 100) / 100));
@@ -39,6 +43,9 @@ export default function FinanciacionCalc({ tnaDefault }: { tnaDefault: number })
   }
   if (cliente.trim()) paramsPdf.set("cliente", cliente.trim());
   if (equipo.trim()) paramsPdf.set("equipo", equipo.trim());
+  if (excluidos.length > 0)
+    paramsPdf.set("planes", incluidas.map((o) => o.clave).join(","));
+  if (conDetalle) paramsPdf.set("detalle", "1");
 
   return (
     <div className="space-y-4">
@@ -225,11 +232,56 @@ export default function FinanciacionCalc({ tnaDefault }: { tnaDefault: number })
                 className={inputCls}
               />
             </div>
+
+            <p className="mt-3 mb-1.5 text-xs text-piedra">
+              Planes que van en la hoja (tocá para sacar alguno):
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {opciones.map((o) => {
+                const activo = !excluidos.includes(o.clave);
+                return (
+                  <button
+                    key={o.clave}
+                    type="button"
+                    onClick={() =>
+                      setExcluidos(
+                        activo
+                          ? [...excluidos, o.clave]
+                          : excluidos.filter((c) => c !== o.clave)
+                      )
+                    }
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                      activo
+                        ? "bg-tinta text-white"
+                        : "border border-borde bg-white text-piedra line-through"
+                    }`}
+                  >
+                    {o.titulo}
+                  </button>
+                );
+              })}
+            </div>
+
+            <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={conDetalle}
+                onChange={(e) => setConDetalle(e.target.checked)}
+                className="h-4 w-4 accent-tinta"
+              />
+              Incluir el desglose cuota por cuota (saldo, interés, IVA y
+              capital, como el simulador del banco)
+            </label>
+
             <a
               href={`/propuesta-financiacion?${paramsPdf.toString()}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 flex items-center justify-center gap-2 rounded-2xl bg-tinta py-3 text-sm font-medium text-white"
+              className={`mt-3 flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-medium ${
+                incluidas.length === 0
+                  ? "pointer-events-none bg-crema-deep text-piedra"
+                  : "bg-tinta text-white"
+              }`}
             >
               <FileText className="h-4 w-4" /> Generar hoja para el cliente
               (imprimir / PDF)

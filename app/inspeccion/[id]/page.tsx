@@ -8,6 +8,7 @@ import {
   respuestaObj,
 } from "@/lib/checklist";
 import BotonImprimir from "@/components/BotonImprimir";
+import LogoEmpresa from "@/components/LogoEmpresa";
 import type { OrdenTrabajo, OTChecklist, Sucursal } from "@/lib/types";
 
 /** Hoja de inspección imprimible de una OT, para entregar al cliente. */
@@ -55,11 +56,14 @@ export default async function InspeccionPage({
   return (
     <div className="mx-auto max-w-2xl bg-white p-8 text-tinta print:p-0">
       <div className="mb-4 flex items-start justify-between border-b-2 border-tinta pb-4">
-        <div>
-          <h1 className="text-xl font-bold">GastroWare</h1>
-          <p className="text-sm text-piedra">
-            Lista de inspección — Mantenimiento preventivo
-          </p>
+        <div className="flex items-center gap-3">
+          <LogoEmpresa />
+          <div>
+            <h1 className="text-xl font-bold">GastroWare</h1>
+            <p className="text-sm text-piedra">
+              Lista de inspección — Mantenimiento preventivo
+            </p>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-lg font-bold">OT-{ot.numero}</p>

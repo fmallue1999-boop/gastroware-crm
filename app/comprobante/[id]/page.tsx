@@ -4,6 +4,7 @@ import { firmarUrl } from "@/lib/core/storage";
 import { fechaCorta, dinero } from "@/lib/format";
 import { TIPOS_OT, ESTADOS_ITEM_OT } from "@/lib/constants";
 import BotonImprimir from "@/components/BotonImprimir";
+import LogoEmpresa from "@/components/LogoEmpresa";
 import type { OrdenTrabajo, OTItem, OTTiempo } from "@/lib/types";
 
 export default async function ComprobantePage({
@@ -46,9 +47,12 @@ export default async function ComprobantePage({
   return (
     <div className="mx-auto max-w-xl bg-white p-8 text-tinta print:p-0">
       <div className="mb-4 flex items-start justify-between border-b-2 border-tinta pb-4">
-        <div>
-          <h1 className="text-xl font-bold">GastroWare</h1>
-          <p className="text-sm text-piedra">Informe de servicio técnico</p>
+        <div className="flex items-center gap-3">
+          <LogoEmpresa />
+          <div>
+            <h1 className="text-xl font-bold">GastroWare</h1>
+            <p className="text-sm text-piedra">Informe de servicio técnico</p>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-lg font-bold">OT-{ot.numero}</p>

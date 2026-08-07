@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fechaCorta, dinero, sumarDias, telefonoProlijo } from "@/lib/format";
 import BotonImprimir from "@/components/BotonImprimir";
+import LogoEmpresa from "@/components/LogoEmpresa";
 import type { Cliente, CotizacionItem, CotizacionVersion } from "@/lib/types";
 
 export default async function CotizacionPrintPage({
@@ -62,9 +63,12 @@ export default async function CotizacionPrintPage({
   return (
     <div className="mx-auto max-w-xl bg-white p-8 text-tinta print:p-0">
       <div className="mb-4 flex items-start justify-between border-b-2 border-tinta pb-4">
-        <div>
-          <h1 className="text-xl font-bold">GastroWare</h1>
-          <p className="text-sm text-piedra">Equipamiento gastronómico</p>
+        <div className="flex items-center gap-3">
+          <LogoEmpresa />
+          <div>
+            <h1 className="text-xl font-bold">GastroWare</h1>
+            <p className="text-sm text-piedra">Equipamiento gastronómico</p>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-lg font-bold">

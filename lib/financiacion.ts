@@ -5,9 +5,19 @@
  * - Interés mensual = saldo × TNA × 30 / 36500 (año de 365 días).
  * - IVA sobre intereses: 10,5%.
  * - Diferidos: el interés del período de gracia se devenga sobre el capital
- *   total y se cobra con el/los pagos (en el 6+6 se prorratea en las cuotas).
+ *   total; en el 6+6 se prorratea dentro de las cuotas (queda incluido en las
+ *   columnas de interés e IVA del desglose).
  * Es una simulación orientativa: la oferta real la hace el banco.
  */
+
+export type FilaPlan = {
+  etiqueta: string;
+  saldo: number;
+  interes: number;
+  iva: number;
+  capital: number;
+  importe: number;
+};
 
 export type OpcionFinanciacion = {
   clave: string;
@@ -24,6 +34,8 @@ export type OpcionFinanciacion = {
   total: number;
   /** Recargo total sobre el monto financiado, en %. */
   recargoPct: number;
+  /** Desglose cuota por cuota (como el simulador del banco). */
+  filas: FilaPlan[];
 };
 
 function planCuotas(
@@ -34,31 +46,41 @@ function planCuotas(
   diferMeses = 0
 ) {
   const capitalCuota = monto / n;
-  // Interés devengado durante la gracia, sobre el capital completo
+  // Interés devengado durante la gracia sobre el capital completo,
+  // prorrateado dentro de las cuotas
   const interesDiferido = (monto * tna * diferMeses * 30) / 36500;
   const ivaDiferido = interesDiferido * ivaPct;
-  const extraPorCuota = (interesDiferido + ivaDiferido) / n;
 
   let saldo = monto;
   let interesTotal = interesDiferido;
   let ivaTotal = ivaDiferido;
-  const importes: number[] = [];
+  const filas: FilaPlan[] = [];
   for (let i = 0; i < n; i++) {
-    const interes = (saldo * tna * 30) / 36500;
-    const iva = interes * ivaPct;
-    interesTotal += interes;
-    ivaTotal += iva;
-    importes.push(capitalCuota + interes + iva + extraPorCuota);
+    const interesMes = (saldo * tna * 30) / 36500;
+    const ivaMes = interesMes * ivaPct;
+    interesTotal += interesMes;
+    ivaTotal += ivaMes;
+    const interesFila = interesMes + interesDiferido / n;
+    const ivaFila = ivaMes + ivaDiferido / n;
+    filas.push({
+      etiqueta: String(i + 1),
+      saldo,
+      interes: interesFila,
+      iva: ivaFila,
+      capital: capitalCuota,
+      importe: capitalCuota + interesFila + ivaFila,
+    });
     saldo -= capitalCuota;
   }
-  const total = importes.reduce((s, x) => s + x, 0);
+  const total = filas.reduce((s, f) => s + f.importe, 0);
   return {
-    primeraCuota: importes[0],
-    ultimaCuota: importes[n - 1],
+    primeraCuota: filas[0].importe,
+    ultimaCuota: filas[n - 1].importe,
     cuotaPromedio: total / n,
     interesTotal,
     ivaTotal,
     total,
+    filas,
   };
 }
 
@@ -67,6 +89,16 @@ function planDiferido(monto: number, meses: number, tna: number, ivaPct: number)
   const interes = (monto * tna * meses * 30) / 36500;
   const iva = interes * ivaPct;
   const total = monto + interes + iva;
+  const filas: FilaPlan[] = [
+    {
+      etiqueta: `Única (mes ${meses})`,
+      saldo: monto,
+      interes,
+      iva,
+      capital: monto,
+      importe: total,
+    },
+  ];
   return {
     primeraCuota: total,
     ultimaCuota: total,
@@ -74,6 +106,7 @@ function planDiferido(monto: number, meses: number, tna: number, ivaPct: number)
     interesTotal: interes,
     ivaTotal: iva,
     total,
+    filas,
   };
 }
 
