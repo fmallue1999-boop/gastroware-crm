@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { guardarProducto } from "@/lib/actions";
+import { crearSubidaBiblioteca, guardarProducto } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/client";
 import type { Producto } from "@/lib/types";
 
@@ -26,16 +26,25 @@ export default function FichaProducto({ producto }: { producto: Producto }) {
       setError("La imagen no puede superar los 10 MB.");
       return;
     }
+    const firma = await crearSubidaBiblioteca(
+      `${producto.id}-${archivo.name}`,
+      "productos"
+    );
+    if ("error" in firma) {
+      setError(firma.error ?? "No se pudo preparar la subida");
+      return;
+    }
     const supabase = createClient();
-    const path = `productos/${producto.id}-${Date.now()}-${archivo.name.replace(/[^\w.\-]/g, "_")}`;
     const { error: errUp } = await supabase.storage
       .from("biblioteca")
-      .upload(path, archivo);
+      .uploadToSignedUrl(firma.path, firma.token, archivo);
     if (errUp) {
       setError("No se pudo subir la imagen: " + errUp.message);
       return;
     }
-    const { data } = supabase.storage.from("biblioteca").getPublicUrl(path);
+    const { data } = supabase.storage
+      .from("biblioteca")
+      .getPublicUrl(firma.path);
     setImagenUrl(data.publicUrl);
   }
 

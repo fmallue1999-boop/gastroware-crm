@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ImageUp } from "lucide-react";
-import { setConfigValor } from "@/lib/actions";
+import { crearSubidaBiblioteca, setConfigValor } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/client";
 
 /** Logo de la empresa para los documentos imprimibles. Se guarda en el bucket público. */
@@ -18,17 +18,22 @@ export default function SubirLogo({ logoActual }: { logoActual: string | null })
       return;
     }
     startTransition(async () => {
+      const firma = await crearSubidaBiblioteca(file.name, "logo");
+      if ("error" in firma) {
+        setError(firma.error ?? "No se pudo preparar la subida");
+        return;
+      }
       const supabase = createClient();
-      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-      const path = `logo/logo-${Date.now()}.${ext}`;
       const { error: errUp } = await supabase.storage
         .from("biblioteca")
-        .upload(path, file, { upsert: true });
+        .uploadToSignedUrl(firma.path, firma.token, file);
       if (errUp) {
         setError(errUp.message);
         return;
       }
-      const { data } = supabase.storage.from("biblioteca").getPublicUrl(path);
+      const { data } = supabase.storage
+        .from("biblioteca")
+        .getPublicUrl(firma.path);
       const res = await setConfigValor("logo_url", data.publicUrl);
       if (res && "error" in res && res.error) setError(res.error);
     });

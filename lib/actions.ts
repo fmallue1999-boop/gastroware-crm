@@ -2101,6 +2101,37 @@ export async function borrarSuscripcionPush(endpoint: string) {
 // Administración
 // =====================================================================
 
+/**
+ * Crea una subida firmada al bucket público biblioteca. El navegador después
+ * sube el archivo con el token (uploadToSignedUrl), sin depender de que la
+ * sesión del navegador llegue al storage — evita falsos "row-level security".
+ */
+export async function crearSubidaBiblioteca(
+  nombreArchivo: string,
+  carpeta?: string
+) {
+  const rol = await rolActual();
+  if (!["direccion", "admin", "marketing"].includes(rol))
+    return { error: "Sin permiso para subir archivos" };
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
+  if (!serviceKey)
+    return { error: "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor" };
+
+  const { createClient: createAdmin } = await import("@supabase/supabase-js");
+  const admin = createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceKey,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  const limpio = nombreArchivo.replace(/[^\w.\-]/g, "_");
+  const path = `${carpeta ? `${carpeta}/` : ""}${Date.now()}-${limpio}`;
+  const { data, error } = await admin.storage
+    .from("biblioteca")
+    .createSignedUploadUrl(path);
+  if (error || !data) return { error: error?.message ?? "No se pudo firmar" };
+  return { ok: true as const, path: data.path, token: data.token };
+}
+
 export async function setConfigValor(clave: string, valor: string) {
   const supabase = await createClient();
   const { error } = await supabase

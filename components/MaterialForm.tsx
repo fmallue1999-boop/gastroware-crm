@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { crearMaterial } from "@/lib/actions";
+import { crearMaterial, crearSubidaBiblioteca } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/client";
 import type { Producto } from "@/lib/types";
 
@@ -57,16 +57,22 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
           setError("El archivo no puede superar los 25 MB.");
           return;
         }
+        const firma = await crearSubidaBiblioteca(archivo.name);
+        if ("error" in firma) {
+          setError(firma.error ?? "No se pudo preparar la subida");
+          return;
+        }
         const supabase = createClient();
-        const path = `${Date.now()}-${archivo.name.replace(/[^\w.\-]/g, "_")}`;
         const { error: errUp } = await supabase.storage
           .from("biblioteca")
-          .upload(path, archivo);
+          .uploadToSignedUrl(firma.path, firma.token, archivo);
         if (errUp) {
           setError("No se pudo subir: " + errUp.message);
           return;
         }
-        const { data } = supabase.storage.from("biblioteca").getPublicUrl(path);
+        const { data } = supabase.storage
+          .from("biblioteca")
+          .getPublicUrl(firma.path);
         urlFinal = data.publicUrl;
       }
 
