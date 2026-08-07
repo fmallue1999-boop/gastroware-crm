@@ -14,6 +14,12 @@ create policy biblioteca_insert on storage.objects for insert to authenticated
     and (fn_es_gestor() or fn_rol() = 'marketing')
   );
 
+-- update: necesario para subir con upsert (ej: reemplazar el logo)
+drop policy if exists biblioteca_update on storage.objects;
+create policy biblioteca_update on storage.objects for update to authenticated
+  using (bucket_id = 'biblioteca' and (fn_es_gestor() or fn_rol() = 'marketing'))
+  with check (bucket_id = 'biblioteca' and (fn_es_gestor() or fn_rol() = 'marketing'));
+
 drop policy if exists biblioteca_delete on storage.objects;
 create policy biblioteca_delete on storage.objects for delete to authenticated
   using (
