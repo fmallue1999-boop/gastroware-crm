@@ -1187,6 +1187,19 @@ export async function transicionarOT(
     .eq("id", otId);
   if (error) return { error: error.message };
 
+  // Instalación terminada: estampar la fecha de instalación en el equipo
+  if (
+    hacia === "finalizado_tecnico" &&
+    ot.tipo === "instalacion" &&
+    ot.equipo_id
+  ) {
+    await supabase
+      .from("equipos")
+      .update({ fecha_instalacion: hoyISO() })
+      .eq("id", ot.equipo_id)
+      .is("fecha_instalacion", null);
+  }
+
   // Registrar observación en el historial de estado si la hubo
   if (extra?.observacion?.trim()) {
     const { data: ultimo } = await supabase

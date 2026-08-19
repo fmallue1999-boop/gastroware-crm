@@ -7,6 +7,7 @@ import {
   BarChart3,
   Bell,
   HardDrive,
+  HardHat,
   Landmark,
   Users,
   Wrench,
@@ -34,6 +35,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
         { href: "/pipeline", label: "Pipeline", icono: BarChart3 },
         { href: "/pedidos", label: "Pedidos", icono: Package },
         { href: "/servicio", label: "Servicio técnico", icono: Wrench },
+        { href: "/instalaciones", label: "Instalaciones", icono: HardHat },
         { href: "/equipos", label: "Equipos", icono: HardDrive },
         { href: "/clientes", label: "Clientes", icono: Users },
       ],
@@ -81,6 +83,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       grupo: "Operación",
       items: [
         { href: "/servicio", label: "Agenda", icono: Wrench },
+        { href: "/instalaciones", label: "Instalaciones", icono: HardHat },
         { href: "/equipos", label: "Equipos", icono: HardDrive },
         { href: "/clientes", label: "Clientes", icono: Users },
       ],

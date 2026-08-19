@@ -14,11 +14,13 @@ export default function OTForm({
   clienteInicial = null,
   equiposIniciales = [],
   equipoInicialId = "",
+  tipoInicial,
 }: {
   usuarios: Usuario[];
   clienteInicial?: Cliente | null;
   equiposIniciales?: { id: string; etiqueta: string }[];
   equipoInicialId?: string;
+  tipoInicial?: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [q, setQ] = useState("");
@@ -28,7 +30,9 @@ export default function OTForm({
     equiposIniciales
   );
   const [equipoId, setEquipoId] = useState(equipoInicialId);
-  const [tipo, setTipo] = useState("correctivo");
+  const [tipo, setTipo] = useState(
+    TIPOS_OT.some((t) => t.value === tipoInicial) ? tipoInicial! : "correctivo"
+  );
   const [prioridad, setPrioridad] = useState("normal");
   const [fecha, setFecha] = useState("");
   const [tecnicoId, setTecnicoId] = useState("");

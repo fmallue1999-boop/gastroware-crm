@@ -6,9 +6,9 @@ import type { Cliente, Usuario } from "@/lib/types";
 export default async function NuevaOTPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cliente?: string; equipo?: string }>;
+  searchParams: Promise<{ cliente?: string; equipo?: string; tipo?: string }>;
 }) {
-  const { cliente: clienteId, equipo: equipoId } = await searchParams;
+  const { cliente: clienteId, equipo: equipoId, tipo } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase
     .from("usuarios")
@@ -42,6 +42,7 @@ export default async function NuevaOTPage({
         clienteInicial={clienteInicial}
         equiposIniciales={equiposIniciales}
         equipoInicialId={equipoId ?? ""}
+        tipoInicial={tipo}
       />
     </div>
   );

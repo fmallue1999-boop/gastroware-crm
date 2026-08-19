@@ -5,6 +5,7 @@ import {
   TrendingUp,
   Citrus,
   BookOpen,
+  HardHat,
   KeyRound,
   Landmark,
   Package,
@@ -93,6 +94,12 @@ export default async function MasPage() {
           icono={Wrench}
           titulo="Servicio técnico"
           detalle="Órdenes de trabajo, agenda y facturación"
+        />
+        <MenuLink
+          href="/instalaciones"
+          icono={HardHat}
+          titulo="Instalaciones"
+          detalle="Control de instalaciones: gastos, serie, fecha y cobro"
         />
         <MenuLink
           href="/pipeline"
