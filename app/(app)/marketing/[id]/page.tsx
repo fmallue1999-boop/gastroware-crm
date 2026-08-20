@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fechaCorta } from "@/lib/format";
+import ActivarCampania from "@/components/ActivarCampania";
 import ColaCampania from "@/components/ColaCampania";
 import EnviarEmails from "@/components/EnviarEmails";
 import type { Cliente } from "@/lib/types";
@@ -74,8 +75,22 @@ export default async function CampaniaPage({
         )}
       </div>
 
+      {camp.estado === "borrador" && (
+        <div className="mt-4">
+          <ActivarCampania campaniaId={camp.id} />
+          <div className="mt-3 rounded-2xl border border-borde bg-white p-4 text-sm shadow-sm">
+            {camp.asunto && (
+              <p className="mb-1">
+                <span className="font-semibold">Asunto:</span> {camp.asunto}
+              </p>
+            )}
+            <p className="whitespace-pre-wrap text-tinta/80">{camp.plantilla}</p>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4">
-        {esEmail ? (
+        {camp.estado === "borrador" ? null : esEmail ? (
           <EnviarEmails
             campaniaId={camp.id}
             pendientes={pendientes.length}

@@ -68,12 +68,16 @@ export default async function MarketingPage() {
                     className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       c.estado === "terminada"
                         ? "bg-green-100 text-green-700"
-                        : "bg-celeste-soft text-sky-800"
+                        : c.estado === "borrador"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-celeste-soft text-sky-800"
                     }`}
                   >
                     {c.estado === "terminada"
                       ? "Terminada"
-                      : `${pendientes} pendientes`}
+                      : c.estado === "borrador"
+                        ? "Borrador"
+                        : `${pendientes} pendientes`}
                   </span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-crema-deep">

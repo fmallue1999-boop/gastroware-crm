@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Users } from "lucide-react";
+import { Eye, Save, Send, Users } from "lucide-react";
 import {
   previewSegmento,
   crearCampania,
+  enviarPruebaCampania,
   type FiltrosSegmento,
 } from "@/lib/actions";
 import { RUBROS, ESTADOS_CLIENTE } from "@/lib/constants";
@@ -39,6 +40,8 @@ export default function CampaniaForm({
     conEmail: number;
     muestra: string[];
   } | null>(null);
+  const [verPreview, setVerPreview] = useState(false);
+  const [pruebaOk, setPruebaOk] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const filtros: FiltrosSegmento = {
@@ -65,11 +68,28 @@ export default function CampaniaForm({
     });
   }
 
-  function crear() {
+  function crear(borrador = false) {
     setError(null);
     startTransition(async () => {
-      const res = await crearCampania({ nombre, filtros, plantilla, canal, asunto });
+      const res = await crearCampania({
+        nombre,
+        filtros,
+        plantilla,
+        canal,
+        asunto,
+        borrador,
+      });
       if (res && "error" in res && res.error) setError(res.error);
+    });
+  }
+
+  function mandarPrueba() {
+    setError(null);
+    setPruebaOk(null);
+    startTransition(async () => {
+      const res = await enviarPruebaCampania({ asunto, plantilla });
+      if ("error" in res && res.error) setError(res.error);
+      else if ("para" in res) setPruebaOk(`Prueba enviada a ${res.para} — revisá tu casilla.`);
     });
   }
 
@@ -276,23 +296,97 @@ export default function CampaniaForm({
             de baja automáticamente.
           </p>
         )}
+
+        {canal === "email" && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setVerPreview(!verPreview)}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-borde bg-white px-4 py-2.5 text-sm font-medium shadow-sm"
+            >
+              <Eye className="h-4 w-4" />
+              {verPreview ? "Ocultar vista previa" : "Ver cómo queda"}
+            </button>
+            <button
+              type="button"
+              onClick={mandarPrueba}
+              disabled={pending || !plantilla.trim() || !asunto.trim()}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-borde bg-white px-4 py-2.5 text-sm font-medium shadow-sm disabled:opacity-60"
+            >
+              <Send className="h-4 w-4" /> Mandarme una prueba a mí
+            </button>
+          </div>
+        )}
+
+        {pruebaOk && (
+          <p className="mt-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
+            {pruebaOk}
+          </p>
+        )}
+
+        {canal === "email" && verPreview && (
+          <div className="mt-3 rounded-2xl bg-crema-deep/60 p-4">
+            <p className="mb-1 text-xs text-piedra">
+              Asunto: <b>{(asunto || "—").replaceAll("{nombre}", "Juan Pérez")}</b>
+            </p>
+            <div className="mx-auto max-w-md rounded-xl bg-white p-5 text-[13.5px] leading-relaxed shadow-sm">
+              <p className="mb-3 text-base font-bold">GastroWare</p>
+              {plantilla
+                .replaceAll("{nombre}", "Juan Pérez")
+                .split(/\n{2,}/)
+                .map((p, i) => (
+                  <p key={i} className="mb-2.5 whitespace-pre-wrap">
+                    {p}
+                  </p>
+                ))}
+              <p className="mt-3">
+                Saludos,
+                <br />
+                <b>GastroWare</b>
+                <br />
+                <span className="text-xs text-piedra">
+                  Equipamiento gastronómico · Mitre 2007, Mar del Plata
+                </span>
+              </p>
+            </div>
+            <p className="mt-2 text-center text-[11px] text-piedra">
+              Recibiste este email por ser cliente o haberte contactado con
+              GastroWare. · <u>No quiero recibir más emails</u>
+            </p>
+          </div>
+        )}
       </section>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <button
-        type="button"
-        onClick={crear}
-        disabled={
-          pending ||
-          !nombre.trim() ||
-          !plantilla.trim() ||
-          (canal === "email" && !asunto.trim())
-        }
-        className="w-full rounded-2xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
-      >
-        {pending ? "Creando…" : "Crear campaña y empezar a mandar"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => crear(true)}
+          disabled={
+            pending ||
+            !nombre.trim() ||
+            !plantilla.trim() ||
+            (canal === "email" && !asunto.trim())
+          }
+          className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-borde bg-white px-4 py-3 text-sm font-medium shadow-sm disabled:opacity-60"
+        >
+          <Save className="h-4 w-4" /> Guardar borrador
+        </button>
+        <button
+          type="button"
+          onClick={() => crear(false)}
+          disabled={
+            pending ||
+            !nombre.trim() ||
+            !plantilla.trim() ||
+            (canal === "email" && !asunto.trim())
+          }
+          className="flex-1 rounded-2xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
+        >
+          {pending ? "Creando…" : "Crear campaña y empezar a mandar"}
+        </button>
+      </div>
       <p className="text-xs text-piedra">
         Los clientes marcados como &quot;no contactar&quot; quedan afuera
         siempre.{" "}

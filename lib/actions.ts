@@ -1649,6 +1649,8 @@ export async function crearCampania(input: {
   plantilla: string;
   canal?: "whatsapp" | "email";
   asunto?: string;
+  /** true = guardar como borrador (la lista se congela recién al activar). */
+  borrador?: boolean;
 }) {
   const rol = await rolActual();
   if (!["direccion", "admin", "marketing"].includes(rol))
@@ -1680,19 +1682,90 @@ export async function crearCampania(input: {
       asunto: input.asunto?.trim() || null,
       filtros: input.filtros,
       plantilla: input.plantilla.trim(),
+      estado: input.borrador ? "borrador" : "en_curso",
       creado_por: user?.id ?? null,
     })
     .select("id")
     .single();
   if (error || !camp) return { error: error?.message ?? "No se pudo crear" };
 
+  // En borrador la lista NO se congela: se arma recién al activar
+  if (!input.borrador) {
+    const { error: errDest } = await supabase.from("campania_destinatarios").insert(
+      lista.map((c) => ({ campania_id: camp.id, cliente_id: c.id }))
+    );
+    if (errDest) return { error: errDest.message };
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/marketing/${camp.id}`);
+}
+
+/** Activa una campaña en borrador: congela la lista del segmento y arranca. */
+export async function activarCampania(campaniaId: string) {
+  const rol = await rolActual();
+  if (!["direccion", "admin", "marketing"].includes(rol))
+    return { error: "Sin permiso para activar campañas" };
+  const supabase = await createClient();
+  const { data: camp } = await supabase
+    .from("campanias")
+    .select("id, canal, filtros, estado")
+    .eq("id", campaniaId)
+    .single();
+  if (!camp) return { error: "Campaña no encontrada" };
+  if (camp.estado !== "borrador") return { error: "La campaña ya está activa" };
+
+  const lista = (
+    await evaluarSegmento(supabase, (camp.filtros ?? {}) as FiltrosSegmento)
+  ).filter((c) => (camp.canal === "email" ? c.email : c.telefono));
+  if (lista.length === 0)
+    return { error: "El segmento quedó vacío. Editá los filtros creando otra campaña." };
+
   const { error: errDest } = await supabase.from("campania_destinatarios").insert(
     lista.map((c) => ({ campania_id: camp.id, cliente_id: c.id }))
   );
   if (errDest) return { error: errDest.message };
 
+  const { error } = await supabase
+    .from("campanias")
+    .update({ estado: "en_curso" })
+    .eq("id", campaniaId);
+  if (error) return { error: error.message };
+
   revalidatePath("/", "layout");
-  redirect(`/marketing/${camp.id}`);
+  return { ok: true, destinatarios: lista.length };
+}
+
+/** Manda el email de la campaña a la casilla del usuario logueado, para verlo real. */
+export async function enviarPruebaCampania(input: {
+  asunto: string;
+  plantilla: string;
+}) {
+  const rol = await rolActual();
+  if (!["direccion", "admin", "marketing"].includes(rol))
+    return { error: "Sin permiso" };
+  const user = await usuarioActual();
+  if (!user?.email) return { error: "Tu usuario no tiene email" };
+
+  const supabase = await createClient();
+  const { data: cfgLogo } = await supabase
+    .from("config")
+    .select("valor")
+    .eq("clave", "logo_url")
+    .maybeSingle();
+
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://gastroware-crm.vercel.app";
+  const res = await enviarEmail({
+    para: user.email,
+    asunto: `[PRUEBA] ${rellenarPlantillaServidor(input.asunto || "Sin asunto", "Juan Pérez")}`,
+    html: htmlCampania(
+      rellenarPlantillaServidor(input.plantilla, "Juan Pérez"),
+      `${base}/api/baja`,
+      cfgLogo?.valor?.trim() || null
+    ),
+  });
+  if ("error" in res) return { error: res.error };
+  return { ok: true, para: user.email };
 }
 
 export async function marcarDestinatario(
