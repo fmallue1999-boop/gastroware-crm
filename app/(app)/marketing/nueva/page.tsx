@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { iaConfigurada } from "@/lib/core/ia";
 import CampaniaForm from "@/components/CampaniaForm";
+
+// El diseño de email con IA puede tardar ~30s
+export const maxDuration = 60;
 
 export default async function NuevaCampaniaPage() {
   const supabase = await createClient();
@@ -17,7 +21,10 @@ export default async function NuevaCampaniaPage() {
       <p className="text-sm text-piedra mb-5">
         Armá el segmento, mirá a cuántos les llega, escribí el mensaje y listo.
       </p>
-      <CampaniaForm mesesDormidoDefault={Number(cfgDormido?.valor) || 6} />
+      <CampaniaForm
+        mesesDormidoDefault={Number(cfgDormido?.valor) || 6}
+        iaOn={iaConfigurada()}
+      />
     </div>
   );
 }

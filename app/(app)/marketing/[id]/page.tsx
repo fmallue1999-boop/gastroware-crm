@@ -84,7 +84,18 @@ export default async function CampaniaPage({
                 <span className="font-semibold">Asunto:</span> {camp.asunto}
               </p>
             )}
-            <p className="whitespace-pre-wrap text-tinta/80">{camp.plantilla}</p>
+            {camp.html ? (
+              <iframe
+                srcDoc={camp.html
+                  .replaceAll("{nombre}", "Juan Pérez")
+                  .replaceAll("{baja}", "#")}
+                title="Vista previa del email"
+                className="h-[560px] w-full rounded-xl border-0 bg-white"
+                sandbox=""
+              />
+            ) : (
+              <p className="whitespace-pre-wrap text-tinta/80">{camp.plantilla}</p>
+            )}
           </div>
         </div>
       )}

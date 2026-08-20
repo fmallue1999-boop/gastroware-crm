@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Eye, Save, Send, Users } from "lucide-react";
+import { Eye, Save, Send, Sparkles, Users } from "lucide-react";
 import {
   previewSegmento,
   crearCampania,
   enviarPruebaCampania,
+  iaRedactarCampania,
+  iaDisenarCampania,
   type FiltrosSegmento,
 } from "@/lib/actions";
 import { RUBROS, ESTADOS_CLIENTE } from "@/lib/constants";
@@ -17,8 +19,10 @@ const MARCAS = ["Zumex", "GastroWare", "Rational", "Jetinno"];
 
 export default function CampaniaForm({
   mesesDormidoDefault,
+  iaOn = false,
 }: {
   mesesDormidoDefault: number;
+  iaOn?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [nombre, setNombre] = useState("");
@@ -42,6 +46,9 @@ export default function CampaniaForm({
   } | null>(null);
   const [verPreview, setVerPreview] = useState(false);
   const [pruebaOk, setPruebaOk] = useState<string | null>(null);
+  const [objetivoIA, setObjetivoIA] = useState("");
+  const [htmlIA, setHtmlIA] = useState<string | null>(null);
+  const [pensandoIA, setPensandoIA] = useState<"texto" | "diseno" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const filtros: FiltrosSegmento = {
@@ -77,6 +84,7 @@ export default function CampaniaForm({
         plantilla,
         canal,
         asunto,
+        html: htmlIA ?? undefined,
         borrador,
       });
       if (res && "error" in res && res.error) setError(res.error);
@@ -87,11 +95,57 @@ export default function CampaniaForm({
     setError(null);
     setPruebaOk(null);
     startTransition(async () => {
-      const res = await enviarPruebaCampania({ asunto, plantilla });
+      const res = await enviarPruebaCampania({
+        asunto,
+        plantilla,
+        html: htmlIA ?? undefined,
+      });
       if ("error" in res && res.error) setError(res.error);
       else if ("para" in res) setPruebaOk(`Prueba enviada a ${res.para} — revisá tu casilla.`);
     });
   }
+
+  function redactarIA() {
+    setError(null);
+    setPensandoIA("texto");
+    startTransition(async () => {
+      const res = await iaRedactarCampania({
+        objetivo: objetivoIA,
+        canal,
+        borradorActual: plantilla.trim().length > 30 ? plantilla : undefined,
+      });
+      setPensandoIA(null);
+      if ("error" in res && res.error) setError(res.error);
+      else if ("cuerpo" in res) {
+        setPlantilla(res.cuerpo);
+        if (canal === "email" && res.asunto) setAsunto(res.asunto);
+        setHtmlIA(null);
+      }
+    });
+  }
+
+  function disenarIA() {
+    setError(null);
+    setPensandoIA("diseno");
+    startTransition(async () => {
+      const res = await iaDisenarCampania({
+        objetivo: objetivoIA,
+        borradorActual: plantilla.trim().length > 30 ? plantilla : undefined,
+      });
+      setPensandoIA(null);
+      if ("error" in res && res.error) setError(res.error);
+      else if ("html" in res) {
+        setAsunto(res.asunto);
+        setPlantilla(res.texto);
+        setHtmlIA(res.html);
+        setVerPreview(true);
+      }
+    });
+  }
+
+  const htmlPreview = htmlIA
+    ? htmlIA.replaceAll("{nombre}", "Juan Pérez").replaceAll("{baja}", "#")
+    : null;
 
   const chip = (activo: boolean) =>
     `rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -268,6 +322,49 @@ export default function CampaniaForm({
         )}
       </section>
 
+      {iaOn && (
+        <section className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-violet-900">
+            <Sparkles className="h-4 w-4" /> Armala con IA
+          </p>
+          <p className="mb-2 text-xs text-violet-800">
+            Contale en una frase qué querés comunicar y te la arma. Usa tu
+            catálogo para hablar bien de los productos; no inventa precios ni
+            promos que no le digas.
+          </p>
+          <input
+            type="text"
+            placeholder="Ej: recompra de pastillas Rational con envío en el día para clientes con horno"
+            value={objetivoIA}
+            onChange={(e) => setObjetivoIA(e.target.value)}
+            className={inputCls}
+          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            {canal === "email" && (
+              <button
+                type="button"
+                onClick={disenarIA}
+                disabled={pending || !objetivoIA.trim()}
+                className="inline-flex items-center gap-1.5 rounded-2xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+              >
+                <Sparkles className="h-4 w-4" />
+                {pensandoIA === "diseno"
+                  ? "Diseñando… (medio minuto)"
+                  : "Diseñar email pro"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={redactarIA}
+              disabled={pending || !objetivoIA.trim()}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-violet-300 bg-white px-4 py-2.5 text-sm font-medium text-violet-800 disabled:opacity-60"
+            >
+              {pensandoIA === "texto" ? "Redactando…" : "Solo redactar el texto"}
+            </button>
+          </div>
+        </section>
+      )}
+
       <section className="rounded-2xl border border-borde bg-white p-4 shadow-sm">
         <p className="mb-1 text-sm font-semibold">El mensaje</p>
         <p className="mb-2 text-xs text-piedra">
@@ -324,7 +421,35 @@ export default function CampaniaForm({
           </p>
         )}
 
-        {canal === "email" && verPreview && (
+        {canal === "email" && htmlIA && (
+          <p className="mt-2 flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs text-violet-800">
+            <Sparkles className="h-3.5 w-3.5" /> Diseño de IA activo: se envía
+            este diseño.
+            <button
+              type="button"
+              onClick={() => setHtmlIA(null)}
+              className="underline"
+            >
+              Descartar y usar texto simple
+            </button>
+          </p>
+        )}
+
+        {canal === "email" && verPreview && htmlPreview && (
+          <div className="mt-3 rounded-2xl bg-crema-deep/60 p-2">
+            <p className="mb-1 px-2 pt-1 text-xs text-piedra">
+              Asunto: <b>{(asunto || "—").replaceAll("{nombre}", "Juan Pérez")}</b>
+            </p>
+            <iframe
+              srcDoc={htmlPreview}
+              title="Vista previa del email"
+              className="h-[560px] w-full rounded-xl border-0 bg-white"
+              sandbox=""
+            />
+          </div>
+        )}
+
+        {canal === "email" && verPreview && !htmlPreview && (
           <div className="mt-3 rounded-2xl bg-crema-deep/60 p-4">
             <p className="mb-1 text-xs text-piedra">
               Asunto: <b>{(asunto || "—").replaceAll("{nombre}", "Juan Pérez")}</b>
