@@ -135,6 +135,11 @@ export async function GET(request: Request) {
         yaEstaban++;
         ultimoOk = c.id;
         sinGuardar++;
+      } else if (r.status === 422) {
+        // Email que Resend considera inválido: saltear y seguir
+        invalidos++;
+        ultimoOk = c.id;
+        sinGuardar++;
       } else if (r.status === 403 || detalle.includes("limit")) {
         // Tope del plan gratis de Resend: cortar sin avanzar el cursor
         limiteAlcanzado = true;
