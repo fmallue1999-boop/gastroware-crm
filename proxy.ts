@@ -57,6 +57,6 @@ export const config = {
   matcher: [
     // api/cron, api/lead-web y api/webhooks son públicos: se protegen solos
     // (CRON_SECRET, honeypot+rate limit, firma de Meta respectivamente).
-    "/((?!_next/static|_next/image|favicon.ico|api/cron|api/lead-web|api/webhooks|api/catalogo|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/cron|api/lead-web|api/webhooks|api/catalogo|api/baja|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

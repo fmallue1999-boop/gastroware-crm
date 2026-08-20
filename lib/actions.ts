@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
+import { enviarEmail } from "@/lib/core/email";
 import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde, fechaCorta } from "@/lib/format";
 import { CADENCIA_COTIZACION, PEDIDO_ESTADOS } from "@/lib/constants";
 import type { Cliente, Etapa, PedidoEstado } from "@/lib/types";
@@ -1550,7 +1551,7 @@ async function evaluarSegmento(
     .select("id, nombre_comercial, telefono, email, sucursales(ciudad)")
     .is("deleted_at", null)
     .eq("no_contactar", false)
-    .limit(5000);
+    .limit(20000);
   if (filtros.estados?.length) q = q.in("estado", filtros.estados);
   if (filtros.rubros?.length) q = q.in("rubro", filtros.rubros);
 
@@ -1633,9 +1634,11 @@ export async function previewSegmento(filtros: FiltrosSegmento) {
   const supabase = await createClient();
   const lista = await evaluarSegmento(supabase, filtros);
   const conTelefono = lista.filter((c) => c.telefono).length;
+  const conEmail = lista.filter((c) => c.email).length;
   return {
     total: lista.length,
     conTelefono,
+    conEmail,
     muestra: lista.slice(0, 5).map((c) => c.nombre_comercial),
   };
 }
@@ -1644,26 +1647,37 @@ export async function crearCampania(input: {
   nombre: string;
   filtros: FiltrosSegmento;
   plantilla: string;
+  canal?: "whatsapp" | "email";
+  asunto?: string;
 }) {
   const rol = await rolActual();
   if (!["direccion", "admin", "marketing"].includes(rol))
     return { error: "Sin permiso para crear campañas" };
   if (!input.nombre.trim()) return { error: "Falta el nombre de la campaña" };
   if (!input.plantilla.trim()) return { error: "Falta el mensaje" };
+  const canal = input.canal ?? "whatsapp";
+  if (canal === "email" && !input.asunto?.trim())
+    return { error: "Falta el asunto del email" };
 
   const supabase = await createClient();
   const user = await usuarioActual();
-  const lista = (await evaluarSegmento(supabase, input.filtros)).filter(
-    (c) => c.telefono
+  const lista = (await evaluarSegmento(supabase, input.filtros)).filter((c) =>
+    canal === "email" ? c.email : c.telefono
   );
   if (lista.length === 0)
-    return { error: "El segmento no tiene clientes con teléfono. Ajustá los filtros." };
+    return {
+      error:
+        canal === "email"
+          ? "El segmento no tiene clientes con email. Ajustá los filtros."
+          : "El segmento no tiene clientes con teléfono. Ajustá los filtros.",
+    };
 
   const { data: camp, error } = await supabase
     .from("campanias")
     .insert({
       nombre: input.nombre.trim(),
-      canal: "whatsapp",
+      canal,
+      asunto: input.asunto?.trim() || null,
       filtros: input.filtros,
       plantilla: input.plantilla.trim(),
       creado_por: user?.id ?? null,
@@ -1728,6 +1742,152 @@ export async function marcarDestinatario(
 
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/** Link de baja firmado (HMAC con CRON_SECRET): nadie puede dar de baja a otro. */
+function urlBaja(clienteId: string): string {
+  const secreto = process.env.CRON_SECRET ?? "";
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createHmac } = require("crypto") as typeof import("crypto");
+  const token = createHmac("sha256", secreto).update(clienteId).digest("hex").slice(0, 32);
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://gastroware-crm.vercel.app";
+  return `${base}/api/baja?c=${clienteId}&t=${token}`;
+}
+
+function htmlCampania(texto: string, bajaUrl: string, logoUrl: string | null): string {
+  const parrafos = texto
+    .split(/\n{2,}/)
+    .map(
+      (p) =>
+        `<p style="margin:0 0 14px 0; line-height:1.55;">${p.replace(/\n/g, "<br/>")}</p>`
+    )
+    .join("");
+  return `<!doctype html><html><body style="margin:0; padding:0; background:#f5f4f0;">
+  <div style="max-width:560px; margin:0 auto; padding:28px 20px; font-family:Arial,Helvetica,sans-serif; font-size:15px; color:#1d1d1f;">
+    <div style="background:#ffffff; border-radius:14px; padding:28px;">
+      ${logoUrl ? `<img src="${logoUrl}" alt="GastroWare" style="height:44px; margin-bottom:18px;"/>` : `<p style="font-size:19px; font-weight:bold; margin:0 0 18px 0;">GastroWare</p>`}
+      ${parrafos}
+      <p style="margin:18px 0 0 0; line-height:1.5;">Saludos,<br/><b>GastroWare</b><br/><span style="color:#6b6b6b; font-size:13px;">Equipamiento gastronómico · Mitre 2007, Mar del Plata</span></p>
+    </div>
+    <p style="text-align:center; color:#9a9a94; font-size:12px; margin-top:16px;">
+      Recibiste este email por ser cliente o haberte contactado con GastroWare.<br/>
+      <a href="${bajaUrl}" style="color:#9a9a94;">No quiero recibir más emails</a>
+    </p>
+  </div>
+</body></html>`;
+}
+
+/**
+ * Envía una tanda de emails de la campaña (secuencial, respeta no_contactar).
+ * Se manda por tandas a propósito: cuida el límite del plan de Resend y la
+ * reputación del dominio (ir de a poco los primeros días).
+ */
+export async function enviarTandaEmail(campaniaId: string, cantidad = 50) {
+  const rol = await rolActual();
+  if (!["direccion", "admin", "marketing"].includes(rol))
+    return { error: "Sin permiso para enviar campañas" };
+
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: camp } = await supabase
+    .from("campanias")
+    .select("id, nombre, canal, asunto, plantilla, estado")
+    .eq("id", campaniaId)
+    .single();
+  if (!camp) return { error: "Campaña no encontrada" };
+  if (camp.canal !== "email") return { error: "Esta campaña no es de email" };
+  if (camp.estado !== "en_curso") return { error: "La campaña no está en curso" };
+
+  const { data: cfgLogo } = await supabase
+    .from("config")
+    .select("valor")
+    .eq("clave", "logo_url")
+    .maybeSingle();
+  const logoUrl = cfgLogo?.valor?.trim() || null;
+
+  const { data: dests } = await supabase
+    .from("campania_destinatarios")
+    .select("id, cliente:clientes(id, nombre_comercial, email, no_contactar)")
+    .eq("campania_id", campaniaId)
+    .eq("estado", "pendiente")
+    .limit(Math.min(Math.max(cantidad, 1), 100));
+
+  type Dest = {
+    id: string;
+    cliente: {
+      id: string;
+      nombre_comercial: string;
+      email: string | null;
+      no_contactar: boolean;
+    } | null;
+  };
+  const lista = ((dests ?? []) as unknown as Dest[]).filter((d) => d.cliente);
+
+  let enviados = 0;
+  let salteados = 0;
+  let errores = 0;
+  for (const d of lista) {
+    const c = d.cliente!;
+    if (!c.email || c.no_contactar) {
+      await supabase
+        .from("campania_destinatarios")
+        .update({ estado: "salteado", enviado_por: user?.id ?? null })
+        .eq("id", d.id);
+      salteados++;
+      continue;
+    }
+    const texto = rellenarPlantillaServidor(camp.plantilla, c.nombre_comercial);
+    const res = await enviarEmail({
+      para: c.email,
+      asunto: rellenarPlantillaServidor(camp.asunto ?? "", c.nombre_comercial) || camp.nombre,
+      html: htmlCampania(texto, urlBaja(c.id), logoUrl),
+    });
+    if ("error" in res) {
+      await supabase
+        .from("campania_destinatarios")
+        .update({ estado: "error", error: res.error.slice(0, 300) })
+        .eq("id", d.id);
+      errores++;
+      // Si falla la configuración (sin API key), cortar acá
+      if (res.error.includes("RESEND_API_KEY")) break;
+    } else {
+      await supabase
+        .from("campania_destinatarios")
+        .update({
+          estado: "enviado",
+          enviado_at: new Date().toISOString(),
+          enviado_por: user?.id ?? null,
+        })
+        .eq("id", d.id);
+      await supabase.from("actividades").insert({
+        cliente_id: c.id,
+        tipo: "nota",
+        contenido: `Campaña "${camp.nombre}": email enviado a ${c.email}`,
+        created_by: user?.id ?? null,
+      });
+      enviados++;
+    }
+  }
+
+  const { count: pendientesRestantes } = await supabase
+    .from("campania_destinatarios")
+    .select("id", { count: "exact", head: true })
+    .eq("campania_id", campaniaId)
+    .eq("estado", "pendiente");
+  if ((pendientesRestantes ?? 0) === 0) {
+    await supabase
+      .from("campanias")
+      .update({ estado: "terminada" })
+      .eq("id", campaniaId);
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true, enviados, salteados, errores, restantes: pendientesRestantes ?? 0 };
+}
+
+/** Reemplaza {nombre} sin depender del cliente (versión servidor). */
+function rellenarPlantillaServidor(texto: string, nombre: string): string {
+  return texto.replaceAll("{nombre}", nombre);
 }
 
 export async function setNoContactar(clienteId: string, valor: boolean) {

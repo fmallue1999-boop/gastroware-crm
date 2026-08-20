@@ -21,6 +21,8 @@ export default function CampaniaForm({
 }) {
   const [pending, startTransition] = useTransition();
   const [nombre, setNombre] = useState("");
+  const [canal, setCanal] = useState<"whatsapp" | "email">("whatsapp");
+  const [asunto, setAsunto] = useState("");
   const [estados, setEstados] = useState<string[]>([]);
   const [rubros, setRubros] = useState<string[]>([]);
   const [marca, setMarca] = useState("");
@@ -34,6 +36,7 @@ export default function CampaniaForm({
   const [preview, setPreview] = useState<{
     total: number;
     conTelefono: number;
+    conEmail: number;
     muestra: string[];
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +68,7 @@ export default function CampaniaForm({
   function crear() {
     setError(null);
     startTransition(async () => {
-      const res = await crearCampania({ nombre, filtros, plantilla });
+      const res = await crearCampania({ nombre, filtros, plantilla, canal, asunto });
       if (res && "error" in res && res.error) setError(res.error);
     });
   }
@@ -85,6 +88,36 @@ export default function CampaniaForm({
         onChange={(e) => setNombre(e.target.value)}
         className={inputCls}
       />
+
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
+          ¿Por dónde sale?
+        </p>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setCanal("whatsapp")}
+            className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
+              canal === "whatsapp"
+                ? "bg-tinta text-white"
+                : "border border-borde bg-white text-piedra"
+            }`}
+          >
+            WhatsApp (uno por uno, con tu OK)
+          </button>
+          <button
+            type="button"
+            onClick={() => setCanal("email")}
+            className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
+              canal === "email"
+                ? "bg-tinta text-white"
+                : "border border-borde bg-white text-piedra"
+            }`}
+          >
+            Email (automático, por tandas)
+          </button>
+        </div>
+      </div>
 
       <section className="rounded-2xl border border-borde bg-white p-4 shadow-sm space-y-3">
         <p className="text-sm font-semibold">¿A quiénes?</p>
@@ -196,10 +229,14 @@ export default function CampaniaForm({
         {preview && (
           <div className="rounded-xl bg-celeste-soft/50 border border-celeste px-3 py-2 text-sm">
             <p className="font-medium">
-              {preview.conTelefono} clientes con WhatsApp
-              {preview.total !== preview.conTelefono
-                ? ` (${preview.total - preview.conTelefono} más sin teléfono, quedan afuera)`
-                : ""}
+              {canal === "email"
+                ? `${preview.conEmail} clientes con email`
+                : `${preview.conTelefono} clientes con WhatsApp`}
+              {canal === "email" && preview.total !== preview.conEmail
+                ? ` (${preview.total - preview.conEmail} más sin email, quedan afuera)`
+                : canal === "whatsapp" && preview.total !== preview.conTelefono
+                  ? ` (${preview.total - preview.conTelefono} más sin teléfono, quedan afuera)`
+                  : ""}
             </p>
             {preview.muestra.length > 0 && (
               <p className="mt-0.5 text-xs text-piedra">
@@ -216,12 +253,29 @@ export default function CampaniaForm({
         <p className="mb-2 text-xs text-piedra">
           {"{nombre}"} se reemplaza por el nombre de cada cliente.
         </p>
+        {canal === "email" && (
+          <input
+            type="text"
+            required
+            placeholder="Asunto del email (ej: Novedades para tu cocina, {nombre})"
+            value={asunto}
+            onChange={(e) => setAsunto(e.target.value)}
+            className={`${inputCls} mb-2`}
+          />
+        )}
         <textarea
           value={plantilla}
           onChange={(e) => setPlantilla(e.target.value)}
-          rows={4}
+          rows={canal === "email" ? 7 : 4}
           className={inputCls}
         />
+        {canal === "email" && (
+          <p className="mt-1.5 text-xs text-piedra">
+            Sale como <b>comunicacion@gastroware.com.ar</b>, las respuestas
+            llegan a <b>info@</b>. El email lleva tu logo, la firma y el link
+            de baja automáticamente.
+          </p>
+        )}
       </section>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -229,15 +283,22 @@ export default function CampaniaForm({
       <button
         type="button"
         onClick={crear}
-        disabled={pending || !nombre.trim() || !plantilla.trim()}
+        disabled={
+          pending ||
+          !nombre.trim() ||
+          !plantilla.trim() ||
+          (canal === "email" && !asunto.trim())
+        }
         className="w-full rounded-2xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
       >
         {pending ? "Creando…" : "Crear campaña y empezar a mandar"}
       </button>
       <p className="text-xs text-piedra">
         Los clientes marcados como &quot;no contactar&quot; quedan afuera
-        siempre. Los mensajes salen por tu WhatsApp, uno por uno, con tu
-        aprobación en cada envío.
+        siempre.{" "}
+        {canal === "whatsapp"
+          ? "Los mensajes salen por tu WhatsApp, uno por uno, con tu aprobación en cada envío."
+          : "Los emails salen por tandas que disparás vos desde la campaña (así cuidamos el límite diario y la reputación del dominio)."}
       </p>
     </div>
   );
