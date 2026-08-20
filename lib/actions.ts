@@ -1542,22 +1542,40 @@ type ClienteSegmento = {
   email: string | null;
 };
 
+/**
+ * Supabase corta cada consulta en 1000 filas aunque se pida más: esta
+ * función pagina con range() hasta traer todo (la base ya supera los 5000).
+ */
+async function traerTodo<T>(
+  arma: (desde: number, hasta: number) => PromiseLike<{ data: unknown[] | null }>
+): Promise<T[]> {
+  const todo: T[] = [];
+  for (let desde = 0; ; desde += 1000) {
+    const { data } = await arma(desde, desde + 999);
+    const pagina = (data ?? []) as T[];
+    todo.push(...pagina);
+    if (pagina.length < 1000) break;
+  }
+  return todo;
+}
+
 async function evaluarSegmento(
   supabase: Awaited<ReturnType<typeof createClient>>,
   filtros: FiltrosSegmento
 ): Promise<ClienteSegmento[]> {
-  let q = supabase
-    .from("clientes")
-    .select("id, nombre_comercial, telefono, email, sucursales(ciudad)")
-    .is("deleted_at", null)
-    .eq("no_contactar", false)
-    .limit(20000);
-  if (filtros.estados?.length) q = q.in("estado", filtros.estados);
-  if (filtros.rubros?.length) q = q.in("rubro", filtros.rubros);
-
-  const { data } = await q;
   type Fila = ClienteSegmento & { sucursales?: { ciudad: string | null }[] };
-  let lista = (data ?? []) as Fila[];
+  let lista = await traerTodo<Fila>((desde, hasta) => {
+    let q = supabase
+      .from("clientes")
+      .select("id, nombre_comercial, telefono, email, sucursales(ciudad)")
+      .is("deleted_at", null)
+      .eq("no_contactar", false)
+      .order("id")
+      .range(desde, hasta);
+    if (filtros.estados?.length) q = q.in("estado", filtros.estados);
+    if (filtros.rubros?.length) q = q.in("rubro", filtros.rubros);
+    return q;
+  });
 
   if (filtros.ciudad?.trim()) {
     const c = filtros.ciudad.trim().toLowerCase();
@@ -1568,57 +1586,77 @@ async function evaluarSegmento(
 
   if (filtros.marca?.trim()) {
     const m = filtros.marca.trim().toLowerCase();
-    const { data: eqs } = await supabase
-      .from("equipos")
-      .select("cliente_id, marca_modelo_libre, producto:productos(marca, nombre), modelo:modelos(marca)")
-      .is("deleted_at", null)
-      .limit(10000);
+    type EquipoFila = {
+      cliente_id: string;
+      marca_modelo_libre: string | null;
+      producto: { marca: string | null; nombre: string | null } | null;
+      modelo: { marca: string | null } | null;
+    };
+    const eqs = await traerTodo<EquipoFila>((desde, hasta) =>
+      supabase
+        .from("equipos")
+        .select(
+          "cliente_id, marca_modelo_libre, producto:productos(marca, nombre), modelo:modelos(marca)"
+        )
+        .is("deleted_at", null)
+        .order("id")
+        .range(desde, hasta)
+    );
     const con = new Set(
-      (eqs ?? [])
+      eqs
         .filter((e) => {
           const marcas = [
-            (e.producto as unknown as { marca: string | null } | null)?.marca,
-            (e.producto as unknown as { nombre: string | null } | null)?.nombre,
-            (e.modelo as unknown as { marca: string | null } | null)?.marca,
+            e.producto?.marca,
+            e.producto?.nombre,
+            e.modelo?.marca,
             e.marca_modelo_libre,
           ];
           return marcas.some((x) => (x ?? "").toLowerCase().includes(m));
         })
-        .map((e) => e.cliente_id as string)
+        .map((e) => e.cliente_id)
     );
     lista = lista.filter((f) => con.has(f.id));
   }
 
   if (filtros.garantiaDias) {
-    const { data: eqs } = await supabase
-      .from("equipos")
-      .select("cliente_id, garantia_hasta")
-      .is("deleted_at", null)
-      .gte("garantia_hasta", hoyISO())
-      .lte("garantia_hasta", sumarDias(filtros.garantiaDias))
-      .limit(10000);
-    const con = new Set((eqs ?? []).map((e) => e.cliente_id as string));
+    const eqs = await traerTodo<{ cliente_id: string }>((desde, hasta) =>
+      supabase
+        .from("equipos")
+        .select("cliente_id, garantia_hasta")
+        .is("deleted_at", null)
+        .gte("garantia_hasta", hoyISO())
+        .lte("garantia_hasta", sumarDias(filtros.garantiaDias!))
+        .order("id")
+        .range(desde, hasta)
+    );
+    const con = new Set(eqs.map((e) => e.cliente_id));
     lista = lista.filter((f) => con.has(f.id));
   }
 
   if (filtros.conRecurrencia) {
-    const { data: recs } = await supabase
-      .from("recurrencias")
-      .select("cliente_id")
-      .eq("activa", true)
-      .limit(10000);
-    const con = new Set((recs ?? []).map((r) => r.cliente_id as string));
+    const recs = await traerTodo<{ cliente_id: string }>((desde, hasta) =>
+      supabase
+        .from("recurrencias")
+        .select("cliente_id")
+        .eq("activa", true)
+        .order("id")
+        .range(desde, hasta)
+    );
+    const con = new Set(recs.map((r) => r.cliente_id));
     lista = lista.filter((f) => con.has(f.id));
   }
 
   if (filtros.dormidoMeses) {
     const corte = sumarDias(-30 * filtros.dormidoMeses);
-    const { data: acts } = await supabase
-      .from("actividades")
-      .select("cliente_id")
-      .gte("created_at", corte)
-      .limit(20000);
-    const activos = new Set((acts ?? []).map((a) => a.cliente_id as string));
+    const acts = await traerTodo<{ cliente_id: string }>((desde, hasta) =>
+      supabase
+        .from("actividades")
+        .select("cliente_id")
+        .gte("created_at", corte)
+        .order("id")
+        .range(desde, hasta)
+    );
+    const activos = new Set(acts.map((a) => a.cliente_id));
     lista = lista.filter((f) => !activos.has(f.id));
   }
 

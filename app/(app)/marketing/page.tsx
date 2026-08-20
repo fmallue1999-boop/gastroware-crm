@@ -9,7 +9,6 @@ type CampaniaFila = {
   nombre: string;
   estado: string;
   created_at: string;
-  destinatarios: { estado: string }[];
 };
 
 export default async function MarketingPage() {
@@ -20,11 +19,31 @@ export default async function MarketingPage() {
 
   const { data } = await supabase
     .from("campanias")
-    .select("id, nombre, estado, created_at, destinatarios:campania_destinatarios(estado)")
+    .select("id, nombre, estado, created_at")
     .order("created_at", { ascending: false })
     .limit(50);
-
   const campanias = (data ?? []) as CampaniaFila[];
+
+  // Progreso por campaña: las filas de destinatarios se cortan en 1000 por
+  // consulta, así que se paginan y se agrupan acá
+  const filasDest: { campania_id: string; estado: string }[] = [];
+  for (let desde = 0; ; desde += 1000) {
+    const { data: pagina } = await supabase
+      .from("campania_destinatarios")
+      .select("campania_id, estado")
+      .order("id")
+      .range(desde, desde + 999);
+    filasDest.push(...((pagina ?? []) as typeof filasDest));
+    if (!pagina || pagina.length < 1000) break;
+  }
+  const progreso = new Map<string, { total: number; enviados: number; pendientes: number }>();
+  for (const f of filasDest) {
+    const p = progreso.get(f.campania_id) ?? { total: 0, enviados: 0, pendientes: 0 };
+    p.total++;
+    if (f.estado === "enviado") p.enviados++;
+    if (f.estado === "pendiente") p.pendientes++;
+    progreso.set(f.campania_id, p);
+  }
 
   return (
     <div>
@@ -52,9 +71,10 @@ export default async function MarketingPage() {
       ) : (
         <div className="space-y-2">
           {campanias.map((c) => {
-            const total = c.destinatarios.length;
-            const enviados = c.destinatarios.filter((d) => d.estado === "enviado").length;
-            const pendientes = c.destinatarios.filter((d) => d.estado === "pendiente").length;
+            const p = progreso.get(c.id) ?? { total: 0, enviados: 0, pendientes: 0 };
+            const total = p.total;
+            const enviados = p.enviados;
+            const pendientes = p.pendientes;
             const pct = total ? Math.round((enviados / total) * 100) : 0;
             return (
               <Link

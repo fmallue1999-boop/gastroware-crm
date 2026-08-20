@@ -27,21 +27,37 @@ export default async function CampaniaPage({
   if (!["direccion", "admin", "marketing"].includes(rol ?? ""))
     redirect("/hoy");
 
-  const [{ data: camp }, { data: dests }] = await Promise.all([
+  // Contadores exactos por consulta (traer todas las filas se corta en 1000)
+  const contar = (estado: string) =>
+    supabase
+      .from("campania_destinatarios")
+      .select("id", { count: "exact", head: true })
+      .eq("campania_id", id)
+      .eq("estado", estado);
+
+  const [
+    { data: camp },
+    { count: enviados },
+    { count: salteados },
+    { count: conError },
+    { count: pendientesTotal },
+    { data: dests },
+  ] = await Promise.all([
     supabase.from("campanias").select("*").eq("id", id).single(),
+    contar("enviado"),
+    contar("salteado"),
+    contar("error"),
+    contar("pendiente"),
     supabase
       .from("campania_destinatarios")
       .select("id, estado, cliente:clientes(id, nombre_comercial, telefono, rubro)")
       .eq("campania_id", id)
-      .order("estado"),
+      .eq("estado", "pendiente")
+      .limit(200),
   ]);
   if (!camp) notFound();
 
-  const destinatarios = (dests ?? []) as unknown as Destinatario[];
-  const enviados = destinatarios.filter((d) => d.estado === "enviado").length;
-  const salteados = destinatarios.filter((d) => d.estado === "salteado").length;
-  const conError = destinatarios.filter((d) => d.estado === "error").length;
-  const pendientes = destinatarios.filter((d) => d.estado === "pendiente");
+  const pendientes = (dests ?? []) as unknown as Destinatario[];
   const esEmail = camp.canal === "email";
 
   return (
@@ -54,20 +70,20 @@ export default async function CampaniaPage({
         <span className="text-sm text-piedra">{fechaCorta(camp.created_at)}</span>
       </div>
 
-      <div className={`mt-3 grid gap-2 text-center ${conError > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
+      <div className={`mt-3 grid gap-2 text-center ${(conError ?? 0) > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
         <div className="rounded-2xl border border-borde bg-white p-3 shadow-sm">
-          <p className="text-xl font-bold text-green-700">{enviados}</p>
+          <p className="text-xl font-bold text-green-700">{enviados ?? 0}</p>
           <p className="text-xs text-piedra">Enviados</p>
         </div>
         <div className="rounded-2xl border border-borde bg-white p-3 shadow-sm">
-          <p className="text-xl font-bold">{pendientes.length}</p>
+          <p className="text-xl font-bold">{pendientesTotal ?? 0}</p>
           <p className="text-xs text-piedra">Pendientes</p>
         </div>
         <div className="rounded-2xl border border-borde bg-white p-3 shadow-sm">
-          <p className="text-xl font-bold text-piedra">{salteados}</p>
+          <p className="text-xl font-bold text-piedra">{salteados ?? 0}</p>
           <p className="text-xs text-piedra">Salteados</p>
         </div>
-        {conError > 0 && (
+        {(conError ?? 0) > 0 && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-3 shadow-sm">
             <p className="text-xl font-bold text-red-700">{conError}</p>
             <p className="text-xs text-red-700">Con error</p>
@@ -104,7 +120,7 @@ export default async function CampaniaPage({
         {camp.estado === "borrador" ? null : esEmail ? (
           <EnviarEmails
             campaniaId={camp.id}
-            pendientes={pendientes.length}
+            pendientes={pendientesTotal ?? 0}
             terminada={camp.estado === "terminada"}
           />
         ) : (
