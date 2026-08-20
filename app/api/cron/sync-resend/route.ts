@@ -34,11 +34,19 @@ export async function GET(request: Request) {
       },
     });
 
-  // Audiencia destino (se crea una vez y se guarda en config)
-  let { data: cfgAud } = await supabase
+  const url = new URL(request.url);
+  // Audiencia destino y rango opcional de ids (para partir la base en tandas)
+  const nombreAudiencia = url.searchParams.get("nombre")?.trim() || "Clientes GastroWare";
+  const desdeId = url.searchParams.get("desde")?.trim() || "";
+  const hastaId = url.searchParams.get("hasta")?.trim() || "";
+  const slug = nombreAudiencia.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 30);
+  const claveAud = `resend_aud_${slug}`;
+  const claveCursor = `resend_cur_${slug}`;
+
+  const { data: cfgAud } = await supabase
     .from("config")
     .select("valor")
-    .eq("clave", "resend_audience_id")
+    .eq("clave", claveAud)
     .maybeSingle();
   let audienceId = cfgAud?.valor?.trim();
   if (!audienceId) {
@@ -46,12 +54,12 @@ export async function GET(request: Request) {
     const rLista = await resend("/audiences");
     if (rLista.ok) {
       const lista = (await rLista.json()) as { data?: { id: string; name: string }[] };
-      audienceId = lista.data?.find((a) => a.name === "Clientes GastroWare")?.id;
+      audienceId = lista.data?.find((a) => a.name === nombreAudiencia)?.id;
     }
     if (!audienceId) {
       const r = await resend("/audiences", {
         method: "POST",
-        body: JSON.stringify({ name: "Clientes GastroWare" }),
+        body: JSON.stringify({ name: nombreAudiencia }),
       });
       if (!r.ok)
         return NextResponse.json(
@@ -62,19 +70,19 @@ export async function GET(request: Request) {
     }
     await supabase
       .from("config")
-      .upsert({ clave: "resend_audience_id", valor: audienceId }, { onConflict: "clave" });
+      .upsert({ clave: claveAud, valor: audienceId }, { onConflict: "clave" });
   }
 
-  // Cursor de avance (id del último cliente procesado)
+  // Cursor de avance (id del último cliente procesado) por audiencia
   const { data: cfgCur } = await supabase
     .from("config")
     .select("valor")
-    .eq("clave", "resend_sync_cursor")
+    .eq("clave", claveCursor)
     .maybeSingle();
   const cursor = cfgCur?.valor?.trim() || "";
 
   const lote = Math.min(
-    Math.max(parseInt(new URL(request.url).searchParams.get("lote") ?? "40", 10) || 40, 1),
+    Math.max(parseInt(url.searchParams.get("lote") ?? "40", 10) || 40, 1),
     50
   );
 
@@ -87,7 +95,9 @@ export async function GET(request: Request) {
     .neq("email", "")
     .order("id")
     .limit(lote);
-  if (cursor) q = q.gt("id", cursor);
+  const piso = cursor || desdeId;
+  if (piso) q = q.gt("id", piso);
+  if (hastaId) q = q.lte("id", hastaId);
   const { data: clientes } = await q;
   const lista = clientes ?? [];
 
@@ -103,7 +113,7 @@ export async function GET(request: Request) {
     if (ultimoOk !== cursor && sinGuardar > 0) {
       await supabase
         .from("config")
-        .upsert({ clave: "resend_sync_cursor", valor: ultimoOk }, { onConflict: "clave" });
+        .upsert({ clave: claveCursor, valor: ultimoOk }, { onConflict: "clave" });
       sinGuardar = 0;
     }
   };
@@ -160,16 +170,19 @@ export async function GET(request: Request) {
 
   await guardarCursor();
 
-  const { count: restantes } = await supabase
+  let qRestantes = supabase
     .from("clientes")
     .select("id", { count: "exact", head: true })
     .is("deleted_at", null)
     .eq("no_contactar", false)
     .not("email", "is", null)
     .neq("email", "")
-    .gt("id", ultimoOk || "00000000-0000-0000-0000-000000000000");
+    .gt("id", ultimoOk || desdeId || "00000000-0000-0000-0000-000000000000");
+  if (hastaId) qRestantes = qRestantes.lte("id", hastaId);
+  const { count: restantes } = await qRestantes;
 
   return NextResponse.json({
+    audiencia: nombreAudiencia,
     audienceId,
     procesados: lista.length,
     agregados,
