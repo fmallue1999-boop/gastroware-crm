@@ -42,17 +42,24 @@ export async function GET(request: Request) {
     .maybeSingle();
   let audienceId = cfgAud?.valor?.trim();
   if (!audienceId) {
-    const r = await resend("/audiences", {
-      method: "POST",
-      body: JSON.stringify({ name: "Clientes GastroWare" }),
-    });
-    if (!r.ok)
-      return NextResponse.json(
-        { error: `No se pudo crear la audiencia: ${await r.text()}` },
-        { status: 500 }
-      );
-    const creada = (await r.json()) as { id: string };
-    audienceId = creada.id;
+    // Reusar si ya existe (una corrida anterior pudo crearla sin llegar a guardarla)
+    const rLista = await resend("/audiences");
+    if (rLista.ok) {
+      const lista = (await rLista.json()) as { data?: { id: string; name: string }[] };
+      audienceId = lista.data?.find((a) => a.name === "Clientes GastroWare")?.id;
+    }
+    if (!audienceId) {
+      const r = await resend("/audiences", {
+        method: "POST",
+        body: JSON.stringify({ name: "Clientes GastroWare" }),
+      });
+      if (!r.ok)
+        return NextResponse.json(
+          { error: `No se pudo crear la audiencia: ${await r.text()}` },
+          { status: 500 }
+        );
+      audienceId = ((await r.json()) as { id: string }).id;
+    }
     await supabase
       .from("config")
       .upsert({ clave: "resend_audience_id", valor: audienceId }, { onConflict: "clave" });
@@ -67,8 +74,8 @@ export async function GET(request: Request) {
   const cursor = cfgCur?.valor?.trim() || "";
 
   const lote = Math.min(
-    Math.max(parseInt(new URL(request.url).searchParams.get("lote") ?? "80", 10) || 80, 1),
-    100
+    Math.max(parseInt(new URL(request.url).searchParams.get("lote") ?? "40", 10) || 40, 1),
+    50
   );
 
   let q = supabase
@@ -89,8 +96,21 @@ export async function GET(request: Request) {
   let invalidos = 0;
   let limiteAlcanzado = false;
   let ultimoOk = cursor;
+  const arranque = Date.now();
+  let sinGuardar = 0;
+
+  const guardarCursor = async () => {
+    if (ultimoOk !== cursor && sinGuardar > 0) {
+      await supabase
+        .from("config")
+        .upsert({ clave: "resend_sync_cursor", valor: ultimoOk }, { onConflict: "clave" });
+      sinGuardar = 0;
+    }
+  };
 
   for (const c of lista) {
+    // Presupuesto de tiempo: cortar prolijo antes del timeout de la función
+    if (Date.now() - arranque > 42000) break;
     const email = (c.email ?? "").trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       invalidos++;
@@ -108,30 +128,32 @@ export async function GET(request: Request) {
     if (r.ok) {
       agregados++;
       ultimoOk = c.id;
+      sinGuardar++;
     } else {
       const detalle = await r.text();
       if (r.status === 409 || detalle.includes("already exists")) {
         yaEstaban++;
         ultimoOk = c.id;
+        sinGuardar++;
       } else if (r.status === 403 || detalle.includes("limit")) {
         // Tope del plan gratis de Resend: cortar sin avanzar el cursor
         limiteAlcanzado = true;
         break;
       } else {
+        await guardarCursor();
         return NextResponse.json(
           { error: `Resend ${r.status}: ${detalle.slice(0, 200)}`, ultimoOk },
           { status: 500 }
         );
       }
     }
+    // Guardar el avance seguido: si la función muere, no se pierde
+    if (sinGuardar >= 10) await guardarCursor();
     // Límite de Resend: 2 requests por segundo
-    await new Promise((res) => setTimeout(res, 550));
+    await new Promise((res) => setTimeout(res, 510));
   }
 
-  if (ultimoOk !== cursor)
-    await supabase
-      .from("config")
-      .upsert({ clave: "resend_sync_cursor", valor: ultimoOk }, { onConflict: "clave" });
+  await guardarCursor();
 
   const { count: restantes } = await supabase
     .from("clientes")
