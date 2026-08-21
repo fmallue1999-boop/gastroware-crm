@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PEDIDO_ESTADOS } from "@/lib/constants";
 import { dinero, fechaCorta, telefonoProlijo } from "@/lib/format";
@@ -33,14 +34,22 @@ export default async function PedidosPage({
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-2">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Pedidos</h1>
-        <Link
-          href={verTodos ? "/pedidos" : "/pedidos?ver=todos"}
-          className="text-sm text-sky-700 underline"
-        >
-          {verTodos ? "Ver solo en curso" : "Ver también finalizados"}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={verTodos ? "/pedidos" : "/pedidos?ver=todos"}
+            className="text-sm text-sky-700 underline"
+          >
+            {verTodos ? "Ver solo en curso" : "Ver también finalizados"}
+          </Link>
+          <Link
+            href="/pedidos/nuevo"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-tinta px-3.5 py-2 text-sm font-medium text-white shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> Nuevo pedido
+          </Link>
+        </div>
       </div>
       <p className="mb-4 text-sm text-piedra">
         Toda venta ganada aparece acá hasta que se entrega y se cierra.

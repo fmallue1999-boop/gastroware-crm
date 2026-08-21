@@ -609,6 +609,47 @@ export async function guardarDiagnostico(
 }
 
 /**
+ * Pedido directo: un cliente pide algo (llamada, WhatsApp, mostrador) y se
+ * carga como venta ya ganada, directo al tablero de Pedidos. Dispara el
+ * circuito completo de ganada (cliente activo, equipo, recurrencia, tarea
+ * de facturar) reutilizando cambiarEtapa.
+ */
+export async function crearPedidoDirecto(input: {
+  clienteId: string;
+  productoIds: string[];
+  monto?: number | null;
+  nota?: string;
+}) {
+  if (!input.clienteId) return { error: "Elegí el cliente" };
+  if (input.productoIds.length === 0)
+    return { error: "Agregá al menos un producto" };
+
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: opp, error } = await supabase
+    .from("oportunidades")
+    .insert({
+      cliente_id: input.clienteId,
+      producto_id: input.productoIds[0],
+      productos_extra: input.productoIds.slice(1),
+      comercial_id: user?.id ?? null,
+      origen: "Pedido directo",
+      monto_estimado: input.monto || null,
+      mensaje_inicial: input.nota?.trim() || null,
+    })
+    .select("id")
+    .single();
+  if (error || !opp)
+    return { error: error?.message ?? "No se pudo crear el pedido" };
+
+  const res = await cambiarEtapa(opp.id, "ganada");
+  if (res && "error" in res && res.error) return { error: res.error };
+
+  revalidatePath("/", "layout");
+  redirect("/pedidos");
+}
+
+/**
  * Avanza el pedido de una venta ganada por su circuito:
  * facturar → pendiente de pago → preparando envío → para entregar →
  * entregado → finalizado. Al marcar entregado se agenda sola la tarea
