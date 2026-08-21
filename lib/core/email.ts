@@ -4,7 +4,7 @@
  * Resend (DNS). Hasta entonces devuelve un error claro: nada simula enviarse.
  */
 
-const REMITENTE = "GastroWare <comunicacion@gastroware.com.ar>";
+const REMITENTE = "GastroWare Argentina <comunicacion@gastroware.com.ar>";
 const RESPONDER_A = "info@gastroware.com.ar";
 
 export async function enviarEmail(input: {
