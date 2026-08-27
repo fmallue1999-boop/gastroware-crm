@@ -37,6 +37,44 @@ export const PEDIDOS = [
   { value: "general", label: "Consulta general" },
 ] as const;
 
+/** Líneas de interés para la captura rápida en ferias. */
+export const LINEAS_FERIA = [
+  "Exprimidoras Zumex",
+  "Licuadoras GX",
+  "Café Jetinno",
+  "Hornos Rational",
+  "Lavado",
+  "Consumibles",
+  "Otro",
+] as const;
+
+export const PROVINCIAS_AR = [
+  "Buenos Aires",
+  "CABA",
+  "Catamarca",
+  "Chaco",
+  "Chubut",
+  "Córdoba",
+  "Corrientes",
+  "Entre Ríos",
+  "Formosa",
+  "Jujuy",
+  "La Pampa",
+  "La Rioja",
+  "Mendoza",
+  "Misiones",
+  "Neuquén",
+  "Río Negro",
+  "Salta",
+  "San Juan",
+  "San Luis",
+  "Santa Cruz",
+  "Santa Fe",
+  "Santiago del Estero",
+  "Tierra del Fuego",
+  "Tucumán",
+] as const;
+
 /** Etiquetas de categoría de producto (para agrupar el selector del alta). */
 export const CATEGORIAS_PRODUCTO: Record<string, string> = {
   exprimidora: "Exprimidoras",

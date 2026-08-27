@@ -20,6 +20,7 @@ import {
   Megaphone,
   Package,
   Plus,
+  Tent,
   type LucideIcon,
 } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -32,6 +33,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       grupo: "Operación",
       items: [
         { href: "/hoy", label: "Inicio", icono: Sun },
+        { href: "/hotelga", label: "HOTELGA", icono: Tent },
         { href: "/pipeline", label: "Pipeline", icono: BarChart3 },
         { href: "/pedidos", label: "Pedidos", icono: Package },
         { href: "/servicio", label: "Servicio técnico", icono: Wrench },
@@ -63,6 +65,7 @@ const SECCIONES: Record<string, { grupo: string; items: Item[] }[]> = {
       grupo: "Operación",
       items: [
         { href: "/hoy", label: "Inicio", icono: Sun },
+        { href: "/hotelga", label: "HOTELGA", icono: Tent },
         { href: "/pipeline", label: "Pipeline", icono: BarChart3 },
         { href: "/pedidos", label: "Pedidos", icono: Package },
         { href: "/clientes", label: "Clientes", icono: Users },

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { enviarEmail } from "@/lib/core/email";
 import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde, fechaCorta } from "@/lib/format";
-import { CADENCIA_COTIZACION, PEDIDO_ESTADOS } from "@/lib/constants";
+import { CADENCIA_COTIZACION, PEDIDO_ESTADOS, RUBROS } from "@/lib/constants";
 import type { Cliente, Etapa, PedidoEstado } from "@/lib/types";
 
 async function usuarioActual() {
@@ -2279,6 +2279,195 @@ Reglas del HTML (crítico — debe verse bien en Gmail y Outlook):
   if (!res.datos.html.includes("{baja}"))
     return { error: "El diseño salió sin el link de baja. Probá de nuevo." };
   return { ok: true, ...res.datos };
+}
+
+/**
+ * Lee una foto de credencial de feria con la IA y devuelve los campos para
+ * precargar el formulario de captura. Lo que no se lee, vuelve vacío.
+ */
+export async function iaLeerCredencial(imagenBase64: string) {
+  if (!imagenBase64) return { error: "Falta la foto" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  const res = await consultarIA<{
+    nombre: string;
+    apellido: string;
+    empresa: string;
+    email: string;
+    telefono: string;
+    rubro: string;
+    provincia: string;
+  }>({
+    supabase,
+    usuarioId: user?.id ?? null,
+    funcion: "leer_credencial",
+    maxTokens: 1000,
+    imagen: { base64: imagenBase64, mediaType: "image/jpeg" },
+    instrucciones: `La imagen es una credencial/acreditación de una feria gastronómica argentina (o una tarjeta personal). Extraé los datos visibles de la persona:
+- nombre (solo el nombre de pila) y apellido
+- empresa (razón social o nombre del negocio)
+- email y telefono si figuran
+- rubro: mapealo a UNO de: ${RUBROS.join(", ")} — si no se puede inferir, dejá vacío
+- provincia: provincia argentina si figura o se infiere de la ciudad; si no, vacío
+Devolvé string vacío en todo campo que no se lea con claridad. NO inventes datos.`,
+    contexto: "Captura de leads en stand de feria (HOTELGA).",
+    esquema: {
+      type: "object",
+      properties: {
+        nombre: { type: "string" },
+        apellido: { type: "string" },
+        empresa: { type: "string" },
+        email: { type: "string" },
+        telefono: { type: "string" },
+        rubro: { type: "string" },
+        provincia: { type: "string" },
+      },
+      required: ["nombre", "apellido", "empresa", "email", "telefono", "rubro", "provincia"],
+      additionalProperties: false,
+    },
+  });
+  return res.ok ? { ok: true, ...res.datos } : { error: res.error };
+}
+
+/**
+ * Captura rápida de lead en feria: crea (o reutiliza, dedup por teléfono y
+ * email) el cliente como prospecto, abre la consulta con origen HOTELGA y
+ * guarda la foto de la credencial en sus documentos. Sin tarea automática:
+ * el seguimiento post-feria se hace por campañas.
+ */
+export async function crearLeadFeria(input: {
+  nombre: string;
+  apellido: string;
+  empresa: string;
+  email: string;
+  telefono: string;
+  lineas: string[];
+  rubro: string;
+  provincia: string;
+  nota?: string;
+  fotoBase64?: string;
+}) {
+  const nombreCompleto = `${input.nombre.trim()} ${input.apellido.trim()}`.trim();
+  if (!nombreCompleto && !input.empresa.trim())
+    return { error: "Cargá al menos el nombre o la empresa" };
+  if (!input.telefono.trim() && !input.email.trim())
+    return { error: "Cargá teléfono o email (sino después no lo podemos contactar)" };
+
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const telDigitos = normalizarTelefono(input.telefono);
+  const emailNorm = input.email.trim().toLowerCase();
+
+  // Dedup: primero por teléfono, después por email
+  let existente: { id: string; nombre_comercial: string } | null = null;
+  if (telDigitos.length >= 8) {
+    const porTel = await buscarClientePorTelefono(telDigitos);
+    if (porTel) existente = porTel;
+  }
+  if (!existente && emailNorm) {
+    const { data: porEmail } = await supabase
+      .from("clientes")
+      .select("id, nombre_comercial")
+      .ilike("email", emailNorm)
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (porEmail) existente = porEmail;
+  }
+
+  const interes = input.lineas.length ? `Interés: ${input.lineas.join(", ")}` : null;
+  const notas = [
+    input.empresa.trim() && nombreCompleto ? `Contacto: ${nombreCompleto}` : null,
+    interes,
+    "Origen: HOTELGA 2026",
+    input.nota?.trim() || null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  let clienteId: string;
+  if (existente) {
+    clienteId = existente.id;
+    // Completar datos que falten, sin pisar los existentes
+    const { data: actual } = await supabase
+      .from("clientes")
+      .select("email, telefono")
+      .eq("id", clienteId)
+      .single();
+    const patch: Record<string, string> = {};
+    if (emailNorm && !actual?.email) patch.email = emailNorm;
+    if (telDigitos && !actual?.telefono) patch.telefono = telDigitos;
+    if (Object.keys(patch).length > 0)
+      await supabase.from("clientes").update(patch).eq("id", clienteId);
+  } else {
+    const { data: nuevo, error } = await supabase
+      .from("clientes")
+      .insert({
+        nombre_comercial: input.empresa.trim() || nombreCompleto,
+        rubro: (RUBROS as readonly string[]).includes(input.rubro) ? input.rubro : "Otro",
+        telefono: telDigitos || null,
+        email: emailNorm || null,
+        estado: "prospecto",
+        comercial_id: user?.id ?? null,
+        notas,
+      })
+      .select("id")
+      .single();
+    if (error || !nuevo) return { error: error?.message ?? "No se pudo crear" };
+    clienteId = nuevo.id;
+    if (input.provincia.trim()) {
+      await supabase.from("sucursales").insert({
+        cliente_id: clienteId,
+        nombre: "Principal",
+        provincia: input.provincia.trim(),
+        es_principal: true,
+      });
+    }
+  }
+
+  const { data: opp, error: errOpp } = await supabase
+    .from("oportunidades")
+    .insert({
+      cliente_id: clienteId,
+      comercial_id: user?.id ?? null,
+      origen: "HOTELGA 2026",
+      pedido: "info",
+      temperatura: "tibio",
+      mensaje_inicial: [interes, input.nota?.trim()].filter(Boolean).join(" — ") || null,
+    })
+    .select("id")
+    .single();
+  if (errOpp || !opp) return { error: errOpp?.message ?? "No se pudo abrir la consulta" };
+
+  // Foto de la credencial → documentos del cliente (subida por el servidor)
+  if (input.fotoBase64) {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
+    if (serviceKey) {
+      const { createClient: createAdmin } = await import("@supabase/supabase-js");
+      const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const path = `feria/${opp.id}.jpg`;
+      const bytes = Buffer.from(input.fotoBase64, "base64");
+      const { error: errFoto } = await admin.storage
+        .from("documentos")
+        .upload(path, bytes, { contentType: "image/jpeg", upsert: true });
+      if (!errFoto) {
+        await supabase.from("documentos").insert({
+          entidad: "cliente",
+          entidad_id: clienteId,
+          tipo: "foto",
+          nombre: `Credencial HOTELGA 2026 — ${nombreCompleto || input.empresa}`,
+          path,
+          subido_por: user?.id ?? null,
+        });
+      }
+    }
+  }
+
+  revalidatePath("/hotelga");
+  return { ok: true as const, existente: !!existente };
 }
 
 export async function iaResumenCliente(clienteId: string) {

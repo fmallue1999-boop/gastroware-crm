@@ -10,6 +10,7 @@ import {
   Landmark,
   Package,
   Smartphone,
+  Tent,
   LogOut,
   ChevronRight,
   type LucideIcon,
@@ -112,6 +113,12 @@ export default async function MasPage() {
           icono={Package}
           titulo="Pedidos"
           detalle="De la venta ganada a la entrega: factura, pago y envío"
+        />
+        <MenuLink
+          href="/hotelga"
+          icono={Tent}
+          titulo="HOTELGA 2026"
+          detalle="Captura rápida de visitantes: foto a la credencial y listo"
         />
         <MenuLink
           href="/reportes"

@@ -39,6 +39,8 @@ export async function consultarIA<T>(input: {
   contexto: string;
   esquema: Record<string, unknown>;
   maxTokens?: number;
+  /** Imagen opcional (visión): base64 sin el prefijo data-url. */
+  imagen?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" };
 }): Promise<{ ok: true; datos: T } | { ok: false; error: string }> {
   if (!iaConfigurada()) {
     return {
@@ -91,7 +93,22 @@ export async function consultarIA<T>(input: {
       messages: [
         {
           role: "user",
-          content: `${input.instrucciones}\n\n<contexto>\n${input.contexto}\n</contexto>`,
+          content: input.imagen
+            ? [
+                {
+                  type: "image" as const,
+                  source: {
+                    type: "base64" as const,
+                    media_type: input.imagen.mediaType,
+                    data: input.imagen.base64,
+                  },
+                },
+                {
+                  type: "text" as const,
+                  text: `${input.instrucciones}\n\n<contexto>\n${input.contexto}\n</contexto>`,
+                },
+              ]
+            : `${input.instrucciones}\n\n<contexto>\n${input.contexto}\n</contexto>`,
         },
       ],
     });
