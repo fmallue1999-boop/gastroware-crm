@@ -98,6 +98,13 @@ export default async function PedidosPage({
                               ? ` · entregado ${fechaCorta(o.entregado_at)}`
                               : ""}
                           </p>
+                          {o.pedido_estado === "comprometido" && (
+                            <p className="mt-0.5 text-xs font-medium text-amber-700">
+                              {o.entrega_estimada
+                                ? `Entrega estimada: ${fechaCorta(o.entrega_estimada)}`
+                                : "Entrega a coordinar"}
+                            </p>
+                          )}
                           {o.cliente?.telefono && (
                             <p className="text-xs text-piedra">
                               {telefonoProlijo(o.cliente.telefono)}

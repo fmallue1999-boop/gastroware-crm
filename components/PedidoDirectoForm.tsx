@@ -20,6 +20,8 @@ export default function PedidoDirectoForm({ productos }: { productos: Producto[]
   const [productoIds, setProductoIds] = useState<string[]>([]);
   const [monto, setMonto] = useState("");
   const [nota, setNota] = useState("");
+  const [comprometido, setComprometido] = useState(false);
+  const [entregaEstimada, setEntregaEstimada] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function buscar(valor: string) {
@@ -59,6 +61,8 @@ export default function PedidoDirectoForm({ productos }: { productos: Producto[]
         productoIds,
         monto: parseFloat(monto.replace(/\./g, "").replace(",", ".")) || null,
         nota,
+        comprometido,
+        entregaEstimada: entregaEstimada || undefined,
       });
       if (res && "error" in res) setError(res.error ?? "Error al crear");
     });
@@ -180,6 +184,32 @@ export default function PedidoDirectoForm({ productos }: { productos: Producto[]
               onChange={(e) => setMonto(e.target.value)}
               className={inputCls}
             />
+          </div>
+
+          <div className="rounded-2xl border border-borde bg-white p-3 shadow-sm">
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={comprometido}
+                onChange={(e) => setComprometido(e.target.checked)}
+                className="h-4 w-4 accent-tinta"
+              />
+              Pre-venta / comprometido (ej: vendido en la feria, entrega a
+              coordinar)
+            </label>
+            {comprometido && (
+              <div className="mt-2">
+                <p className="mb-1 text-xs text-piedra">
+                  Entrega estimada (opcional)
+                </p>
+                <input
+                  type="date"
+                  value={entregaEstimada}
+                  onChange={(e) => setEntregaEstimada(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+            )}
           </div>
 
           <textarea

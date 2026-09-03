@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Check, Package } from "lucide-react";
-import { avanzarPedido, facturarPedido } from "@/lib/actions";
+import { avanzarPedido, facturarPedido, setEntregaEstimada } from "@/lib/actions";
 import { PEDIDO_ESTADOS } from "@/lib/constants";
 import { fechaCorta } from "@/lib/format";
 import type { PedidoEstado } from "@/lib/types";
@@ -15,12 +15,14 @@ export default function PedidoControl({
   oportunidadId,
   estado,
   entregadoAt,
+  entregaEstimada,
   nroFactura,
   pedirSerie = false,
 }: {
   oportunidadId: string;
   estado: PedidoEstado | null;
   entregadoAt: string | null;
+  entregaEstimada?: string | null;
   nroFactura?: string | null;
   /** true si la venta incluye un equipo que todavía no tiene número de serie */
   pedirSerie?: boolean;
@@ -28,9 +30,11 @@ export default function PedidoControl({
   const [pending, startTransition] = useTransition();
   const [factura, setFactura] = useState("");
   const [serie, setSerie] = useState("");
+  const [fechaEntrega, setFechaEntrega] = useState(entregaEstimada ?? "");
   const [error, setError] = useState<string | null>(null);
   const idx = PEDIDO_ESTADOS.findIndex((p) => p.value === (estado ?? "facturar"));
   const enFacturar = (estado ?? "facturar") === "facturar";
+  const enComprometido = estado === "comprometido";
   const siguiente = PEDIDO_ESTADOS[idx + 1] ?? null;
 
   function mover(nuevo: PedidoEstado) {
@@ -92,6 +96,35 @@ export default function PedidoControl({
           Entregado el {fechaCorta(entregadoAt)} — el seguimiento a los 7 días
           se agendó solo.
         </p>
+      )}
+
+      {enComprometido && (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs font-semibold text-amber-900">
+            Pedido comprometido (pre-venta): entrega a coordinar
+          </p>
+          <div className="mt-1.5 flex gap-2">
+            <input
+              type="date"
+              value={fechaEntrega}
+              onChange={(e) => setFechaEntrega(e.target.value)}
+              className="flex-1 rounded-xl border border-borde bg-white px-3 py-1.5 text-sm outline-none focus:border-tinta"
+            />
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  const res = await setEntregaEstimada(oportunidadId, fechaEntrega);
+                  if (res && "error" in res && res.error) setError(res.error);
+                })
+              }
+              className="rounded-xl bg-tinta px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+            >
+              Guardar fecha
+            </button>
+          </div>
+        </div>
       )}
 
       {enFacturar ? (

@@ -619,6 +619,10 @@ export async function crearPedidoDirecto(input: {
   productoIds: string[];
   monto?: number | null;
   nota?: string;
+  /** true = pre-venta/compromiso (ej: vendido en la feria, entrega a coordinar). */
+  comprometido?: boolean;
+  /** Fecha estimada de entrega (YYYY-MM-DD), para los comprometidos. */
+  entregaEstimada?: string;
 }) {
   if (!input.clienteId) return { error: "Elegí el cliente" };
   if (input.productoIds.length === 0)
@@ -645,8 +649,31 @@ export async function crearPedidoDirecto(input: {
   const res = await cambiarEtapa(opp.id, "ganada");
   if (res && "error" in res && res.error) return { error: res.error };
 
+  // Pre-venta: arranca en "comprometido" (antes de facturar), con su fecha
+  if (input.comprometido) {
+    await supabase
+      .from("oportunidades")
+      .update({
+        pedido_estado: "comprometido",
+        entrega_estimada: input.entregaEstimada || null,
+      })
+      .eq("id", opp.id);
+  }
+
   revalidatePath("/", "layout");
   redirect("/pedidos");
+}
+
+/** Fecha estimada de entrega de un pedido (editable desde el circuito). */
+export async function setEntregaEstimada(oportunidadId: string, fecha: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({ entrega_estimada: fecha || null })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
 
 /**

@@ -15,6 +15,7 @@ export type Etapa =
 
 /** Circuito del pedido después de ganar la venta. */
 export type PedidoEstado =
+  | "comprometido"
   | "facturar"
   | "pendiente_pago"
   | "preparar_envio"
@@ -184,6 +185,7 @@ export interface Oportunidad {
   productos_extra: string[];
   pedido_estado: PedidoEstado | null;
   entregado_at: string | null;
+  entrega_estimada: string | null;
   nro_factura: string | null;
   created_at: string;
   closed_at: string | null;

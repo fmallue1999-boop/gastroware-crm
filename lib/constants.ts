@@ -114,6 +114,7 @@ export const ETAPAS_ABIERTAS = ["nueva", "cotizada", "seguimiento"] as const;
 
 /** Circuito del pedido una vez ganada la venta, en orden. */
 export const PEDIDO_ESTADOS = [
+  { value: "comprometido", label: "Comprometido" },
   { value: "facturar", label: "Emitir factura" },
   { value: "pendiente_pago", label: "Pendiente de pago" },
   { value: "preparar_envio", label: "Preparando envío" },

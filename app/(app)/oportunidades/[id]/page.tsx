@@ -228,6 +228,7 @@ export default async function OportunidadPage({
           oportunidadId={opp.id}
           estado={opp.pedido_estado}
           entregadoAt={opp.entregado_at}
+          entregaEstimada={opp.entrega_estimada}
           nroFactura={opp.nro_factura}
           pedirSerie={!!equipoVendido && !equipoVendido.numero_serie}
         />
