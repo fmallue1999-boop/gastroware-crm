@@ -46,7 +46,7 @@ export async function crearLead(input: {
   clienteId?: string;
   telefono: string;
   nombre_comercial: string;
-  rubro: string;
+  rubro?: string;
   ciudad?: string;
   /** Productos consultados: el primero queda como principal. */
   productoIds: string[];
@@ -69,7 +69,7 @@ export async function crearLead(input: {
         .from("clientes")
         .insert({
           nombre_comercial: input.nombre_comercial.trim(),
-          rubro: input.rubro,
+          rubro: input.rubro || "Otro",
           telefono: input.telefono,
           comercial_id: user?.id ?? null,
         })
@@ -615,7 +615,11 @@ export async function guardarDiagnostico(
  * de facturar) reutilizando cambiarEtapa.
  */
 export async function crearPedidoDirecto(input: {
-  clienteId: string;
+  /** Cliente como texto libre: nombre, empresa o teléfono, como se tenga.
+   *  Si parece un teléfono ya cargado, se reutiliza ese cliente; si no, se
+   *  crea uno mínimo que se completa después desde su ficha. */
+  clienteTexto?: string;
+  clienteId?: string;
   productoIds: string[];
   monto?: number | null;
   nota?: string;
@@ -624,12 +628,39 @@ export async function crearPedidoDirecto(input: {
   /** Fecha estimada de entrega (YYYY-MM-DD), para los comprometidos. */
   entregaEstimada?: string;
 }) {
-  if (!input.clienteId) return { error: "Elegí el cliente" };
   if (input.productoIds.length === 0)
-    return { error: "Agregá al menos un producto" };
+    return { error: "Elegí al menos un equipo" };
 
   const supabase = await createClient();
   const user = await usuarioActual();
+
+  let clienteId = input.clienteId;
+  if (!clienteId) {
+    const texto = input.clienteTexto?.trim() ?? "";
+    if (!texto) return { error: "Poné quién lo compró (nombre o teléfono)" };
+    const digitos = normalizarTelefono(texto);
+    if (digitos.length >= 8) {
+      const existente = await buscarClientePorTelefono(digitos);
+      if (existente) clienteId = existente.id;
+    }
+    if (!clienteId) {
+      const { data: nuevo, error: errCli } = await supabase
+        .from("clientes")
+        .insert({
+          nombre_comercial: /^[\d\s+\-().]+$/.test(texto) ? `Cliente ${texto}` : texto,
+          telefono: digitos.length >= 8 ? digitos : null,
+          rubro: "Otro",
+          comercial_id: user?.id ?? null,
+          notas: "Cargado rápido desde un pedido — completar datos",
+        })
+        .select("id")
+        .single();
+      if (errCli || !nuevo)
+        return { error: errCli?.message ?? "No se pudo crear el cliente" };
+      clienteId = nuevo.id;
+    }
+  }
+  input.clienteId = clienteId;
   const { data: opp, error } = await supabase
     .from("oportunidades")
     .insert({

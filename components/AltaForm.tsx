@@ -149,10 +149,6 @@ export default function AltaForm({
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (productoIds.length === 0) {
-      setError("Agregá al menos un producto consultado");
-      return;
-    }
     startTransition(async () => {
       const res = await crearLead({
         clienteId: existente?.id,
@@ -281,24 +277,9 @@ export default function AltaForm({
         disabled={!!existente}
       />
 
-      <select
-        required
-        value={rubro}
-        onChange={(e) => setRubro(e.target.value)}
-        className={inputCls}
-        disabled={!!existente}
-      >
-        <option value="">Rubro…</option>
-        {RUBROS.map((r) => (
-          <option key={r} value={r}>
-            {r}
-          </option>
-        ))}
-      </select>
-
       <div>
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
-          ¿Qué consultó? (podés agregar varios)
+          ¿Qué consultó? (opcional, podés agregar varios)
         </p>
         {productoIds.length > 0 && (
           <div className="mb-1.5 flex flex-wrap gap-1.5">
@@ -416,34 +397,55 @@ export default function AltaForm({
         )}
       </div>
 
-      <select
-        value={temperatura}
-        onChange={(e) => setTemperatura(e.target.value)}
-        className={inputCls}
-      >
-        {TEMPERATURAS.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.label}
-          </option>
-        ))}
-      </select>
+      <details>
+        <summary className="cursor-pointer text-sm text-sky-700 underline list-none [&::-webkit-details-marker]:hidden">
+          Más datos (opcional): rubro, ciudad, temperatura, nota
+        </summary>
+        <div className="mt-2 space-y-3">
+          <select
+            value={rubro}
+            onChange={(e) => setRubro(e.target.value)}
+            className={inputCls}
+            disabled={!!existente}
+          >
+            <option value="">Rubro…</option>
+            {RUBROS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
 
-      <input
-        type="text"
-        placeholder="Ciudad (opcional)"
-        value={ciudad}
-        onChange={(e) => setCiudad(e.target.value)}
-        className={inputCls}
-        disabled={!!existente}
-      />
+          <select
+            value={temperatura}
+            onChange={(e) => setTemperatura(e.target.value)}
+            className={inputCls}
+          >
+            {TEMPERATURAS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
 
-      <textarea
-        placeholder="Mensaje inicial o nota (opcional)"
-        value={mensaje}
-        onChange={(e) => setMensaje(e.target.value)}
-        rows={2}
-        className={inputCls}
-      />
+          <input
+            type="text"
+            placeholder="Ciudad (opcional)"
+            value={ciudad}
+            onChange={(e) => setCiudad(e.target.value)}
+            className={inputCls}
+            disabled={!!existente}
+          />
+
+          <textarea
+            placeholder="Mensaje inicial o nota (opcional)"
+            value={mensaje}
+            onChange={(e) => setMensaje(e.target.value)}
+            rows={2}
+            className={inputCls}
+          />
+        </div>
+      </details>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
