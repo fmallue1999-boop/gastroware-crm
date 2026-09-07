@@ -402,3 +402,23 @@ export interface IngresoStock {
   created_at: string;
   producto?: Producto | null;
 }
+
+/** Contacto escaneado en una feria (HOTELGA): seguimiento propio, estados y calificación. */
+export interface FeriaLead {
+  id: string;
+  cliente_id: string;
+  feria: string;
+  numero: string | null;
+  nombre: string | null;
+  empresa: string | null;
+  cargo: string | null;
+  telefono: string | null;
+  email: string | null;
+  observaciones: string | null;
+  calificacion: number | null;
+  estado: "inicial" | "contactado" | "cerrado" | "descartado";
+  asignado_a: string | null;
+  contactado_por: string | null;
+  contactado_at: string | null;
+  created_at: string;
+}

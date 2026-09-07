@@ -2431,6 +2431,18 @@ export async function crearLeadFeria(input: {
     .single();
   if (errOpp || !opp) return { error: errOpp?.message ?? "No se pudo abrir la consulta" };
 
+  // Entra también al seguimiento de la feria (estados, calificación, asignación)
+  await supabase.from("feria_leads").insert({
+    cliente_id: clienteId,
+    feria: "HOTELGA 2026",
+    nombre: nombreCompleto || null,
+    empresa: input.empresa.trim() || null,
+    telefono: telDigitos || null,
+    email: emailNorm || null,
+    observaciones: [interes, input.nota?.trim()].filter(Boolean).join(" — ") || null,
+    asignado_a: user?.id ?? null,
+  });
+
   // Foto de la credencial → documentos del cliente (subida por el servidor)
   if (input.fotoBase64) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
@@ -3654,4 +3666,124 @@ export async function registrarInteres(input: {
 
   revalidatePath("/", "layout");
   redirect(`/clientes/${clienteId}`);
+}
+
+// =====================================================================
+// Seguimiento de feria (HOTELGA): estados, calificación, asignación
+// =====================================================================
+
+const ESTADOS_FERIA_VALIDOS = ["inicial", "contactado", "cerrado", "descartado"];
+
+/**
+ * Cambia estado, calificación u observaciones de un contacto de feria.
+ * Al marcarlo contactado/cerrado/descartado queda registrado quién y cuándo,
+ * y se anota en el historial del contacto (aparece en Movimientos).
+ */
+export async function actualizarFeriaLead(
+  id: string,
+  patch: { estado?: string; calificacion?: number | null; observaciones?: string }
+) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: lead } = await supabase
+    .from("feria_leads")
+    .select("id, cliente_id, estado, nombre, empresa")
+    .eq("id", id)
+    .single();
+  if (!lead) return { error: "No se encontró el contacto de feria" };
+
+  const update: Record<string, unknown> = {};
+  if (patch.estado !== undefined) {
+    if (!ESTADOS_FERIA_VALIDOS.includes(patch.estado)) return { error: "Estado inválido" };
+    update.estado = patch.estado;
+    if (patch.estado !== "inicial") {
+      update.contactado_por = user?.id ?? null;
+      update.contactado_at = new Date().toISOString();
+    } else {
+      update.contactado_por = null;
+      update.contactado_at = null;
+    }
+  }
+  if (patch.calificacion !== undefined) {
+    const c = patch.calificacion;
+    update.calificacion = c == null || c < 1 ? null : Math.min(5, Math.round(c));
+  }
+  if (patch.observaciones !== undefined)
+    update.observaciones = patch.observaciones.trim() || null;
+
+  const { error } = await supabase.from("feria_leads").update(update).eq("id", id);
+  if (error) return { error: error.message };
+
+  if (patch.estado !== undefined && patch.estado !== lead.estado) {
+    const TEXTO: Record<string, string> = {
+      inicial: "vuelve a sin contactar",
+      contactado: "contactado",
+      cerrado: "cerrado (compró)",
+      descartado: "descartado",
+    };
+    await supabase.from("actividades").insert({
+      cliente_id: lead.cliente_id,
+      tipo: "feria",
+      contenido: `HOTELGA: ${TEXTO[patch.estado] ?? patch.estado}${
+        patch.observaciones?.trim() ? ` — ${patch.observaciones.trim()}` : ""
+      }`,
+      created_by: user?.id ?? null,
+    });
+  }
+  revalidatePath("/hotelga");
+  revalidatePath(`/clientes/${lead.cliente_id}`);
+  return { ok: true as const };
+}
+
+/**
+ * Asigna el contacto de feria a un vendedor (solo dirección/administración).
+ * También queda como comercial del contacto, con lo que pasa a verlo solo
+ * ese vendedor (y dirección/administración).
+ */
+export async function asignarFeriaLead(id: string, usuarioId: string | null) {
+  const rol = await rolActual();
+  if (!["direccion", "admin"].includes(rol))
+    return { error: "Solo dirección o administración asignan vendedores" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: lead } = await supabase
+    .from("feria_leads")
+    .select("id, cliente_id")
+    .eq("id", id)
+    .single();
+  if (!lead) return { error: "No se encontró el contacto de feria" };
+
+  const { error } = await supabase
+    .from("feria_leads")
+    .update({ asignado_a: usuarioId })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  await supabase
+    .from("clientes")
+    .update({ comercial_id: usuarioId })
+    .eq("id", lead.cliente_id);
+
+  if (usuarioId) {
+    const { data: u } = await supabase
+      .from("usuarios")
+      .select("nombre")
+      .eq("id", usuarioId)
+      .single();
+    await supabase.from("actividades").insert({
+      cliente_id: lead.cliente_id,
+      tipo: "feria",
+      contenido: `HOTELGA: asignado a ${u?.nombre ?? "un vendedor"}`,
+      created_by: user?.id ?? null,
+    });
+    if (usuarioId !== user?.id)
+      await supabase.from("notificaciones").insert({
+        usuario_id: usuarioId,
+        tipo: "feria_asignada",
+        titulo: "Te asignaron un contacto de HOTELGA",
+        url: "/hotelga?vista=mios",
+      });
+  }
+  revalidatePath("/hotelga");
+  revalidatePath("/", "layout");
+  return { ok: true as const };
 }

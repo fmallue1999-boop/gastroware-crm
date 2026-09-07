@@ -277,3 +277,11 @@ export const ESTADOS_ITEM_OT = [
   { value: "garantia", label: "Por garantía" },
   { value: "cortesia", label: "Sin cargo" },
 ] as const;
+
+/** Estados del seguimiento de feria (espejo del sistema de HOTELGA). */
+export const ESTADOS_FERIA = [
+  { value: "inicial", label: "Sin contactar", color: "bg-crema-deep text-tinta/70" },
+  { value: "contactado", label: "Contactado", color: "bg-celeste-soft text-sky-800" },
+  { value: "cerrado", label: "Cerrado", color: "bg-green-100 text-green-700" },
+  { value: "descartado", label: "Descartado", color: "bg-crema-deep text-piedra" },
+] as const;
