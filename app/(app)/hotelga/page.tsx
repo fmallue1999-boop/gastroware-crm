@@ -38,6 +38,8 @@ export default async function HotelgaPage({
       `nombre.ilike.%${busqueda}%`,
       `empresa.ilike.%${busqueda}%`,
       `email.ilike.%${busqueda}%`,
+      `cargo.ilike.%${busqueda}%`,
+      `observaciones.ilike.%${busqueda}%`,
     ];
     if (digitos.length >= 4) filtros.push(`telefono.ilike.%${digitos}%`);
     query = query.or(filtros.join(","));
@@ -107,7 +109,7 @@ export default async function HotelgaPage({
           type="search"
           name="q"
           defaultValue={busqueda}
-          placeholder="Buscar por nombre, empresa, email o teléfono"
+          placeholder="Buscar por nombre, empresa, email, teléfono o interés (ej: zumex)"
           className="w-full rounded-2xl border border-borde bg-white py-3 pl-11 pr-4 text-base shadow-sm outline-none focus:border-tinta"
         />
       </form>
