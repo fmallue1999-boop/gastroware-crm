@@ -79,11 +79,6 @@ export default function EtapaControl({
           </button>
         ))}
       </div>
-      {etapa === "cotizada" && (
-        <p className="mt-2 text-xs text-piedra/80">
-          La cadencia D+2 / D+5 / D+10 / D+20 se generó automáticamente.
-        </p>
-      )}
       <div className="mt-3 border-t border-crema-deep pt-3">
         <p className="text-xs text-piedra/80">
           Recién cuando el cliente se decide, cerrala acá:

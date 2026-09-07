@@ -11,13 +11,19 @@ const inputCls =
   "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-tinta";
 
 /**
- * Alta de pedido sin trabas: primero el equipo, después quién lo compró
- * (un solo campo de texto — el cliente se crea o se encuentra solo).
+ * Venta nueva sin trabas: primero qué se vendió, después a quién (un solo
+ * campo de texto: el cliente se crea o se encuentra solo). Entra al tablero
+ * de ventas en "Vendido".
  */
-export default function PedidoDirectoForm({ productos }: { productos: Producto[] }) {
+export default function PedidoDirectoForm({
+  productos,
+  clienteInicial = null,
+}: {
+  productos: Producto[];
+  clienteInicial?: { id: string; nombre: string } | null;
+}) {
   const [pending, startTransition] = useTransition();
   const [productoIds, setProductoIds] = useState<string[]>([]);
-  const [comprometido, setComprometido] = useState(true);
   const [entregaEstimada, setEntregaEstimada] = useState("");
   const [clienteTexto, setClienteTexto] = useState("");
   const [monto, setMonto] = useState("");
@@ -46,20 +52,25 @@ export default function PedidoDirectoForm({ productos }: { productos: Producto[]
     setError(null);
     startTransition(async () => {
       const res = await crearPedidoDirecto({
-        clienteTexto,
+        clienteId: clienteInicial?.id,
+        clienteTexto: clienteInicial ? undefined : clienteTexto,
         productoIds,
         monto: parseFloat(monto.replace(/\./g, "").replace(",", ".")) || null,
         nota,
-        comprometido,
         entregaEstimada: entregaEstimada || undefined,
+        volverA: clienteInicial ? `/clientes/${clienteInicial.id}` : undefined,
       });
       if (res && "error" in res) setError(res.error ?? "Error al crear");
     });
   }
 
+  const puedeEnviar =
+    (productoIds.length > 0 || nota.trim()) &&
+    (clienteInicial || clienteTexto.trim());
+
   return (
     <form onSubmit={enviar} className="space-y-3">
-      {/* 1. El equipo, primero */}
+      {/* 1. Qué se vendió */}
       <div>
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
           1 · ¿Qué se vendió?
@@ -103,50 +114,44 @@ export default function PedidoDirectoForm({ productos }: { productos: Producto[]
             </optgroup>
           ))}
         </select>
+        <input
+          type="text"
+          placeholder="…o escribí qué se vendió, si no está en la lista"
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+          className={`${inputCls} mt-1.5`}
+        />
       </div>
 
-      {/* 2. Quién lo compró: un solo campo, sin buscadores */}
+      {/* 2. A quién */}
       <div>
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
           2 · ¿Quién lo compró?
         </p>
-        <input
-          type="text"
-          placeholder="Nombre, empresa o teléfono — como lo tengas"
-          value={clienteTexto}
-          onChange={(e) => setClienteTexto(e.target.value)}
-          className={inputCls}
-        />
-        <p className="mt-1 text-xs text-piedra">
-          Con eso alcanza: si el teléfono ya está en la base lo enganchamos, y
-          el resto de los datos se completan después.
-        </p>
-      </div>
-
-      {/* 3. Compromiso y entrega */}
-      <div className="rounded-2xl border border-borde bg-white p-3 shadow-sm">
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={comprometido}
-            onChange={(e) => setComprometido(e.target.checked)}
-            className="h-4 w-4 accent-tinta"
-          />
-          Comprometido (entrega a coordinar)
-        </label>
-        {comprometido && (
-          <input
-            type="date"
-            value={entregaEstimada}
-            onChange={(e) => setEntregaEstimada(e.target.value)}
-            className={`${inputCls} mt-2`}
-          />
+        {clienteInicial ? (
+          <div className="rounded-2xl bg-celeste-soft px-4 py-3 text-sm font-medium">
+            {clienteInicial.nombre}
+          </div>
+        ) : (
+          <>
+            <input
+              type="text"
+              placeholder="Nombre, empresa o teléfono, como lo tengas"
+              value={clienteTexto}
+              onChange={(e) => setClienteTexto(e.target.value)}
+              className={inputCls}
+            />
+            <p className="mt-1 text-xs text-piedra">
+              Si el teléfono ya está en la base lo enganchamos solos. El resto
+              se completa después.
+            </p>
+          </>
         )}
       </div>
 
       <details>
         <summary className="cursor-pointer text-sm text-sky-700 underline list-none [&::-webkit-details-marker]:hidden">
-          Monto y nota (opcional)
+          Monto y fecha de entrega (opcional)
         </summary>
         <div className="mt-2 space-y-2">
           <input
@@ -157,13 +162,15 @@ export default function PedidoDirectoForm({ productos }: { productos: Producto[]
             onChange={(e) => setMonto(e.target.value)}
             className={inputCls}
           />
-          <input
-            type="text"
-            placeholder="Nota: seña, detalle de entrega…"
-            value={nota}
-            onChange={(e) => setNota(e.target.value)}
-            className={inputCls}
-          />
+          <label className="block text-xs text-piedra">
+            Entrega estimada
+            <input
+              type="date"
+              value={entregaEstimada}
+              onChange={(e) => setEntregaEstimada(e.target.value)}
+              className={`${inputCls} mt-1`}
+            />
+          </label>
         </div>
       </details>
 
@@ -171,10 +178,10 @@ export default function PedidoDirectoForm({ productos }: { productos: Producto[]
 
       <button
         type="submit"
-        disabled={pending || productoIds.length === 0 || !clienteTexto.trim()}
+        disabled={pending || !puedeEnviar}
         className="w-full rounded-2xl bg-tinta py-4 text-base font-semibold text-white disabled:opacity-60"
       >
-        {pending ? "Cargando…" : "Cargar pedido"}
+        {pending ? "Cargando…" : "Cargar venta"}
       </button>
     </form>
   );

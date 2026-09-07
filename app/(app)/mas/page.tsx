@@ -1,17 +1,19 @@
 import Link from "next/link";
 import {
-  Wrench,
+  Activity,
   BarChart3,
-  TrendingUp,
-  Citrus,
   BookOpen,
+  Citrus,
+  HardDrive,
   HardHat,
   KeyRound,
   Landmark,
-  Package,
+  LogOut,
+  Megaphone,
+  ShieldCheck,
   Smartphone,
   Tent,
-  LogOut,
+  TrendingUp,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -48,120 +50,135 @@ function MenuLink({
   );
 }
 
+/** Todo lo que no es de todos los días vive acá, ordenado por para qué sirve. */
 export default async function MasPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [clientes, abiertas, ganadas, { data: yo }, { data: cfgTarifa }] =
-    await Promise.all([
-      supabase.from("clientes").select("id", { count: "exact", head: true }),
-      supabase
-        .from("oportunidades")
-        .select("id", { count: "exact", head: true })
-        .in("etapa", ["nueva", "cotizada", "seguimiento"]),
-      supabase
-        .from("oportunidades")
-        .select("id", { count: "exact", head: true })
-        .eq("etapa", "ganada"),
-      supabase.from("usuarios").select("rol, nombre").eq("id", user!.id).single(),
-      supabase.from("config").select("valor").eq("clave", "tarifa_hora").maybeSingle(),
-    ]);
-  const esAdmin = ["direccion", "admin"].includes(yo?.rol ?? "");
+  const [{ data: yo }, { data: cfgTarifa }] = await Promise.all([
+    supabase.from("usuarios").select("rol, nombre").eq("id", user!.id).single(),
+    supabase.from("config").select("valor").eq("clave", "tarifa_hora").maybeSingle(),
+  ]);
+  const rol = yo?.rol ?? "comercial";
+  const esAdmin = ["direccion", "admin"].includes(rol);
+  const esTecnico = rol === "tecnico";
 
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Más</h1>
 
-      <section className="grid grid-cols-3 gap-2">
-        <div className="rounded-2xl border border-borde bg-white p-3 text-center shadow-sm">
-          <p className="text-2xl font-bold tracking-tight">{clientes.count ?? 0}</p>
-          <p className="text-xs text-piedra">Clientes</p>
-        </div>
-        <div className="rounded-2xl border border-borde bg-white p-3 text-center shadow-sm">
-          <p className="text-2xl font-bold tracking-tight">{abiertas.count ?? 0}</p>
-          <p className="text-xs text-piedra">Abiertas</p>
-        </div>
-        <div className="rounded-2xl border border-borde bg-white p-3 text-center shadow-sm">
-          <p className="text-2xl font-bold tracking-tight">{ganadas.count ?? 0}</p>
-          <p className="text-xs text-piedra">Ganadas</p>
-        </div>
+      <section className="space-y-2">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">
+          Para el trabajo
+        </h2>
+        <MenuLink
+          href="/movimientos"
+          icono={Activity}
+          titulo="Movimientos"
+          detalle="Todo lo que anotó, vendió y arregló el equipo, en orden"
+        />
+        <MenuLink
+          href="/equipos"
+          icono={HardDrive}
+          titulo="Equipos"
+          detalle="Buscar por número de serie, garantías y fichas de equipos"
+        />
+        {!esTecnico && (
+          <MenuLink
+            href="/hotelga"
+            icono={Tent}
+            titulo="HOTELGA"
+            detalle="Captura de visitantes de la feria: foto a la credencial y listo"
+          />
+        )}
+        {(esAdmin || esTecnico) && (
+          <MenuLink
+            href="/instalaciones"
+            icono={HardHat}
+            titulo="Instalaciones"
+            detalle="Control de instalaciones: gastos, serie, fecha y cobro"
+          />
+        )}
       </section>
 
+      {!esTecnico && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">
+            Para vender
+          </h2>
+          <MenuLink
+            href="/financiacion"
+            icono={Landmark}
+            titulo="Financiación bancaria"
+            detalle="Planes BNA en cuotas: hoja con todas las opciones para el cliente"
+          />
+          <MenuLink
+            href="/calculadora"
+            icono={Citrus}
+            titulo="Calculadora Zumex"
+            detalle="Recupero de inversión, lista para mandar al cliente"
+          />
+          <MenuLink
+            href="/biblioteca"
+            icono={BookOpen}
+            titulo="Biblioteca comercial"
+            detalle="Fichas, videos, comparativas y casos"
+          />
+          <MenuLink
+            href="/pipeline"
+            icono={BarChart3}
+            titulo="Ventas por etapa"
+            detalle="Vista avanzada de las consultas abiertas, por etapa"
+          />
+        </section>
+      )}
+
+      {esAdmin && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">
+            Dirección
+          </h2>
+          <MenuLink
+            href="/reportes"
+            icono={TrendingUp}
+            titulo="Reportes"
+            detalle="Embudo, canales, rubros y motivos de pérdida"
+          />
+          <MenuLink
+            href="/marketing"
+            icono={Megaphone}
+            titulo="Marketing"
+            detalle="Segmentos y campañas por email y WhatsApp"
+          />
+          <MenuLink
+            href="/admin"
+            icono={ShieldCheck}
+            titulo="Administración"
+            detalle="Usuarios, catálogo, plantillas, checklists y logo"
+          />
+        </section>
+      )}
+
       <section className="space-y-2">
-        <MenuLink
-          href="/servicio"
-          icono={Wrench}
-          titulo="Servicio técnico"
-          detalle="Órdenes de trabajo, agenda y facturación"
-        />
-        <MenuLink
-          href="/instalaciones"
-          icono={HardHat}
-          titulo="Instalaciones"
-          detalle="Control de instalaciones: gastos, serie, fecha y cobro"
-        />
-        <MenuLink
-          href="/pipeline"
-          icono={BarChart3}
-          titulo="Pipeline de ventas"
-          detalle="Kanban de oportunidades por etapa"
-        />
-        <MenuLink
-          href="/pedidos"
-          icono={Package}
-          titulo="Pedidos"
-          detalle="De la venta ganada a la entrega: factura, pago y envío"
-        />
-        <MenuLink
-          href="/hotelga"
-          icono={Tent}
-          titulo="HOTELGA 2026"
-          detalle="Captura rápida de visitantes: foto a la credencial y listo"
-        />
-        <MenuLink
-          href="/reportes"
-          icono={TrendingUp}
-          titulo="Reportes"
-          detalle="Embudo, canales, rubros y motivos de pérdida"
-        />
-        <MenuLink
-          href="/calculadora"
-          icono={Citrus}
-          titulo="Calculadora Zumex"
-          detalle="Recupero de inversión, lista para mandar al cliente"
-        />
-        <MenuLink
-          href="/financiacion"
-          icono={Landmark}
-          titulo="Financiación bancaria"
-          detalle="Planes BNA en cuotas: hoja con todas las opciones para el cliente"
-        />
-        <MenuLink
-          href="/biblioteca"
-          icono={BookOpen}
-          titulo="Biblioteca comercial"
-          detalle="Fichas, videos, comparativas y casos"
-        />
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">
+          Tu cuenta
+        </h2>
         <MenuLink
           href="/password"
           icono={KeyRound}
           titulo="Cambiar contraseña"
           detalle="Poné una contraseña tuya, sobre todo si te dieron una inicial"
         />
+        <PushToggle />
+        {esAdmin && <ConfigForm tarifaActual={cfgTarifa?.valor ?? "0"} />}
       </section>
-
-      <PushToggle />
-
-      {esAdmin && <ConfigForm tarifaActual={cfgTarifa?.valor ?? "0"} />}
 
       <section className="flex items-start gap-3 rounded-2xl border border-dashed border-borde p-4 text-sm text-piedra">
         <Smartphone className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2} />
         <p>
-          <span className="font-medium text-tinta/70">
-            Instalala en el celular:
-          </span>{" "}
+          <span className="font-medium text-tinta/70">Instalala en el celular:</span>{" "}
           abrí esta página desde el navegador del teléfono y elegí “Agregar a
           pantalla de inicio”.
         </p>

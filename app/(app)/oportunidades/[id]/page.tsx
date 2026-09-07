@@ -8,7 +8,7 @@ import IAMensaje from "@/components/IAMensaje";
 import { fechaCorta, dinero, rellenarPlantilla, diasDesde, hoyISO } from "@/lib/format";
 import { EtapaBadge, ProductoBadge } from "@/components/Badges";
 import EtapaControl from "@/components/EtapaControl";
-import PedidoControl from "@/components/PedidoControl";
+import VentaPaso from "@/components/VentaPaso";
 import TemperaturaControl from "@/components/TemperaturaControl";
 import DiagnosticoForm from "@/components/DiagnosticoForm";
 import CotizacionForm from "@/components/CotizacionForm";
@@ -224,10 +224,9 @@ export default async function OportunidadPage({
         motivoPerdida={opp.motivo_perdida}
       />
       {opp.etapa === "ganada" && (
-        <PedidoControl
+        <VentaPaso
           oportunidadId={opp.id}
           estado={opp.pedido_estado}
-          entregadoAt={opp.entregado_at}
           entregaEstimada={opp.entrega_estimada}
           nroFactura={opp.nro_factura}
           pedirSerie={!!equipoVendido && !equipoVendido.numero_serie}

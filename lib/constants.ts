@@ -13,9 +13,18 @@ export const RUBROS = [
 ] as const;
 
 export const ESTADOS_CLIENTE = [
-  { value: "prospecto", label: "Prospectos" },
-  { value: "cliente_activo", label: "Clientes activos" },
+  { value: "prospecto", label: "Interesados" },
+  { value: "cliente_activo", label: "Clientes" },
   { value: "inactivo", label: "Inactivos" },
+] as const;
+
+/** Accesos rápidos para agendar "volver a contactar". */
+export const SEGUIMIENTO_RAPIDO = [
+  { label: "Mañana", dias: 1 },
+  { label: "En 3 días", dias: 3 },
+  { label: "En 1 semana", dias: 7 },
+  { label: "En 2 semanas", dias: 14 },
+  { label: "En 1 mes", dias: 30 },
 ] as const;
 
 export const ORIGENES = [
@@ -112,15 +121,26 @@ export const ETAPAS = [
 
 export const ETAPAS_ABIERTAS = ["nueva", "cotizada", "seguimiento"] as const;
 
-/** Circuito del pedido una vez ganada la venta, en orden. */
+/**
+ * Circuito de la venta, en orden: vendido → preparar → facturar → entregado.
+ * "para_entregar" = ya facturada, falta entregar (se muestra dentro de Facturar).
+ * Los valores viejos (pendiente_pago, finalizado) ya no se usan: quedaron
+ * migrados a para_entregar / entregado.
+ */
 export const PEDIDO_ESTADOS = [
-  { value: "comprometido", label: "Comprometido" },
-  { value: "facturar", label: "Emitir factura" },
-  { value: "pendiente_pago", label: "Pendiente de pago" },
-  { value: "preparar_envio", label: "Preparando envío" },
-  { value: "para_entregar", label: "Para entregar" },
+  { value: "comprometido", label: "Vendido" },
+  { value: "preparar_envio", label: "Preparar" },
+  { value: "facturar", label: "Facturar" },
+  { value: "para_entregar", label: "Facturado, a entregar" },
   { value: "entregado", label: "Entregado" },
-  { value: "finalizado", label: "Finalizado" },
+] as const;
+
+/** Columnas del tablero de ventas (agrupan estados del pedido). */
+export const VENTA_PASOS = [
+  { key: "vendido", label: "Vendido", estados: ["comprometido"] },
+  { key: "preparar", label: "Preparar", estados: ["preparar_envio"] },
+  { key: "facturar", label: "Facturar", estados: ["facturar", "para_entregar"] },
+  { key: "entregado", label: "Entregado", estados: ["entregado", "finalizado"] },
 ] as const;
 
 export const TEMPERATURAS = [

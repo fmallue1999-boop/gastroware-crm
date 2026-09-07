@@ -41,7 +41,7 @@ export default async function AppLayout({
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-borde bg-crema/90 px-4 py-2.5 backdrop-blur lg:hidden">
-          <Link href="/hoy" className="flex items-center gap-2.5">
+          <Link href="/clientes" className="flex items-center gap-2.5">
             <Logo />
             <span className="text-[15px] font-bold tracking-tight">
               GastroWare <span className="font-medium text-piedra">CRM</span>

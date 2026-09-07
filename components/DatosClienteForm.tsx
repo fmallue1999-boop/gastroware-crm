@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { BellOff, Pencil } from "lucide-react";
 import { actualizarCliente, setNoContactar } from "@/lib/actions";
 import { telefonoProlijo } from "@/lib/format";
-import { CONDICIONES_FISCALES } from "@/lib/constants";
+import { CONDICIONES_FISCALES, RUBROS } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
 
 const inputCls =
@@ -13,6 +13,8 @@ const inputCls =
 export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
   const [editando, setEditando] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [nombre, setNombre] = useState(cliente.nombre_comercial ?? "");
+  const [rubro, setRubro] = useState(cliente.rubro ?? "Otro");
   const [razonSocial, setRazonSocial] = useState(cliente.razon_social ?? "");
   const [cuit, setCuit] = useState(cliente.cuit ?? "");
   const [condicion, setCondicion] = useState(cliente.condicion_fiscal ?? "");
@@ -28,7 +30,13 @@ export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
+      if (!nombre.trim()) {
+        setError("El nombre no puede quedar vacío");
+        return;
+      }
       const res = await actualizarCliente(cliente.id, {
+        nombre_comercial: nombre.trim(),
+        rubro: rubro || "Otro",
         razon_social: razonSocial,
         cuit,
         condicion_fiscal: condicion,
@@ -45,6 +53,8 @@ export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
 
   if (!editando) {
     const filas = [
+      { k: "Nombre", v: cliente.nombre_comercial },
+      { k: "Rubro", v: cliente.rubro },
       { k: "Razón social", v: cliente.razon_social },
       { k: "CUIT", v: cliente.cuit },
       { k: "Cond. fiscal", v: etiquetaCondicion },
@@ -106,6 +116,22 @@ export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
       className="space-y-2.5 rounded-2xl border border-borde bg-white shadow-sm p-4"
     >
       <h2 className="text-sm font-semibold">Datos de facturación</h2>
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="text"
+          placeholder="Nombre del contacto o negocio"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          className={inputCls}
+        />
+        <select value={rubro} onChange={(e) => setRubro(e.target.value)} className={inputCls}>
+          {RUBROS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+      </div>
       <input
         type="text"
         placeholder="Razón social"

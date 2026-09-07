@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import AltaForm from "@/components/AltaForm";
+import ContactoNuevoForm from "@/components/ContactoNuevoForm";
 import type { Producto } from "@/lib/types";
 
-/** Recibe también contenido compartido desde WhatsApp (PWA share target). */
-export default async function AltaPage({
+/** Alta de contacto. Recibe también texto compartido desde WhatsApp (PWA). */
+export default async function NuevoContactoPage({
   searchParams,
 }: {
   searchParams: Promise<{ texto?: string; titulo?: string; url?: string }>;
@@ -24,18 +24,16 @@ export default async function AltaPage({
     : "";
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Nuevo lead</h1>
-      <p className="text-sm text-piedra mb-5">
-        30 segundos: teléfono, nombre, producto y listo.
+    <div className="mx-auto max-w-lg">
+      <h1 className="mb-1 text-2xl font-bold tracking-tight">Nuevo contacto</h1>
+      <p className="mb-5 text-sm text-piedra">
+        Nombre y teléfono alcanzan. Lo demás se completa después.
       </p>
-      <AltaForm
+      <ContactoNuevoForm
         productos={(data ?? []) as Producto[]}
         telefonoInicial={telefonoDetectado}
-        mensajeInicial={
-          compartido
-            ? compartido.replace(telefonoDetectado, "").trim()
-            : undefined
+        notaInicial={
+          compartido ? compartido.replace(telefonoDetectado, "").trim() : ""
         }
       />
     </div>

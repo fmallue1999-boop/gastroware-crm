@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { enviarEmail } from "@/lib/core/email";
 import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde, fechaCorta } from "@/lib/format";
-import { CADENCIA_COTIZACION, PEDIDO_ESTADOS, RUBROS } from "@/lib/constants";
+import { PEDIDO_ESTADOS, RUBROS } from "@/lib/constants";
 import type { Cliente, Etapa, PedidoEstado } from "@/lib/types";
 
 async function usuarioActual() {
@@ -107,21 +107,7 @@ export async function crearLead(input: {
   if (errOpp || !opp)
     return { error: errOpp?.message ?? "No se pudo crear la oportunidad" };
 
-  const TITULO_PRIMERA_TAREA: Record<string, string> = {
-    precio: "Responder precio CON el guión (ancla valor y repregunta)",
-    info: "Mandar la ficha del producto y hacer 2 preguntas para calificar",
-    general: "Hacer diagnóstico: uso, volumen y equipo actual",
-  };
-  await supabase.from("tareas").insert({
-    cliente_id: clienteId,
-    oportunidad_id: opp.id,
-    usuario_id: user?.id ?? null,
-    tipo: "seguimiento",
-    titulo: TITULO_PRIMERA_TAREA[pedido],
-    vence_el: hoyISO(),
-    auto: true,
-  });
-
+  // Sin tarea automática: el seguimiento lo agenda la persona cuando hace falta.
   const ETIQUETA_PEDIDO: Record<string, string> = {
     precio: " — pidió precio directo",
     info: " — pidió info",
@@ -477,8 +463,8 @@ export async function cambiarEtapa(
   if (etapa === "ganada" || etapa === "perdida")
     update.closed_at = new Date().toISOString();
   if (etapa === "perdida") update.motivo_perdida = motivo;
-  // El circuito de pedido arranca al ganar; si se reabre o se pierde, se apaga
-  update.pedido_estado = etapa === "ganada" ? "facturar" : null;
+  // El circuito de la venta arranca en "Vendido"; si se reabre o se pierde, se apaga
+  update.pedido_estado = etapa === "ganada" ? "comprometido" : null;
   const { error: errUpd } = await supabase
     .from("oportunidades")
     .update(update)
@@ -486,7 +472,7 @@ export async function cambiarEtapa(
   if (errUpd) return { error: errUpd.message };
 
   if (["ganada", "perdida"].includes(etapa)) {
-    // Venta cerrada: no queda ninguna tarea colgada (ni las cargadas a mano)
+    // Venta cerrada: no queda ninguna tarea colgada de esta consulta
     await supabase
       .from("tareas")
       .update({ cancelada: true })
@@ -494,24 +480,8 @@ export async function cambiarEtapa(
       .is("completada_at", null);
   }
 
-  if (etapa === "cotizada") {
-    const { data: plantillas } = await supabase
-      .from("plantillas")
-      .select("id, uso")
-      .in("uso", ["d2", "d5", "d10", "d20"]);
-    await supabase.from("tareas").insert(
-      CADENCIA_COTIZACION.map((c) => ({
-        cliente_id: opp.cliente_id,
-        oportunidad_id: oportunidadId,
-        usuario_id: opp.comercial_id,
-        tipo: "seguimiento",
-        titulo: c.titulo,
-        plantilla_id: plantillas?.find((p) => p.uso === c.uso)?.id ?? null,
-        vence_el: sumarDias(c.dias),
-        auto: true,
-      }))
-    );
-  }
+  // Sin cadencias ni recordatorios automáticos: el equipo pidió que el CRM
+  // no agende nada solo. Los seguimientos los carga cada persona a mano.
 
   if (etapa === "ganada") {
     await supabase
@@ -551,36 +521,20 @@ export async function cambiarEtapa(
         });
       }
     }
-
-    // El circuito del pedido guía la post-venta; la primera parada es facturar
-    await supabase.from("tareas").insert({
-      cliente_id: opp.cliente_id,
-      oportunidad_id: oportunidadId,
-      usuario_id: opp.comercial_id,
-      tipo: "postventa",
-      titulo: "Emitir factura y coordinar el cobro",
-      vence_el: hoyISO(),
-      auto: true,
-    });
   }
 
-  if (etapa === "perdida" && motivo === "No era el momento") {
-    await supabase.from("tareas").insert({
-      cliente_id: opp.cliente_id,
-      oportunidad_id: oportunidadId,
-      usuario_id: opp.comercial_id,
-      tipo: "reactivacion",
-      titulo: "Reactivar: quedó para más adelante — enviar novedad o promo",
-      vence_el: sumarDias(45),
-      auto: true,
-    });
-  }
-
+  const TEXTO_ETAPA: Record<string, string> = {
+    nueva: "Consulta nueva",
+    cotizada: "Cotizada",
+    seguimiento: "En seguimiento",
+    ganada: "Venta cerrada",
+    perdida: "No se dio",
+  };
   await supabase.from("actividades").insert({
     cliente_id: opp.cliente_id,
     oportunidad_id: oportunidadId,
     tipo: "cambio_etapa",
-    contenido: `Etapa → ${etapa}${motivo ? ` (${motivo})` : ""}`,
+    contenido: `${TEXTO_ETAPA[etapa] ?? etapa}${motivo ? ` (${motivo})` : ""}`,
     created_by: user?.id ?? null,
   });
 
@@ -623,13 +577,13 @@ export async function crearPedidoDirecto(input: {
   productoIds: string[];
   monto?: number | null;
   nota?: string;
-  /** true = pre-venta/compromiso (ej: vendido en la feria, entrega a coordinar). */
-  comprometido?: boolean;
-  /** Fecha estimada de entrega (YYYY-MM-DD), para los comprometidos. */
+  /** Fecha estimada de entrega (YYYY-MM-DD), opcional. */
   entregaEstimada?: string;
+  /** A dónde volver después de cargar (por defecto, el tablero de ventas). */
+  volverA?: string;
 }) {
-  if (input.productoIds.length === 0)
-    return { error: "Elegí al menos un equipo" };
+  if (input.productoIds.length === 0 && !input.nota?.trim())
+    return { error: "Elegí el equipo o escribí qué se vendió" };
 
   const supabase = await createClient();
   const user = await usuarioActual();
@@ -651,7 +605,7 @@ export async function crearPedidoDirecto(input: {
           telefono: digitos.length >= 8 ? digitos : null,
           rubro: "Otro",
           comercial_id: user?.id ?? null,
-          notas: "Cargado rápido desde un pedido — completar datos",
+          notas: "Cargado rápido desde una venta — completar datos",
         })
         .select("id")
         .single();
@@ -665,34 +619,26 @@ export async function crearPedidoDirecto(input: {
     .from("oportunidades")
     .insert({
       cliente_id: input.clienteId,
-      producto_id: input.productoIds[0],
+      producto_id: input.productoIds[0] ?? null,
       productos_extra: input.productoIds.slice(1),
       comercial_id: user?.id ?? null,
-      origen: "Pedido directo",
+      origen: "Venta directa",
       monto_estimado: input.monto || null,
       mensaje_inicial: input.nota?.trim() || null,
+      entrega_estimada: input.entregaEstimada || null,
     })
     .select("id")
     .single();
   if (error || !opp)
-    return { error: error?.message ?? "No se pudo crear el pedido" };
+    return { error: error?.message ?? "No se pudo crear la venta" };
 
+  // Reutiliza todo el circuito de "ganada": cliente activo, equipo con
+  // garantía, recompra de consumibles y estado Vendido.
   const res = await cambiarEtapa(opp.id, "ganada");
   if (res && "error" in res && res.error) return { error: res.error };
 
-  // Pre-venta: arranca en "comprometido" (antes de facturar), con su fecha
-  if (input.comprometido) {
-    await supabase
-      .from("oportunidades")
-      .update({
-        pedido_estado: "comprometido",
-        entrega_estimada: input.entregaEstimada || null,
-      })
-      .eq("id", opp.id);
-  }
-
   revalidatePath("/", "layout");
-  redirect("/pedidos");
+  redirect(input.volverA || "/pedidos");
 }
 
 /** Fecha estimada de entrega de un pedido (editable desde el circuito). */
@@ -708,10 +654,8 @@ export async function setEntregaEstimada(oportunidadId: string, fecha: string) {
 }
 
 /**
- * Avanza el pedido de una venta ganada por su circuito:
- * facturar → pendiente de pago → preparando envío → para entregar →
- * entregado → finalizado. Al marcar entregado se agenda sola la tarea
- * de seguimiento a los 7 días.
+ * Avanza la venta por su circuito: vendido → preparar → facturar →
+ * (facturado, a entregar) → entregado. No agenda nada solo.
  */
 export async function avanzarPedido(
   oportunidadId: string,
@@ -737,25 +681,13 @@ export async function avanzarPedido(
     .eq("id", oportunidadId);
   if (error) return { error: error.message };
 
-  if (estado === "entregado" && !opp.entregado_at) {
-    await supabase.from("tareas").insert({
-      cliente_id: opp.cliente_id,
-      oportunidad_id: oportunidadId,
-      usuario_id: opp.comercial_id,
-      tipo: "postventa",
-      titulo: "Seguimiento post-entrega: ¿cómo va todo con el equipo?",
-      vence_el: sumarDias(7),
-      auto: true,
-    });
-  }
-
   const label =
     PEDIDO_ESTADOS.find((p) => p.value === estado)?.label ?? estado;
   await supabase.from("actividades").insert({
     cliente_id: opp.cliente_id,
     oportunidad_id: oportunidadId,
     tipo: "pedido",
-    contenido: `Pedido → ${label}`,
+    contenido: `Venta: ${label}`,
     created_by: user?.id ?? null,
   });
 
@@ -764,9 +696,9 @@ export async function avanzarPedido(
 }
 
 /**
- * Cierra el paso "Emitir factura" del pedido: guarda el número de factura
- * en la venta y, si la venta incluye un equipo, su número de serie (queda
- * anexado al equipo del cliente). Después pasa el pedido a pendiente de pago.
+ * Cierra el paso "Facturar" de la venta: guarda el número de factura y, si
+ * la venta incluye un equipo, su número de serie (queda anexado al equipo
+ * del cliente). Después queda "facturada, a entregar".
  */
 export async function facturarPedido(
   oportunidadId: string,
@@ -809,7 +741,7 @@ export async function facturarPedido(
 
   const { error } = await supabase
     .from("oportunidades")
-    .update({ nro_factura: nroFactura.trim(), pedido_estado: "pendiente_pago" })
+    .update({ nro_factura: nroFactura.trim(), pedido_estado: "para_entregar" })
     .eq("id", oportunidadId);
   if (error) return { error: error.message };
 
@@ -817,7 +749,7 @@ export async function facturarPedido(
     cliente_id: opp.cliente_id,
     oportunidad_id: oportunidadId,
     tipo: "pedido",
-    contenido: `Facturada (${nroFactura.trim()})${serie ? ` — serie ${serie} anexada al equipo` : ""} → Pendiente de pago`,
+    contenido: `Venta facturada (${nroFactura.trim()})${serie ? `, serie ${serie} anexada al equipo` : ""}. Falta entregar.`,
     created_by: user?.id ?? null,
   });
 
@@ -3066,4 +2998,438 @@ export async function cerrarSesion() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+// =====================================================================
+// CRM simple: contactos, notas con seguimiento, intereses y services rápidos
+// =====================================================================
+
+type SupabaseServidor = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Agenda (o mueve) el "volver a contactar" de un contacto. Hay uno solo por
+ * contacto: si ya tenía una fecha pendiente, se reemplaza por la nueva.
+ */
+async function agendarVolver(
+  supabase: SupabaseServidor,
+  clienteId: string,
+  fecha: string,
+  usuarioId: string | null,
+  motivo?: string
+) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha < hoyISO())
+    return { error: "Elegí una fecha de hoy en adelante" };
+  const titulo = motivo ? `Volver a contactar: ${motivo}` : "Volver a contactar";
+  const { data: pendiente } = await supabase
+    .from("tareas")
+    .select("id")
+    .eq("cliente_id", clienteId)
+    .eq("auto", false)
+    .is("completada_at", null)
+    .eq("cancelada", false)
+    .order("vence_el")
+    .limit(1)
+    .maybeSingle();
+  if (pendiente) {
+    const { error } = await supabase
+      .from("tareas")
+      .update({ vence_el: fecha, titulo })
+      .eq("id", pendiente.id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase.from("tareas").insert({
+      cliente_id: clienteId,
+      usuario_id: usuarioId,
+      tipo: "seguimiento",
+      titulo,
+      vence_el: fecha,
+      auto: false,
+    });
+    if (error) return { error: error.message };
+  }
+  return { ok: true as const };
+}
+
+/**
+ * Alta de contacto (cliente o interesado) con lo mínimo: nombre y un modo de
+ * contactarlo. Todo lo demás es opcional y se completa después en la ficha.
+ */
+export async function crearContacto(input: {
+  nombre: string;
+  telefono?: string;
+  email?: string;
+  empresa?: string;
+  esCliente?: boolean;
+  /** Productos que le interesan (catálogo) y/o texto libre. */
+  productoIds?: string[];
+  interesTexto?: string;
+  origen?: string;
+  rubro?: string;
+  ciudad?: string;
+  nota?: string;
+  /** Fecha para volver a contactar (YYYY-MM-DD), opcional. */
+  volverEl?: string;
+}) {
+  const nombre = input.nombre.trim();
+  if (!nombre) return { error: "Falta el nombre" };
+  const telefono = normalizarTelefono(input.telefono ?? "");
+  const email = input.email?.trim().toLowerCase() || null;
+  if (telefono.length < 6 && !email)
+    return { error: "Cargá un teléfono o un email para poder contactarlo" };
+
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  if (telefono.length >= 6) {
+    const dup = await buscarClientePorTelefono(telefono);
+    if (dup)
+      return {
+        error: `Ese teléfono ya está cargado como "${dup.nombre_comercial}"`,
+        existenteId: dup.id,
+      };
+  }
+
+  const empresa = input.empresa?.trim();
+  const nota = input.nota?.trim() || null;
+  const notas =
+    [empresa ? `Contacto: ${nombre}` : null, nota].filter(Boolean).join(" | ") ||
+    null;
+
+  const { data: nuevo, error } = await supabase
+    .from("clientes")
+    .insert({
+      nombre_comercial: empresa || nombre,
+      rubro: (RUBROS as readonly string[]).includes(input.rubro ?? "")
+        ? input.rubro
+        : "Otro",
+      telefono: telefono.length >= 6 ? telefono : null,
+      email,
+      estado: input.esCliente ? "cliente_activo" : "prospecto",
+      comercial_id: user?.id ?? null,
+      notas,
+    })
+    .select("id")
+    .single();
+  if (error || !nuevo)
+    return { error: error?.message ?? "No se pudo crear el contacto" };
+  const clienteId = nuevo.id as string;
+
+  if (input.ciudad?.trim()) {
+    await supabase.from("sucursales").insert({
+      cliente_id: clienteId,
+      nombre: "Principal",
+      ciudad: input.ciudad.trim(),
+      es_principal: true,
+    });
+  }
+
+  const productoIds = (input.productoIds ?? []).filter(Boolean);
+  const interes = input.interesTexto?.trim() || null;
+  if (productoIds.length || interes) {
+    await supabase.from("oportunidades").insert({
+      cliente_id: clienteId,
+      producto_id: productoIds[0] ?? null,
+      productos_extra: productoIds.slice(1),
+      comercial_id: user?.id ?? null,
+      origen: input.origen || "Otro",
+      pedido: "general",
+      mensaje_inicial: interes,
+    });
+  }
+
+  await supabase.from("actividades").insert({
+    cliente_id: clienteId,
+    tipo: "nota",
+    contenido: `${input.esCliente ? "Cliente" : "Interesado"} cargado${
+      input.origen ? ` (${input.origen})` : ""
+    }${interes ? `: ${interes}` : ""}${nota ? ` — ${nota}` : ""}`,
+    created_by: user?.id ?? null,
+  });
+
+  if (input.volverEl) {
+    const r = await agendarVolver(supabase, clienteId, input.volverEl, user?.id ?? null);
+    if ("error" in r) return { error: r.error };
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/clientes/${clienteId}`);
+}
+
+/**
+ * "¿Qué pasó?": guarda la nota en el historial del contacto y, si se eligió
+ * fecha, agenda el volver a contactar. Es la acción diaria del equipo.
+ */
+export async function anotarContacto(
+  clienteId: string,
+  texto: string,
+  volverEl?: string | null
+) {
+  const contenido = texto.trim();
+  if (!contenido && !volverEl)
+    return { error: "Escribí qué pasó o elegí una fecha para volver a contactar" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  if (contenido) {
+    const { error } = await supabase.from("actividades").insert({
+      cliente_id: clienteId,
+      tipo: "nota",
+      contenido,
+      created_by: user?.id ?? null,
+    });
+    if (error) return { error: error.message };
+  }
+  if (volverEl) {
+    const r = await agendarVolver(
+      supabase,
+      clienteId,
+      volverEl,
+      user?.id ?? null,
+      contenido ? contenido.slice(0, 60) : undefined
+    );
+    if ("error" in r) return { error: r.error };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Marca hecho el "volver a contactar" y deja constancia en el historial. */
+export async function cerrarSeguimiento(tareaId: string, resultado?: string) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: tarea } = await supabase
+    .from("tareas")
+    .select("id, cliente_id, titulo")
+    .eq("id", tareaId)
+    .single();
+  if (!tarea) return { error: "No se encontró el seguimiento" };
+  const { error } = await supabase
+    .from("tareas")
+    .update({ completada_at: new Date().toISOString() })
+    .eq("id", tareaId);
+  if (error) return { error: error.message };
+  await supabase.from("actividades").insert({
+    cliente_id: tarea.cliente_id,
+    tipo: "nota",
+    contenido: resultado?.trim()
+      ? `Contactado: ${resultado.trim()}`
+      : "Contactado (seguimiento hecho)",
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Agrega "le interesa X" a un contacto que ya existe. */
+export async function crearInteres(input: {
+  clienteId: string;
+  productoIds?: string[];
+  texto?: string;
+  origen?: string;
+}) {
+  const productoIds = (input.productoIds ?? []).filter(Boolean);
+  const texto = input.texto?.trim() || null;
+  if (!productoIds.length && !texto)
+    return { error: "Elegí un producto o escribí qué le interesa" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { error } = await supabase.from("oportunidades").insert({
+    cliente_id: input.clienteId,
+    producto_id: productoIds[0] ?? null,
+    productos_extra: productoIds.slice(1),
+    comercial_id: user?.id ?? null,
+    origen: input.origen || "Otro",
+    pedido: "general",
+    mensaje_inicial: texto,
+  });
+  if (error) return { error: error.message };
+  await supabase.from("actividades").insert({
+    cliente_id: input.clienteId,
+    tipo: "nota",
+    contenido: `Le interesa${texto ? `: ${texto}` : " un producto del catálogo"}`,
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Carga un service YA HECHO en un solo paso (para el técnico que lo terminó
+ * y quiere dejarlo asentado, tenga agenda o no). Crea la orden directamente
+ * cerrada por el técnico y la deja en revisión para que administración la
+ * apruebe y cobre. Sin firma ni cronómetro obligatorios.
+ */
+export async function cargarServiceHecho(input: {
+  clienteId?: string;
+  /** Cliente como texto libre (nombre o teléfono) si no se eligió uno. */
+  clienteTexto?: string;
+  equipoId?: string | null;
+  /** Equipo como texto libre (marca/modelo) si no está cargado. */
+  equipoTexto?: string;
+  tipo: string;
+  fecha: string;
+  trabajo: string;
+  horas?: number | null;
+  items?: { descripcion: string; monto: number; tipo?: "refaccion" | "gasto" }[];
+  cobertura?: "facturable" | "garantia" | "contrato";
+  fotoBase64?: string;
+}) {
+  const trabajo = input.trabajo.trim();
+  if (!trabajo) return { error: "Contá qué se hizo, aunque sea en una línea" };
+  const tipo = ["correctivo", "preventivo", "instalacion", "garantia"].includes(input.tipo)
+    ? input.tipo
+    : "correctivo";
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(input.fecha) ? input.fecha : hoyISO();
+
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  // Cliente: elegido, o por texto (teléfono conocido → se engancha; si no, se crea)
+  let clienteId = input.clienteId;
+  if (!clienteId) {
+    const texto = input.clienteTexto?.trim() ?? "";
+    if (!texto) return { error: "Poné de quién es el service (nombre o teléfono)" };
+    const digitos = normalizarTelefono(texto);
+    if (digitos.length >= 8) {
+      const existente = await buscarClientePorTelefono(digitos);
+      if (existente) clienteId = existente.id;
+    }
+    if (!clienteId) {
+      const { data: nuevo, error: errCli } = await supabase
+        .from("clientes")
+        .insert({
+          nombre_comercial: /^[\d\s+\-().]+$/.test(texto) ? `Cliente ${texto}` : texto,
+          telefono: digitos.length >= 8 ? digitos : null,
+          rubro: "Otro",
+          estado: "cliente_activo",
+          comercial_id: user?.id ?? null,
+          notas: "Cargado rápido desde un service — completar datos",
+        })
+        .select("id")
+        .single();
+      if (errCli || !nuevo)
+        return { error: errCli?.message ?? "No se pudo crear el cliente" };
+      clienteId = nuevo.id;
+    }
+  }
+
+  // Equipo: elegido, o por texto (queda cargado como equipo de otra marca)
+  let equipoId = input.equipoId || null;
+  if (!equipoId && input.equipoTexto?.trim()) {
+    const { data: eq } = await supabase
+      .from("equipos")
+      .insert({
+        cliente_id: clienteId,
+        marca_modelo_libre: input.equipoTexto.trim(),
+        origen: "externo",
+      })
+      .select("id")
+      .single();
+    equipoId = eq?.id ?? null;
+  }
+
+  const cobertura =
+    input.cobertura ?? (tipo === "garantia" ? "garantia" : "facturable");
+  const cerrada =
+    fecha === hoyISO() ? new Date().toISOString() : `${fecha}T15:00:00.000Z`;
+
+  const { data: ot, error } = await supabase
+    .from("ordenes_trabajo")
+    .insert({
+      cliente_id: clienteId,
+      equipo_id: equipoId,
+      tecnico_id: user?.id ?? null,
+      creado_por: user?.id ?? null,
+      estado: "finalizado_tecnico",
+      tipo,
+      prioridad: "normal",
+      cobertura,
+      fecha_solicitada: fecha,
+      fecha_programada: fecha,
+      trabajo_realizado: trabajo,
+      cerrada_tecnico_at: cerrada,
+    })
+    .select("id, numero")
+    .single();
+  if (error || !ot) return { error: error?.message ?? "No se pudo guardar el service" };
+
+  if (input.horas && input.horas > 0) {
+    await supabase.from("ot_tiempos").insert({
+      ot_id: ot.id,
+      tecnico_id: user?.id ?? null,
+      inicio: cerrada,
+      fin: cerrada,
+      minutos: Math.round(input.horas * 60),
+      manual: true,
+      justificacion: "Cargado al terminar el service",
+    });
+  }
+
+  const items = (input.items ?? []).filter((i) => i.descripcion.trim());
+  if (items.length) {
+    await supabase.from("ot_items").insert(
+      items.map((i) => ({
+        ot_id: ot.id,
+        tipo: i.tipo ?? "refaccion",
+        descripcion: i.descripcion.trim(),
+        cantidad: 1,
+        precio_unit: Number(i.monto) || 0,
+        estado: cobertura === "garantia" ? "garantia" : "facturable",
+        aprobado_admin: false,
+      }))
+    );
+  }
+
+  if (input.fotoBase64) {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
+    if (serviceKey) {
+      const { createClient: createAdmin } = await import("@supabase/supabase-js");
+      const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const path = `fotos/${ot.id}/${Date.now()}-service.jpg`;
+      const { error: errFoto } = await admin.storage
+        .from("servicio")
+        .upload(path, Buffer.from(input.fotoBase64, "base64"), {
+          contentType: "image/jpeg",
+        });
+      if (!errFoto)
+        await supabase
+          .from("ot_fotos")
+          .insert({ ot_id: ot.id, momento: "despues", path });
+    }
+  }
+
+  if (tipo === "instalacion" && equipoId) {
+    await supabase
+      .from("equipos")
+      .update({ fecha_instalacion: fecha })
+      .eq("id", equipoId)
+      .is("fecha_instalacion", null);
+  }
+
+  // Queda en revisión para que administración apruebe y cobre
+  await transicionarOT(ot.id, "revision_admin");
+
+  await supabase
+    .from("clientes")
+    .update({ estado: "cliente_activo" })
+    .eq("id", clienteId)
+    .eq("estado", "prospecto");
+
+  const TIPO_TEXTO: Record<string, string> = {
+    correctivo: "Reparación",
+    preventivo: "Mantenimiento",
+    instalacion: "Instalación",
+    garantia: "Garantía",
+  };
+  await supabase.from("actividades").insert({
+    cliente_id: clienteId,
+    tipo: "service",
+    contenido: `${TIPO_TEXTO[tipo]} hecha (service ${ot.numero}): ${trabajo.slice(0, 140)}`,
+    created_by: user?.id ?? null,
+  });
+
+  revalidatePath("/", "layout");
+  redirect(`/clientes/${clienteId}`);
 }

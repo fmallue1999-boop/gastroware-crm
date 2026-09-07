@@ -44,6 +44,7 @@ export async function GET(request: Request) {
       .select("usuario_id, vence_el, cliente:clientes(nombre_comercial)")
       .is("completada_at", null)
       .eq("cancelada", false)
+      .eq("auto", false)
       .lte("vence_el", hoy),
   ]);
 
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
     try {
       await webpush.sendNotification(
         sub.subscription,
-        JSON.stringify({ title: "Seguimientos de hoy", body, url: "/hoy" })
+        JSON.stringify({ title: "Seguimientos de hoy", body, url: "/clientes?vista=contactar" })
       );
       enviadas++;
     } catch (e: unknown) {

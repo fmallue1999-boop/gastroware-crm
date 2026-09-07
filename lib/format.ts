@@ -94,3 +94,15 @@ export function rellenarPlantilla(
 ): string {
   return contenido.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
 }
+
+/** "hoy", "ayer", "hace 3 días", "hace 2 meses" — para listas de contactos. */
+export function haceCuanto(iso: string): string {
+  const dias = diasDesde(iso);
+  if (dias === 0) return "hoy";
+  if (dias === 1) return "ayer";
+  if (dias < 30) return `hace ${dias} días`;
+  const meses = Math.floor(dias / 30);
+  if (meses < 12) return meses === 1 ? "hace 1 mes" : `hace ${meses} meses`;
+  const anios = Math.floor(dias / 365);
+  return anios === 1 ? "hace 1 año" : `hace ${anios} años`;
+}
