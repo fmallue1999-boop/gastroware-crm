@@ -3,6 +3,7 @@ import {
   Activity,
   BarChart3,
   BookOpen,
+  Boxes,
   Citrus,
   HardDrive,
   HardHat,
@@ -73,6 +74,12 @@ export default async function MasPage() {
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">
           Para el trabajo
         </h2>
+        <MenuLink
+          href="/stock"
+          icono={Boxes}
+          titulo="Stock"
+          detalle="Qué hay, qué llega y cuándo, y quiénes esperan cada equipo"
+        />
         <MenuLink
           href="/movimientos"
           icono={Activity}

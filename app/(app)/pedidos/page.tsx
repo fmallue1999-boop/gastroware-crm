@@ -5,6 +5,7 @@ import { VENTA_PASOS } from "@/lib/constants";
 import { dinero, fechaCorta, sumarDias, telefonoProlijo } from "@/lib/format";
 import VentaPaso from "@/components/VentaPaso";
 import { pasoDe } from "@/lib/ventas";
+import { infoStockPorProducto, textoStock } from "@/lib/stock";
 import type { Oportunidad, Producto } from "@/lib/types";
 
 /** Tablero de ventas: Vendido → Preparar → Facturar → Entregado. */
@@ -17,7 +18,7 @@ export default async function VentasPage({
   const verTodas = ver === "todas";
   const supabase = await createClient();
 
-  const [{ data }, { data: prods }] = await Promise.all([
+  const [{ data }, { data: prods }, stockInfo] = await Promise.all([
     supabase
       .from("oportunidades")
       .select("*, cliente:clientes(*), producto:productos(*)")
@@ -25,6 +26,7 @@ export default async function VentasPage({
       .order("closed_at", { ascending: false })
       .limit(300),
     supabase.from("productos").select("id, nombre"),
+    infoStockPorProducto(supabase),
   ]);
   let ventas = (data ?? []) as unknown as Oportunidad[];
   const productos = (prods ?? []) as Pick<Producto, "id" | "nombre">[];
@@ -104,6 +106,14 @@ export default async function VentasPage({
                           {o.cliente?.nombre_comercial}
                         </p>
                         <p className="text-sm text-tinta/80">{nombreProductos(o)}</p>
+                        {o.producto_id &&
+                          stockInfo[o.producto_id] &&
+                          stockInfo[o.producto_id].stock <= 0 &&
+                          i < 3 && (
+                            <p className="text-xs font-medium text-amber-700">
+                              {textoStock(stockInfo[o.producto_id], fechaCorta)}
+                            </p>
+                          )}
                         <p className="mt-0.5 text-xs text-piedra">
                           {o.monto_estimado ? `${dinero(o.monto_estimado, o.moneda)} · ` : ""}
                           {fechaCorta(o.closed_at ?? o.created_at)}

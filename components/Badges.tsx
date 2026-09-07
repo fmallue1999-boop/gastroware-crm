@@ -26,6 +26,7 @@ export function EtapaBadge({ etapa }: { etapa: string }) {
     nueva: "bg-celeste-soft text-sky-800",
     cotizada: "bg-amber-100 text-amber-700",
     seguimiento: "bg-cyan-100 text-cyan-700",
+    espera: "bg-orange-100 text-orange-700",
     ganada: "bg-green-100 text-green-700",
     perdida: "bg-crema-deep text-piedra",
   };

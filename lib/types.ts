@@ -10,6 +10,7 @@ export type Etapa =
   | "nueva"
   | "cotizada"
   | "seguimiento"
+  | "espera"
   | "ganada"
   | "perdida";
 
@@ -111,6 +112,8 @@ export interface Producto {
   descripcion: string | null;
   destacados: string[];
   imagen_url: string | null;
+  /** Unidades disponibles ahora (lo mantiene administración). */
+  stock: number;
 }
 
 export interface CotizacionItem {
@@ -385,4 +388,17 @@ export interface Notificacion {
   url: string | null;
   leida_at: string | null;
   created_at: string;
+}
+
+/** Mercadería que va a entrar: cantidad y fecha estimada por producto. */
+export interface IngresoStock {
+  id: string;
+  producto_id: string;
+  cantidad: number;
+  fecha_estimada: string | null;
+  recibido_at: string | null;
+  nota: string | null;
+  created_by: string | null;
+  created_at: string;
+  producto?: Producto | null;
 }

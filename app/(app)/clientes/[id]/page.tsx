@@ -4,6 +4,7 @@ import { Bell, Mail, MessageCircle, Phone, Wrench } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrls } from "@/lib/core/storage";
 import { iaConfigurada } from "@/lib/core/ia";
+import { infoStockPorProducto } from "@/lib/stock";
 import IAResumenCliente from "@/components/IAResumenCliente";
 import {
   fechaCorta,
@@ -78,6 +79,7 @@ export default async function ContactoPage({
     documentosRes,
     otsRes,
     usuariosRes,
+    stockInfo,
   ] = await Promise.all([
     supabase
       .from("equipos")
@@ -122,6 +124,7 @@ export default async function ContactoPage({
       .order("created_at", { ascending: false })
       .limit(10),
     supabase.from("usuarios").select("id, nombre"),
+    infoStockPorProducto(supabase),
   ]);
 
   const equipos = (equiposRes.data ?? []) as unknown as Equipo[];
@@ -277,7 +280,12 @@ export default async function ContactoPage({
       {iaConfigurada() && <IAResumenCliente clienteId={c.id} />}
 
       {!esTecnico && (
-        <InteresControl clienteId={c.id} abiertas={abiertas} productos={productos} />
+        <InteresControl
+          clienteId={c.id}
+          abiertas={abiertas}
+          productos={productos}
+          stockInfo={stockInfo}
+        />
       )}
 
       {/* Ventas */}

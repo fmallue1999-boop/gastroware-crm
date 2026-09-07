@@ -115,11 +115,19 @@ export const ETAPAS = [
   { value: "nueva", label: "Nueva" },
   { value: "cotizada", label: "Cotizada" },
   { value: "seguimiento", label: "Seguimiento" },
+  { value: "espera", label: "Lista de espera" },
   { value: "ganada", label: "Ganada" },
   { value: "perdida", label: "Perdida" },
 ] as const;
 
-export const ETAPAS_ABIERTAS = ["nueva", "cotizada", "seguimiento"] as const;
+export const ETAPAS_ABIERTAS = ["nueva", "cotizada", "seguimiento", "espera"] as const;
+
+/** Cuánto le interesa: se guarda en oportunidades.temperatura. */
+export const NIVELES_INTERES = [
+  { value: "caliente", label: "Muy interesado" },
+  { value: "tibio", label: "Interesado" },
+  { value: "frio", label: "Solo preguntó" },
+] as const;
 
 /**
  * Circuito de la venta, en orden: vendido → preparar → facturar → entregado.

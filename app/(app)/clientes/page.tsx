@@ -51,6 +51,7 @@ const VISTAS = [
   { key: "recientes", label: "Recientes" },
   { key: "contactar", label: "Para contactar" },
   { key: "interesados", label: "Interesados" },
+  { key: "espera", label: "Lista de espera" },
   { key: "clientes", label: "Clientes" },
   { key: "todos", label: "Todos" },
 ] as const;
@@ -62,17 +63,21 @@ const VISTAS = [
 export default async function ContactosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; vista?: string }>;
+  searchParams: Promise<{ q?: string; vista?: string; producto?: string }>;
 }) {
-  const { q, vista: vistaParam } = await searchParams;
+  const { q, vista: vistaParam, producto } = await searchParams;
   const busqueda = q?.trim() ?? "";
   const vista = busqueda ? "busqueda" : (vistaParam ?? "recientes");
   const supabase = await createClient();
   const hoy = hoyISO();
 
   // Seguimientos agendados a mano (los únicos que se muestran): próximos 7 días
-  const [{ data: tareasData }, { data: usuariosData }, { count: totalContactos }] =
-    await Promise.all([
+  const [
+    { data: tareasData },
+    { data: usuariosData },
+    { count: totalContactos },
+    { count: totalEspera },
+  ] = await Promise.all([
       supabase
         .from("tareas")
         .select(
@@ -89,6 +94,10 @@ export default async function ContactosPage({
         .from("clientes")
         .select("id", { count: "exact", head: true })
         .is("deleted_at", null),
+      supabase
+        .from("oportunidades")
+        .select("id", { count: "exact", head: true })
+        .eq("etapa", "espera"),
     ]);
   const tareas = (tareasData ?? []) as unknown as TareaFila[];
   const nombres = new Map(
@@ -147,6 +156,25 @@ export default async function ContactosPage({
       const porId = new Map(aplanar((data ?? []) as Fila[]).map((c) => [c.id, c]));
       clientes = ids.map((id) => porId.get(id)).filter(Boolean) as Cliente[];
     }
+  } else if (vista === "espera") {
+    let qEspera = supabase
+      .from("oportunidades")
+      .select("cliente_id")
+      .eq("etapa", "espera")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (producto) qEspera = qEspera.eq("producto_id", producto);
+    const { data: opps } = await qEspera;
+    const ids = unicos((opps ?? []).map((o) => o.cliente_id)).slice(0, 100);
+    if (ids.length) {
+      const { data } = await supabase
+        .from("clientes")
+        .select(SELECT_CLI)
+        .in("id", ids)
+        .is("deleted_at", null);
+      const porId = new Map(aplanar((data ?? []) as Fila[]).map((c) => [c.id, c]));
+      clientes = ids.map((id) => porId.get(id)).filter(Boolean) as Cliente[];
+    }
   } else if (vista === "clientes") {
     const { data } = await supabase
       .from("clientes")
@@ -178,7 +206,7 @@ export default async function ContactosPage({
           .limit(400),
         supabase
           .from("oportunidades")
-          .select("cliente_id, mensaje_inicial, producto:productos(nombre)")
+          .select("cliente_id, etapa, mensaje_inicial, producto:productos(nombre)")
           .in("cliente_id", ids)
           .in("etapa", [...ETAPAS_ABIERTAS])
           .order("created_at", { ascending: false })
@@ -198,14 +226,19 @@ export default async function ContactosPage({
   const ultimo = new Map<string, { contenido: string | null; created_at: string }>();
   for (const a of (actsData ?? []) as { cliente_id: string; contenido: string | null; created_at: string }[])
     if (!ultimo.has(a.cliente_id)) ultimo.set(a.cliente_id, a);
-  const interes = new Map<string, string>();
+  const interes = new Map<string, { texto: string; espera: boolean }>();
   for (const o of (oppsData ?? []) as unknown as {
     cliente_id: string;
+    etapa: string;
     mensaje_inicial: string | null;
     producto: { nombre: string } | null;
   }[]) {
     const texto = o.producto?.nombre ?? o.mensaje_inicial;
-    if (texto && !interes.has(o.cliente_id)) interes.set(o.cliente_id, texto);
+    if (!texto) continue;
+    const espera = o.etapa === "espera";
+    const actual = interes.get(o.cliente_id);
+    // La lista de espera manda: es lo que hay que resolver
+    if (!actual || (espera && !actual.espera)) interes.set(o.cliente_id, { texto, espera });
   }
   const proximo = new Map<string, string>();
   for (const t of (pendData ?? []) as { cliente_id: string; vence_el: string }[])
@@ -249,6 +282,7 @@ export default async function ContactosPage({
           <Link key={v.key} href={linkVista(v.key)} className={chip(vista === v.key)}>
             {v.label}
             {v.key === "contactar" && paraHoy > 0 ? ` (${paraHoy})` : ""}
+            {v.key === "espera" && totalEspera ? ` (${totalEspera})` : ""}
             {v.key === "todos" && totalContactos
               ? ` (${totalContactos.toLocaleString("es-AR")})`
               : ""}
@@ -360,8 +394,13 @@ export default async function ContactosPage({
                     {c.telefono ? ` · ${telefonoProlijo(c.telefono)}` : ""}
                   </p>
                   {int && (
-                    <p className="mt-1 truncate text-sm text-tinta/80">
-                      Le interesa: <span className="font-medium">{int}</span>
+                    <p
+                      className={`mt-1 truncate text-sm ${
+                        int.espera ? "text-orange-700" : "text-tinta/80"
+                      }`}
+                    >
+                      {int.espera ? "En lista de espera: " : "Le interesa: "}
+                      <span className="font-medium">{int.texto}</span>
                     </p>
                   )}
                   {u && (

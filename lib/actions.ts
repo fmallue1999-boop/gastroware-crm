@@ -527,6 +527,7 @@ export async function cambiarEtapa(
     nueva: "Consulta nueva",
     cotizada: "Cotizada",
     seguimiento: "En seguimiento",
+    espera: "En lista de espera (sin stock)",
     ganada: "Venta cerrada",
     perdida: "No se dio",
   };
@@ -3069,6 +3070,10 @@ export async function crearContacto(input: {
   nota?: string;
   /** Fecha para volver a contactar (YYYY-MM-DD), opcional. */
   volverEl?: string;
+  /** Cuánto le interesa: caliente (muy) / tibio / frio. */
+  nivel?: string;
+  /** true = quiere comprar pero no hay stock: entra en lista de espera. */
+  enEspera?: boolean;
 }) {
   const nombre = input.nombre.trim();
   if (!nombre) return { error: "Falta el nombre" };
@@ -3125,6 +3130,10 @@ export async function crearContacto(input: {
 
   const productoIds = (input.productoIds ?? []).filter(Boolean);
   const interes = input.interesTexto?.trim() || null;
+  const nivel = ["caliente", "tibio", "frio"].includes(input.nivel ?? "")
+    ? input.nivel
+    : null;
+  const enEspera = !!input.enEspera && (productoIds.length > 0 || !!interes);
   if (productoIds.length || interes) {
     await supabase.from("oportunidades").insert({
       cliente_id: clienteId,
@@ -3133,6 +3142,8 @@ export async function crearContacto(input: {
       comercial_id: user?.id ?? null,
       origen: input.origen || "Otro",
       pedido: "general",
+      etapa: enEspera ? "espera" : "nueva",
+      temperatura: nivel,
       mensaje_inicial: interes,
     });
   }
@@ -3142,7 +3153,9 @@ export async function crearContacto(input: {
     tipo: "nota",
     contenido: `${input.esCliente ? "Cliente" : "Interesado"} cargado${
       input.origen ? ` (${input.origen})` : ""
-    }${interes ? `: ${interes}` : ""}${nota ? ` — ${nota}` : ""}`,
+    }${interes ? `: ${interes}` : ""}${
+      nivel === "caliente" ? " — muy interesado" : ""
+    }${enEspera ? " — en lista de espera (sin stock)" : ""}${nota ? ` — ${nota}` : ""}`,
     created_by: user?.id ?? null,
   });
 
@@ -3226,6 +3239,8 @@ export async function crearInteres(input: {
   productoIds?: string[];
   texto?: string;
   origen?: string;
+  nivel?: string;
+  enEspera?: boolean;
 }) {
   const productoIds = (input.productoIds ?? []).filter(Boolean);
   const texto = input.texto?.trim() || null;
@@ -3233,6 +3248,13 @@ export async function crearInteres(input: {
     return { error: "Elegí un producto o escribí qué le interesa" };
   const supabase = await createClient();
   const user = await usuarioActual();
+  const nivel = ["caliente", "tibio", "frio"].includes(input.nivel ?? "")
+    ? input.nivel
+    : null;
+  const { data: prods } = productoIds.length
+    ? await supabase.from("productos").select("id, nombre").in("id", productoIds)
+    : { data: [] };
+  const nombres = (prods ?? []).map((p) => p.nombre).join(", ");
   const { error } = await supabase.from("oportunidades").insert({
     cliente_id: input.clienteId,
     producto_id: productoIds[0] ?? null,
@@ -3240,13 +3262,17 @@ export async function crearInteres(input: {
     comercial_id: user?.id ?? null,
     origen: input.origen || "Otro",
     pedido: "general",
+    etapa: input.enEspera ? "espera" : "nueva",
+    temperatura: nivel,
     mensaje_inicial: texto,
   });
   if (error) return { error: error.message };
   await supabase.from("actividades").insert({
     cliente_id: input.clienteId,
     tipo: "nota",
-    contenido: `Le interesa${texto ? `: ${texto}` : " un producto del catálogo"}`,
+    contenido: `Le interesa: ${[nombres, texto].filter(Boolean).join(" — ") || "un producto"}${
+      nivel === "caliente" ? " (muy interesado)" : ""
+    }${input.enEspera ? " — en lista de espera (sin stock)" : ""}`,
     created_by: user?.id ?? null,
   });
   revalidatePath("/", "layout");
@@ -3432,4 +3458,94 @@ export async function cargarServiceHecho(input: {
 
   revalidatePath("/", "layout");
   redirect(`/clientes/${clienteId}`);
+}
+
+// =====================================================================
+// Stock e ingresos previstos (lo mantiene administración; lo ven todos)
+// =====================================================================
+
+async function exigirGestor(): Promise<{ error: string } | null> {
+  const rol = await rolActual();
+  return ["direccion", "admin"].includes(rol)
+    ? null
+    : { error: "Solo administración puede cambiar el stock" };
+}
+
+export async function guardarStock(productoId: string, stock: number) {
+  const bloqueo = await exigirGestor();
+  if (bloqueo) return bloqueo;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("productos")
+    .update({ stock: Math.max(0, Math.round(Number(stock) || 0)) })
+    .eq("id", productoId);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+export async function crearIngresoStock(input: {
+  productoId: string;
+  cantidad: number;
+  fechaEstimada?: string | null;
+  nota?: string;
+}) {
+  const bloqueo = await exigirGestor();
+  if (bloqueo) return bloqueo;
+  const cantidad = Math.round(Number(input.cantidad) || 0);
+  if (cantidad <= 0) return { error: "Poné cuántas unidades van a entrar" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { error } = await supabase.from("ingresos_stock").insert({
+    producto_id: input.productoId,
+    cantidad,
+    fecha_estimada: input.fechaEstimada || null,
+    nota: input.nota?.trim() || null,
+    created_by: user?.id ?? null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Marca un ingreso como recibido: suma las unidades al stock del producto. */
+export async function recibirIngresoStock(ingresoId: string) {
+  const bloqueo = await exigirGestor();
+  if (bloqueo) return bloqueo;
+  const supabase = await createClient();
+  const { data: ing } = await supabase
+    .from("ingresos_stock")
+    .select("id, producto_id, cantidad, recibido_at")
+    .eq("id", ingresoId)
+    .single();
+  if (!ing) return { error: "No se encontró el ingreso" };
+  if (ing.recibido_at) return { error: "Ese ingreso ya fue recibido" };
+  const { data: prod } = await supabase
+    .from("productos")
+    .select("stock")
+    .eq("id", ing.producto_id)
+    .single();
+  const nuevo = (prod?.stock ?? 0) + ing.cantidad;
+  const { error: e1 } = await supabase
+    .from("productos")
+    .update({ stock: nuevo })
+    .eq("id", ing.producto_id);
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase
+    .from("ingresos_stock")
+    .update({ recibido_at: new Date().toISOString() })
+    .eq("id", ingresoId);
+  if (e2) return { error: e2.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const, stock: nuevo };
+}
+
+export async function borrarIngresoStock(ingresoId: string) {
+  const bloqueo = await exigirGestor();
+  if (bloqueo) return bloqueo;
+  const supabase = await createClient();
+  const { error } = await supabase.from("ingresos_stock").delete().eq("id", ingresoId);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const };
 }

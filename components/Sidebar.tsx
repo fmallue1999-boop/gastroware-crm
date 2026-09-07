@@ -21,6 +21,7 @@ import {
   Tent,
   Activity,
   BarChart3,
+  Boxes,
   type LucideIcon,
 } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -33,6 +34,7 @@ const GESTORES = ["direccion", "admin"];
 const PRINCIPAL: Item[] = [
   { href: "/clientes", label: "Contactos", icono: Users },
   { href: "/pedidos", label: "Ventas", icono: Package, roles: ["direccion", "admin", "comercial", "marketing", "distribuidor"] },
+  { href: "/stock", label: "Stock", icono: Boxes },
   { href: "/servicio", label: "Services", icono: Wrench },
   { href: "/movimientos", label: "Movimientos", icono: Activity },
 ];

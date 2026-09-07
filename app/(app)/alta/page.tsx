@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { infoStockPorProducto } from "@/lib/stock";
 import ContactoNuevoForm from "@/components/ContactoNuevoForm";
 import type { Producto } from "@/lib/types";
 
@@ -12,12 +13,15 @@ export default async function NuevoContactoPage({
   const compartido = [titulo, texto].filter(Boolean).join(" ").trim();
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("productos")
-    .select("*")
-    .eq("activo", true)
-    .eq("es_consumible", false)
-    .order("nombre");
+  const [{ data }, stockInfo] = await Promise.all([
+    supabase
+      .from("productos")
+      .select("*")
+      .eq("activo", true)
+      .eq("es_consumible", false)
+      .order("nombre"),
+    infoStockPorProducto(supabase),
+  ]);
 
   const telefonoDetectado = compartido
     ? (compartido.match(/(?:\+?54\s?9?[\s\-.]?)?(?:\(?\d{2,4}\)?[\s\-.]?)?\d{3,4}[\s\-.]?\d{4}/)?.[0] ?? "")
@@ -31,6 +35,7 @@ export default async function NuevoContactoPage({
       </p>
       <ContactoNuevoForm
         productos={(data ?? []) as Producto[]}
+        stockInfo={stockInfo}
         telefonoInicial={telefonoDetectado}
         notaInicial={
           compartido ? compartido.replace(telefonoDetectado, "").trim() : ""

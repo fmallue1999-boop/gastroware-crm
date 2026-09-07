@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Boxes,
   HardDrive,
   Plus,
   Users,
@@ -14,11 +15,21 @@ import {
 
 type Item = { href: string; label: string; icono: LucideIcon; central?: boolean };
 
-const EQUIPO: Item[] = [
+/** Dirección y administración: también revisan y cobran services. */
+const GESTION: Item[] = [
   { href: "/clientes", label: "Contactos", icono: Users },
   { href: "/pedidos", label: "Ventas", icono: Package },
   { href: "/alta", label: "Nuevo", icono: Plus, central: true },
   { href: "/servicio", label: "Services", icono: Wrench },
+  { href: "/mas", label: "Más", icono: Menu },
+];
+
+/** Vendedores: el stock a mano, para saber qué pueden vender y qué llega. */
+const VENTAS: Item[] = [
+  { href: "/clientes", label: "Contactos", icono: Users },
+  { href: "/pedidos", label: "Ventas", icono: Package },
+  { href: "/alta", label: "Nuevo", icono: Plus, central: true },
+  { href: "/stock", label: "Stock", icono: Boxes },
   { href: "/mas", label: "Más", icono: Menu },
 ];
 
@@ -33,7 +44,12 @@ const TECNICO: Item[] = [
 /** Una sola barra para todo el equipo; el técnico tiene su variante. */
 export default function BottomNav({ rol = "comercial" }: { rol?: string }) {
   const pathname = usePathname();
-  const items = rol === "tecnico" ? TECNICO : EQUIPO;
+  const items =
+    rol === "tecnico"
+      ? TECNICO
+      : ["direccion", "admin"].includes(rol)
+        ? GESTION
+        : VENTAS;
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-borde bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">

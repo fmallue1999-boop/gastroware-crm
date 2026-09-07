@@ -4,13 +4,15 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { buscarClientePorTelefono, crearContacto } from "@/lib/actions";
-import { telefonoProlijo, normalizarTelefono, sumarDias, hoyISO } from "@/lib/format";
+import { telefonoProlijo, normalizarTelefono, sumarDias, hoyISO, fechaCorta } from "@/lib/format";
 import {
   CATEGORIAS_PRODUCTO,
+  NIVELES_INTERES,
   ORIGENES,
   RUBROS,
   SEGUIMIENTO_RAPIDO,
 } from "@/lib/constants";
+import { textoStock, type InfoStock } from "@/lib/stock";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
@@ -26,10 +28,12 @@ const chipCls = (activo: boolean) =>
  */
 export default function ContactoNuevoForm({
   productos,
+  stockInfo = {},
   telefonoInicial = "",
   notaInicial = "",
 }: {
   productos: Producto[];
+  stockInfo?: Record<string, InfoStock>;
   telefonoInicial?: string;
   notaInicial?: string;
 }) {
@@ -39,6 +43,9 @@ export default function ContactoNuevoForm({
   const [esCliente, setEsCliente] = useState(false);
   const [productoIds, setProductoIds] = useState<string[]>([]);
   const [interesTexto, setInteresTexto] = useState("");
+  const [nivel, setNivel] = useState("tibio");
+  const [enEspera, setEnEspera] = useState(false);
+  const sinStock = productoIds.some((id) => (stockInfo[id]?.stock ?? 1) <= 0);
   const [nota, setNota] = useState(notaInicial);
   const [volverEl, setVolverEl] = useState("");
   const [email, setEmail] = useState("");
@@ -91,9 +98,18 @@ export default function ContactoNuevoForm({
         ciudad,
         nota,
         volverEl: volverEl || undefined,
+        nivel,
+        enEspera: enEspera && sinStock,
       });
       if (res && "error" in res) setError(res.error ?? "No se pudo guardar");
     });
+  }
+
+  function agregarProducto(id: string) {
+    if (!id || productoIds.includes(id)) return;
+    setProductoIds([...productoIds, id]);
+    // Sin stock: sugerimos la lista de espera de una
+    if ((stockInfo[id]?.stock ?? 1) <= 0) setEnEspera(true);
   }
 
   return (
@@ -182,14 +198,7 @@ export default function ContactoNuevoForm({
             })}
           </div>
         )}
-        <select
-          value=""
-          onChange={(e) => {
-            const id = e.target.value;
-            if (id && !productoIds.includes(id)) setProductoIds([...productoIds, id]);
-          }}
-          className={inputCls}
-        >
+        <select value="" onChange={(e) => agregarProducto(e.target.value)} className={inputCls}>
           <option value="">
             {productoIds.length === 0 ? "Elegir del catálogo…" : "Agregar otro…"}
           </option>
@@ -210,7 +219,54 @@ export default function ContactoNuevoForm({
           onChange={(e) => setInteresTexto(e.target.value)}
           className={`${inputCls} mt-1.5`}
         />
+        {productoIds.length > 0 && (
+          <div className="mt-1.5 space-y-0.5">
+            {productoIds.map((id) => {
+              const info = stockInfo[id];
+              if (!info) return null;
+              return (
+                <p
+                  key={id}
+                  className={`text-xs ${info.stock > 0 ? "text-green-700" : "text-amber-700"}`}
+                >
+                  {productos.find((p) => p.id === id)?.nombre}: {textoStock(info, fechaCorta)}
+                </p>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {(productoIds.length > 0 || interesTexto.trim()) && (
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
+            ¿Cuánto le interesa?
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {NIVELES_INTERES.map((n) => (
+              <button
+                key={n.value}
+                type="button"
+                onClick={() => setNivel(n.value)}
+                className={chipCls(nivel === n.value)}
+              >
+                {n.label}
+              </button>
+            ))}
+          </div>
+          {sinStock && (
+            <label className="mt-2 flex cursor-pointer items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+              <input
+                type="checkbox"
+                checked={enEspera}
+                onChange={(e) => setEnEspera(e.target.checked)}
+                className="h-4 w-4 accent-tinta"
+              />
+              Ponerlo en lista de espera: lo quiere y no hay stock
+            </label>
+          )}
+        </div>
+      )}
 
       <textarea
         placeholder="Nota (opcional): qué hablaron, qué tiene, qué necesita…"
