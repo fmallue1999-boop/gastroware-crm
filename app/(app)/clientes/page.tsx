@@ -361,6 +361,10 @@ export default async function ContactosPage({
                 Cargarlo como contacto nuevo
               </Link>
             </>
+          ) : vista === "espera" ? (
+            "Nadie en lista de espera. Cuando alguien quiera algo sin stock, marcalo en su ficha y aparece acá."
+          ) : vista === "interesados" ? (
+            "Todavía no hay interesados con consulta abierta."
           ) : (
             "Todavía no hay movimientos. Cargá un contacto con el botón Nuevo."
           )}
