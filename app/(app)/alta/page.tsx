@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { infoStockPorProducto } from "@/lib/stock";
-import ContactoNuevoForm from "@/components/ContactoNuevoForm";
+import InteresNuevoForm from "@/components/InteresNuevoForm";
 import type { Producto } from "@/lib/types";
 
-/** Alta de contacto. Recibe también texto compartido desde WhatsApp (PWA). */
-export default async function NuevoContactoPage({
+/**
+ * Nuevo interés: la acción principal. Primero qué quiere, después quién.
+ * Recibe también texto compartido desde WhatsApp (PWA share target).
+ */
+export default async function NuevoInteresPage({
   searchParams,
 }: {
   searchParams: Promise<{ texto?: string; titulo?: string; url?: string }>;
@@ -29,11 +32,11 @@ export default async function NuevoContactoPage({
 
   return (
     <div className="mx-auto max-w-lg">
-      <h1 className="mb-1 text-2xl font-bold tracking-tight">Nuevo contacto</h1>
+      <h1 className="mb-1 text-2xl font-bold tracking-tight">Nuevo interés</h1>
       <p className="mb-5 text-sm text-piedra">
-        Nombre y teléfono alcanzan. Lo demás se completa después.
+        Qué le interesa y a quién. Si no está en la base, lo cargás ahí mismo.
       </p>
-      <ContactoNuevoForm
+      <InteresNuevoForm
         productos={(data ?? []) as Producto[]}
         stockInfo={stockInfo}
         telefonoInicial={telefonoDetectado}

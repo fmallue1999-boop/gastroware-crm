@@ -19,7 +19,7 @@ type Item = { href: string; label: string; icono: LucideIcon; central?: boolean 
 const GESTION: Item[] = [
   { href: "/clientes", label: "Contactos", icono: Users },
   { href: "/pedidos", label: "Ventas", icono: Package },
-  { href: "/alta", label: "Nuevo", icono: Plus, central: true },
+  { href: "/alta", label: "Interés", icono: Plus, central: true },
   { href: "/servicio", label: "Services", icono: Wrench },
   { href: "/mas", label: "Más", icono: Menu },
 ];
@@ -28,7 +28,7 @@ const GESTION: Item[] = [
 const VENTAS: Item[] = [
   { href: "/clientes", label: "Contactos", icono: Users },
   { href: "/pedidos", label: "Ventas", icono: Package },
-  { href: "/alta", label: "Nuevo", icono: Plus, central: true },
+  { href: "/alta", label: "Interés", icono: Plus, central: true },
   { href: "/stock", label: "Stock", icono: Boxes },
   { href: "/mas", label: "Más", icono: Menu },
 ];

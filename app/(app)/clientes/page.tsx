@@ -258,12 +258,20 @@ export default async function ContactosPage({
     <div>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Contactos</h1>
-        <Link
-          href="/alta"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-tinta px-3.5 py-2 text-sm font-semibold text-white shadow-sm"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.5} /> Nuevo
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/clientes/nuevo"
+            className="hidden text-xs text-piedra underline sm:inline"
+          >
+            Contacto sin interés
+          </Link>
+          <Link
+            href="/alta"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-tinta px-3.5 py-2 text-sm font-semibold text-white shadow-sm"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} /> Nuevo interés
+          </Link>
+        </div>
       </div>
 
       <form method="get" className="relative mb-3">

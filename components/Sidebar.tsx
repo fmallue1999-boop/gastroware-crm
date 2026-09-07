@@ -69,7 +69,7 @@ export default function Sidebar({
   const crear =
     rol === "tecnico"
       ? { href: "/servicio/cargar", label: "Cargar service" }
-      : { href: "/alta", label: "Nuevo contacto" };
+      : { href: "/alta", label: "Nuevo interés" };
 
   const activo = (href: string) =>
     href === "/clientes"

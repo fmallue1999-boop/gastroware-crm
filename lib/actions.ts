@@ -3549,3 +3549,109 @@ export async function borrarIngresoStock(ingresoId: string) {
   revalidatePath("/", "layout");
   return { ok: true as const };
 }
+
+// =====================================================================
+// Nuevo interés: primero qué quiere, después quién (de la base o nuevo)
+// =====================================================================
+
+/**
+ * La acción principal del equipo de ventas. Arranca por el interés
+ * ("una licuadora") y recién después asigna a quién: un contacto de la
+ * base, o uno nuevo con nombre y teléfono. Si el teléfono ya existe, se
+ * asigna a ese contacto sin preguntar.
+ */
+export async function registrarInteres(input: {
+  productoIds?: string[];
+  interesTexto?: string;
+  nivel?: string;
+  enEspera?: boolean;
+  /** Contacto elegido de la base. */
+  clienteId?: string;
+  /** O contacto nuevo: */
+  nombre?: string;
+  telefono?: string;
+  email?: string;
+  empresa?: string;
+  esCliente?: boolean;
+  origen?: string;
+  rubro?: string;
+  ciudad?: string;
+  nota?: string;
+  volverEl?: string;
+}) {
+  const productoIds = (input.productoIds ?? []).filter(Boolean);
+  const interes = input.interesTexto?.trim() || null;
+  if (!productoIds.length && !interes)
+    return { error: "Elegí qué le interesa, o escribilo" };
+
+  const supabase = await createClient();
+  const user = await usuarioActual();
+
+  let clienteId = input.clienteId;
+  const telefono = normalizarTelefono(input.telefono ?? "");
+  if (!clienteId && telefono.length >= 6) {
+    const dup = await buscarClientePorTelefono(telefono);
+    if (dup) clienteId = dup.id;
+  }
+
+  if (!clienteId) {
+    const nombre = input.nombre?.trim() ?? "";
+    const email = input.email?.trim().toLowerCase() || null;
+    if (!nombre) return { error: "Falta el nombre de quien consulta" };
+    if (telefono.length < 6 && !email)
+      return { error: "Cargá un teléfono o un email para poder contactarlo" };
+    const empresa = input.empresa?.trim();
+    const { data: nuevo, error } = await supabase
+      .from("clientes")
+      .insert({
+        nombre_comercial: empresa || nombre,
+        rubro: (RUBROS as readonly string[]).includes(input.rubro ?? "")
+          ? input.rubro
+          : "Otro",
+        telefono: telefono.length >= 6 ? telefono : null,
+        email,
+        estado: input.esCliente ? "cliente_activo" : "prospecto",
+        comercial_id: user?.id ?? null,
+        notas: empresa ? `Contacto: ${nombre}` : null,
+      })
+      .select("id")
+      .single();
+    if (error || !nuevo)
+      return { error: error?.message ?? "No se pudo crear el contacto" };
+    clienteId = nuevo.id as string;
+    if (input.ciudad?.trim()) {
+      await supabase.from("sucursales").insert({
+        cliente_id: clienteId,
+        nombre: "Principal",
+        ciudad: input.ciudad.trim(),
+        es_principal: true,
+      });
+    }
+    await supabase.from("actividades").insert({
+      cliente_id: clienteId,
+      tipo: "nota",
+      contenido: `${input.esCliente ? "Cliente" : "Contacto"} cargado desde un interés${
+        input.origen ? ` (${input.origen})` : ""
+      }`,
+      created_by: user?.id ?? null,
+    });
+  }
+
+  const r = await crearInteres({
+    clienteId,
+    productoIds,
+    texto: interes ?? undefined,
+    origen: input.origen,
+    nivel: input.nivel,
+    enEspera: input.enEspera,
+  });
+  if ("error" in r) return { error: r.error };
+
+  if (input.nota?.trim() || input.volverEl) {
+    const a = await anotarContacto(clienteId, input.nota ?? "", input.volverEl || null);
+    if ("error" in a) return { error: a.error };
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/clientes/${clienteId}`);
+}
