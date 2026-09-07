@@ -6,17 +6,11 @@ import { ArrowRight, Check } from "lucide-react";
 import { avanzarPedido, facturarPedido, setEntregaEstimada } from "@/lib/actions";
 import { VENTA_PASOS } from "@/lib/constants";
 import { fechaCorta } from "@/lib/format";
+import { pasoDe } from "@/lib/ventas";
 import type { PedidoEstado } from "@/lib/types";
 
 const inputCls =
   "w-full rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta";
-
-/** Índice de columna del tablero para un estado de pedido. */
-export function pasoDe(estado: PedidoEstado | null): number {
-  const e = estado ?? "comprometido";
-  const i = VENTA_PASOS.findIndex((p) => (p.estados as readonly string[]).includes(e));
-  return i < 0 ? 0 : i;
-}
 
 /**
  * El circuito de la venta en 4 pasos (Vendido → Preparar → Facturar →

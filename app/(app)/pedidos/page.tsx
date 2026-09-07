@@ -3,7 +3,8 @@ import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { VENTA_PASOS } from "@/lib/constants";
 import { dinero, fechaCorta, sumarDias, telefonoProlijo } from "@/lib/format";
-import VentaPaso, { pasoDe } from "@/components/VentaPaso";
+import VentaPaso from "@/components/VentaPaso";
+import { pasoDe } from "@/lib/ventas";
 import type { Oportunidad, Producto } from "@/lib/types";
 
 /** Tablero de ventas: Vendido → Preparar → Facturar → Entregado. */
