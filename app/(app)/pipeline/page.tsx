@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ETAPAS, ETAPAS_ABIERTAS } from "@/lib/constants";
 import { dinero, diasDesde, hoyISO } from "@/lib/format";
+import { sumarPorMoneda } from "@/lib/dinero";
+import Montos from "@/components/Montos";
 import { TempBadge, ProductoBadge } from "@/components/Badges";
 import type { Oportunidad, Producto } from "@/lib/types";
 
@@ -59,9 +61,9 @@ export default async function PipelinePage({
     (ETAPAS_ABIERTAS as readonly string[]).includes(e.value)
   );
 
-  const totalPipeline = oportunidades.reduce(
-    (sum, o) => sum + (o.moneda === "ARS" ? o.monto_estimado ?? 0 : 0),
-    0
+  // Totales por moneda, sin mezclar (antes solo se sumaba ARS y USD quedaba afuera)
+  const totalPipeline = sumarPorMoneda(
+    oportunidades.map((o) => ({ monto: o.monto_estimado, moneda: o.moneda }))
   );
 
   return (
@@ -69,7 +71,7 @@ export default async function PipelinePage({
       <div className="flex items-center justify-between gap-2 mb-1">
         <h1 className="text-2xl font-bold tracking-tight">Pipeline</h1>
         <span className="text-sm text-piedra">
-          {oportunidades.length} abiertas · {dinero(totalPipeline)}
+          {oportunidades.length} abiertas · <Montos por={totalPipeline} inline />
         </span>
       </div>
       <p className="mb-3 text-sm text-piedra">
