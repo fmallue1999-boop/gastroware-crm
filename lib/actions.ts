@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { enviarEmail } from "@/lib/core/email";
 import { exigirGestor, rolActual } from "@/lib/auth";
+import { must, mensajeDe } from "@/lib/supabase/must";
 import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde, fechaCorta } from "@/lib/format";
 import { PEDIDO_ESTADOS, RUBROS } from "@/lib/constants";
 import type { Cliente, Etapa, PedidoEstado } from "@/lib/types";
@@ -422,7 +423,7 @@ export async function crearTarea(input: {
 }) {
   const supabase = await createClient();
   const user = await usuarioActual();
-  await supabase.from("tareas").insert({
+  const { error } = await supabase.from("tareas").insert({
     cliente_id: input.clienteId,
     oportunidad_id: input.oportunidadId ?? null,
     usuario_id: user?.id ?? null,
@@ -430,6 +431,7 @@ export async function crearTarea(input: {
     titulo: input.titulo,
     vence_el: sumarDias(input.dias),
   });
+  if (error) return { error: `crear seguimiento: ${error.message}` };
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -479,42 +481,61 @@ export async function cambiarEtapa(
   // no agende nada solo. Los seguimientos los carga cada persona a mano.
 
   if (etapa === "ganada") {
-    await supabase
-      .from("clientes")
-      .update({ estado: "cliente_activo" })
-      .eq("id", opp.cliente_id);
+    try {
+      must(
+        await supabase
+          .from("clientes")
+          .update({ estado: "cliente_activo" })
+          .eq("id", opp.cliente_id),
+        "activar cliente"
+      );
 
-    if (opp.producto_id) {
-      const { data: prod } = await supabase
-        .from("productos")
-        .select("garantia_meses, modelo_id")
-        .eq("id", opp.producto_id)
-        .single();
-      await supabase.from("equipos").insert({
-        cliente_id: opp.cliente_id,
-        producto_id: opp.producto_id,
-        modelo_id: prod?.modelo_id ?? null,
-        origen: "vendido",
-        fecha_venta: hoyISO(),
-        garantia_hasta: prod?.garantia_meses
-          ? sumarMeses(prod.garantia_meses)
-          : null,
-        comercial_id: opp.comercial_id,
-        oportunidad_id: oportunidadId,
-      });
-      const { data: consumible } = await supabase
-        .from("productos")
-        .select("id, frecuencia_recompra_dias")
-        .eq("consumible_de", opp.producto_id)
-        .maybeSingle();
-      if (consumible?.frecuencia_recompra_dias) {
-        await supabase.from("recurrencias").insert({
-          cliente_id: opp.cliente_id,
-          producto_id: consumible.id,
-          frecuencia_dias: consumible.frecuencia_recompra_dias,
-          proxima_alerta: sumarDias(consumible.frecuencia_recompra_dias),
-        });
+      if (opp.producto_id) {
+        const prod = must(
+          await supabase
+            .from("productos")
+            .select("garantia_meses, modelo_id")
+            .eq("id", opp.producto_id)
+            .single(),
+          "leer producto"
+        );
+        must(
+          await supabase.from("equipos").insert({
+            cliente_id: opp.cliente_id,
+            producto_id: opp.producto_id,
+            modelo_id: prod?.modelo_id ?? null,
+            origen: "vendido",
+            fecha_venta: hoyISO(),
+            garantia_hasta: prod?.garantia_meses
+              ? sumarMeses(prod.garantia_meses)
+              : null,
+            comercial_id: opp.comercial_id,
+            oportunidad_id: oportunidadId,
+          }),
+          "crear equipo de la venta"
+        );
+        const consumible = must(
+          await supabase
+            .from("productos")
+            .select("id, frecuencia_recompra_dias")
+            .eq("consumible_de", opp.producto_id)
+            .maybeSingle(),
+          "buscar consumible"
+        );
+        if (consumible?.frecuencia_recompra_dias) {
+          must(
+            await supabase.from("recurrencias").insert({
+              cliente_id: opp.cliente_id,
+              producto_id: consumible.id,
+              frecuencia_dias: consumible.frecuencia_recompra_dias,
+              proxima_alerta: sumarDias(consumible.frecuencia_recompra_dias),
+            }),
+            "crear recurrencia del consumible"
+          );
+        }
       }
+    } catch (e) {
+      return { error: mensajeDe(e) };
     }
   }
 
@@ -1405,7 +1426,10 @@ export async function agregarFotoOT(
   momento: "antes" | "despues" | "otro" = "otro"
 ) {
   const supabase = await createClient();
-  await supabase.from("ot_fotos").insert({ ot_id: otId, path, momento });
+  const { error } = await supabase
+    .from("ot_fotos")
+    .insert({ ot_id: otId, path, momento });
+  if (error) return { error: `registrar foto: ${error.message}` };
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -2392,8 +2416,13 @@ export async function crearLeadFeria(input: {
     const patch: Record<string, string> = {};
     if (emailNorm && !actual?.email) patch.email = emailNorm;
     if (telDigitos && !actual?.telefono) patch.telefono = telDigitos;
-    if (Object.keys(patch).length > 0)
-      await supabase.from("clientes").update(patch).eq("id", clienteId);
+    if (Object.keys(patch).length > 0) {
+      const { error: errPatch } = await supabase
+        .from("clientes")
+        .update(patch)
+        .eq("id", clienteId);
+      if (errPatch) return { error: `completar contacto: ${errPatch.message}` };
+    }
   } else {
     const { data: nuevo, error } = await supabase
       .from("clientes")
@@ -2411,12 +2440,13 @@ export async function crearLeadFeria(input: {
     if (error || !nuevo) return { error: error?.message ?? "No se pudo crear" };
     clienteId = nuevo.id;
     if (input.provincia.trim()) {
-      await supabase.from("sucursales").insert({
+      const { error: errSuc } = await supabase.from("sucursales").insert({
         cliente_id: clienteId,
         nombre: "Principal",
         provincia: input.provincia.trim(),
         es_principal: true,
       });
+      if (errSuc) return { error: `guardar provincia: ${errSuc.message}` };
     }
   }
 
@@ -2435,16 +2465,23 @@ export async function crearLeadFeria(input: {
   if (errOpp || !opp) return { error: errOpp?.message ?? "No se pudo abrir la consulta" };
 
   // Entra también al seguimiento de la feria (estados, calificación, asignación)
-  await supabase.from("feria_leads").insert({
-    cliente_id: clienteId,
-    feria: "HOTELGA 2026",
-    nombre: nombreCompleto || null,
-    empresa: input.empresa.trim() || null,
-    telefono: telDigitos || null,
-    email: emailNorm || null,
-    observaciones: [interes, input.nota?.trim()].filter(Boolean).join(" — ") || null,
-    asignado_a: user?.id ?? null,
-  });
+  try {
+    must(
+      await supabase.from("feria_leads").insert({
+        cliente_id: clienteId,
+        feria: "HOTELGA 2026",
+        nombre: nombreCompleto || null,
+        empresa: input.empresa.trim() || null,
+        telefono: telDigitos || null,
+        email: emailNorm || null,
+        observaciones: [interes, input.nota?.trim()].filter(Boolean).join(" — ") || null,
+        asignado_a: user?.id ?? null,
+      }),
+      "guardar en el seguimiento de la feria"
+    );
+  } catch (e) {
+    return { error: mensajeDe(e) };
+  }
 
   // Foto de la credencial → documentos del cliente (subida por el servidor)
   if (input.fotoBase64) {
@@ -3450,7 +3487,9 @@ export async function cargarServiceHecho(input: {
   }
 
   // Queda en revisión para que administración apruebe y cobre
-  await transicionarOT(ot.id, "revision_admin");
+  const rev = await transicionarOT(ot.id, "revision_admin");
+  if (rev && "error" in rev && rev.error)
+    return { error: `pasar a revisión: ${rev.error}` };
 
   await supabase
     .from("clientes")

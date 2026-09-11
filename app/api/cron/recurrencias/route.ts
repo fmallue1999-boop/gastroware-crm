@@ -33,6 +33,7 @@ export async function GET(request: Request) {
     .lte("proxima_alerta", hoy);
 
   let creadas = 0;
+  const errores: string[] = [];
   for (const rec of recurrencias ?? []) {
     // Evitar duplicados: ¿ya hay una tarea de recompra pendiente para esta recurrencia?
     const { count } = await supabase
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
       .eq("cancelada", false);
     if ((count ?? 0) > 0) continue;
 
-    await supabase.from("tareas").insert({
+    const { error } = await supabase.from("tareas").insert({
       cliente_id: rec.cliente_id,
       recurrencia_id: rec.id,
       usuario_id: rec.cliente?.comercial_id ?? null,
@@ -52,6 +53,10 @@ export async function GET(request: Request) {
       vence_el: hoy,
       auto: true,
     });
+    if (error) {
+      errores.push(`recompra ${rec.id}: ${error.message}`);
+      continue;
+    }
     creadas++;
   }
 
@@ -85,7 +90,7 @@ export async function GET(request: Request) {
       (eq.producto as unknown as { nombre: string } | null)?.nombre ??
       eq.marca_modelo_libre ??
       "equipo";
-    await supabase.from("tareas").insert({
+    const { error } = await supabase.from("tareas").insert({
       cliente_id: eq.cliente_id,
       equipo_id: eq.id,
       usuario_id: eq.comercial_id ?? null,
@@ -94,8 +99,13 @@ export async function GET(request: Request) {
       vence_el: hoy,
       auto: true,
     });
+    if (error) {
+      errores.push(`garantía ${eq.id}: ${error.message}`);
+      continue;
+    }
     avisosGarantia++;
   }
 
-  return NextResponse.json({ ok: true, creadas, avisosGarantia });
+  if (errores.length) console.error("cron recurrencias:", errores);
+  return NextResponse.json({ ok: errores.length === 0, creadas, avisosGarantia, errores });
 }
