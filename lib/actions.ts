@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { enviarEmail } from "@/lib/core/email";
+import { exigirGestor, rolActual } from "@/lib/auth";
 import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde, fechaCorta } from "@/lib/format";
 import { PEDIDO_ESTADOS, RUBROS } from "@/lib/constants";
 import type { Cliente, Etapa, PedidoEstado } from "@/lib/types";
@@ -15,12 +16,6 @@ async function usuarioActual() {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
-
-async function rolActual(): Promise<string> {
-  const supabase = await createClient();
-  const { data } = await supabase.rpc("fn_rol");
-  return (data as string) ?? "comercial";
 }
 
 // =====================================================================
@@ -707,6 +702,10 @@ export async function facturarPedido(
   numeroSerie?: string
 ) {
   if (!nroFactura.trim()) return { error: "Falta el número de factura" };
+  // Facturar es de dirección/administración (la base lo refuerza con
+  // fn_protege_facturacion desde la migración 025).
+  const bloqueo = await exigirGestor();
+  if (bloqueo) return bloqueo;
   const supabase = await createClient();
   const user = await usuarioActual();
   const { data: opp } = await supabase
@@ -1375,6 +1374,10 @@ export async function revisarItemOT(
   itemId: string,
   patch: { estado?: string; precioUnit?: number; aprobado?: boolean }
 ) {
+  // Revisar ítems (aprobar, cambiar precio o estado) es de gestores; la
+  // base además bloquea al técnico con fn_protege_ot_items (025).
+  const bloqueo = await exigirGestor();
+  if (bloqueo) return bloqueo;
   const supabase = await createClient();
   const update: Record<string, unknown> = {};
   if (patch.estado) update.estado = patch.estado;
@@ -3475,13 +3478,6 @@ export async function cargarServiceHecho(input: {
 // =====================================================================
 // Stock e ingresos previstos (lo mantiene administración; lo ven todos)
 // =====================================================================
-
-async function exigirGestor(): Promise<{ error: string } | null> {
-  const rol = await rolActual();
-  return ["direccion", "admin"].includes(rol)
-    ? null
-    : { error: "Solo administración puede cambiar el stock" };
-}
 
 export async function guardarStock(productoId: string, stock: number) {
   const bloqueo = await exigirGestor();
