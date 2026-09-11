@@ -455,89 +455,46 @@ export async function cambiarEtapa(
   if (!opp) return { error: "Oportunidad no encontrada" };
   if (etapa === "perdida" && !motivo)
     return { error: "El motivo de pérdida es obligatorio" };
+  // Idempotente: si ya está en esa etapa no se escribe nada
+  if (opp.etapa === etapa) return { ok: true };
+
+  if (etapa === "ganada") {
+    // Todo o nada en la base (fn_ganar_venta, migración 025): etapa, cierre
+    // de seguimientos, cliente activo, equipo con garantía, recurrencia del
+    // consumible y actividad. Si algo falla no queda nada a medias.
+    const { error: errRpc } = await supabase.rpc("fn_ganar_venta", {
+      p_oportunidad_id: oportunidadId,
+    });
+    if (errRpc) return { error: `cerrar la venta: ${errRpc.message}` };
+    revalidatePath("/", "layout");
+    return { ok: true };
+  }
 
   const update: Record<string, unknown> = { etapa };
-  if (etapa === "ganada" || etapa === "perdida")
+  if (etapa === "perdida") {
     update.closed_at = new Date().toISOString();
-  if (etapa === "perdida") update.motivo_perdida = motivo;
-  // El circuito de la venta arranca en "Vendido"; si se reabre o se pierde, se apaga
-  update.pedido_estado = etapa === "ganada" ? "comprometido" : null;
+    update.motivo_perdida = motivo;
+  }
+  // El circuito de la venta arranca al ganar; si se reabre o se pierde, se apaga
+  update.pedido_estado = null;
   const { error: errUpd } = await supabase
     .from("oportunidades")
     .update(update)
     .eq("id", oportunidadId);
   if (errUpd) return { error: errUpd.message };
 
-  if (["ganada", "perdida"].includes(etapa)) {
-    // Venta cerrada: no queda ninguna tarea colgada de esta consulta
-    await supabase
+  if (etapa === "perdida") {
+    // Consulta cerrada: no queda ningún seguimiento colgado
+    const { error: errTareas } = await supabase
       .from("tareas")
       .update({ cancelada: true })
       .eq("oportunidad_id", oportunidadId)
       .is("completada_at", null);
+    if (errTareas) return { error: `cerrar seguimientos: ${errTareas.message}` };
   }
 
   // Sin cadencias ni recordatorios automáticos: el equipo pidió que el CRM
   // no agende nada solo. Los seguimientos los carga cada persona a mano.
-
-  if (etapa === "ganada") {
-    try {
-      must(
-        await supabase
-          .from("clientes")
-          .update({ estado: "cliente_activo" })
-          .eq("id", opp.cliente_id),
-        "activar cliente"
-      );
-
-      if (opp.producto_id) {
-        const prod = must(
-          await supabase
-            .from("productos")
-            .select("garantia_meses, modelo_id")
-            .eq("id", opp.producto_id)
-            .single(),
-          "leer producto"
-        );
-        must(
-          await supabase.from("equipos").insert({
-            cliente_id: opp.cliente_id,
-            producto_id: opp.producto_id,
-            modelo_id: prod?.modelo_id ?? null,
-            origen: "vendido",
-            fecha_venta: hoyISO(),
-            garantia_hasta: prod?.garantia_meses
-              ? sumarMeses(prod.garantia_meses)
-              : null,
-            comercial_id: opp.comercial_id,
-            oportunidad_id: oportunidadId,
-          }),
-          "crear equipo de la venta"
-        );
-        const consumible = must(
-          await supabase
-            .from("productos")
-            .select("id, frecuencia_recompra_dias")
-            .eq("consumible_de", opp.producto_id)
-            .maybeSingle(),
-          "buscar consumible"
-        );
-        if (consumible?.frecuencia_recompra_dias) {
-          must(
-            await supabase.from("recurrencias").insert({
-              cliente_id: opp.cliente_id,
-              producto_id: consumible.id,
-              frecuencia_dias: consumible.frecuencia_recompra_dias,
-              proxima_alerta: sumarDias(consumible.frecuencia_recompra_dias),
-            }),
-            "crear recurrencia del consumible"
-          );
-        }
-      }
-    } catch (e) {
-      return { error: mensajeDe(e) };
-    }
-  }
 
   const TEXTO_ETAPA: Record<string, string> = {
     nueva: "Consulta nueva",
@@ -860,11 +817,23 @@ export async function registrarCotizacion(input: {
     if (errI) return { error: errI.message };
   }
 
-  await supabase
+  const { error: errMonto } = await supabase
     .from("oportunidades")
     .update({ monto_estimado: total, moneda: input.moneda })
     .eq("id", input.oportunidadId);
+  if (errMonto) return { error: `guardar monto: ${errMonto.message}` };
 
+  // Una venta ya cerrada (ganada/perdida) no vuelve a "cotizada": solo
+  // queda registrada la nueva versión.
+  const { data: actual } = await supabase
+    .from("oportunidades")
+    .select("etapa")
+    .eq("id", input.oportunidadId)
+    .single();
+  if (actual && ["ganada", "perdida"].includes(actual.etapa)) {
+    revalidatePath("/", "layout");
+    return { ok: true };
+  }
   return cambiarEtapa(input.oportunidadId, "cotizada");
 }
 
@@ -2374,114 +2343,31 @@ export async function crearLeadFeria(input: {
 
   const supabase = await createClient();
   const user = await usuarioActual();
-  const telDigitos = normalizarTelefono(input.telefono);
-  const emailNorm = input.email.trim().toLowerCase();
 
-  // Dedup: primero por teléfono, después por email
-  let existente: { id: string; nombre_comercial: string } | null = null;
-  if (telDigitos.length >= 8) {
-    const porTel = await buscarClientePorTelefono(telDigitos);
-    if (porTel) existente = porTel;
-  }
-  if (!existente && emailNorm) {
-    const { data: porEmail } = await supabase
-      .from("clientes")
-      .select("id, nombre_comercial")
-      .ilike("email", emailNorm)
-      .is("deleted_at", null)
-      .limit(1)
-      .maybeSingle();
-    if (porEmail) existente = porEmail;
-  }
-
-  const interes = input.lineas.length ? `Interés: ${input.lineas.join(", ")}` : null;
-  const notas = [
-    input.empresa.trim() && nombreCompleto ? `Contacto: ${nombreCompleto}` : null,
-    interes,
-    "Origen: HOTELGA 2026",
-    input.nota?.trim() || null,
-  ]
-    .filter(Boolean)
-    .join(" | ");
-
-  let clienteId: string;
-  if (existente) {
-    clienteId = existente.id;
-    // Completar datos que falten, sin pisar los existentes
-    const { data: actual } = await supabase
-      .from("clientes")
-      .select("email, telefono")
-      .eq("id", clienteId)
-      .single();
-    const patch: Record<string, string> = {};
-    if (emailNorm && !actual?.email) patch.email = emailNorm;
-    if (telDigitos && !actual?.telefono) patch.telefono = telDigitos;
-    if (Object.keys(patch).length > 0) {
-      const { error: errPatch } = await supabase
-        .from("clientes")
-        .update(patch)
-        .eq("id", clienteId);
-      if (errPatch) return { error: `completar contacto: ${errPatch.message}` };
-    }
-  } else {
-    const { data: nuevo, error } = await supabase
-      .from("clientes")
-      .insert({
-        nombre_comercial: input.empresa.trim() || nombreCompleto,
-        rubro: (RUBROS as readonly string[]).includes(input.rubro) ? input.rubro : "Otro",
-        telefono: telDigitos || null,
-        email: emailNorm || null,
-        estado: "prospecto",
-        comercial_id: user?.id ?? null,
-        notas,
-      })
-      .select("id")
-      .single();
-    if (error || !nuevo) return { error: error?.message ?? "No se pudo crear" };
-    clienteId = nuevo.id;
-    if (input.provincia.trim()) {
-      const { error: errSuc } = await supabase.from("sucursales").insert({
-        cliente_id: clienteId,
-        nombre: "Principal",
-        provincia: input.provincia.trim(),
-        es_principal: true,
-      });
-      if (errSuc) return { error: `guardar provincia: ${errSuc.message}` };
-    }
-  }
-
-  const { data: opp, error: errOpp } = await supabase
-    .from("oportunidades")
-    .insert({
-      cliente_id: clienteId,
-      comercial_id: user?.id ?? null,
-      origen: "HOTELGA 2026",
-      pedido: "info",
-      temperatura: "tibio",
-      mensaje_inicial: [interes, input.nota?.trim()].filter(Boolean).join(" — ") || null,
-    })
-    .select("id")
-    .single();
-  if (errOpp || !opp) return { error: errOpp?.message ?? "No se pudo abrir la consulta" };
-
-  // Entra también al seguimiento de la feria (estados, calificación, asignación)
-  try {
-    must(
-      await supabase.from("feria_leads").insert({
-        cliente_id: clienteId,
-        feria: "HOTELGA 2026",
-        nombre: nombreCompleto || null,
-        empresa: input.empresa.trim() || null,
-        telefono: telDigitos || null,
-        email: emailNorm || null,
-        observaciones: [interes, input.nota?.trim()].filter(Boolean).join(" — ") || null,
-        asignado_a: user?.id ?? null,
-      }),
-      "guardar en el seguimiento de la feria"
-    );
-  } catch (e) {
-    return { error: mensajeDe(e) };
-  }
+  // Todo o nada en la base (fn_crear_lead_feria, migración 025): contacto
+  // (o el existente por teléfono/email), oportunidad, seguimiento de feria
+  // y actividad. Devuelve {cliente_id, oportunidad_id, existente}.
+  const { data: resultado, error: errRpc } = await supabase.rpc("fn_crear_lead_feria", {
+    p: {
+      nombre: input.nombre,
+      apellido: input.apellido,
+      empresa: input.empresa,
+      email: input.email,
+      telefono: input.telefono,
+      lineas: input.lineas,
+      rubro: (RUBROS as readonly string[]).includes(input.rubro) ? input.rubro : "Otro",
+      provincia: input.provincia,
+      nota: input.nota ?? "",
+    },
+  });
+  if (errRpc) return { error: errRpc.message };
+  const { cliente_id: clienteId, oportunidad_id: oppId, existente } = (resultado ?? {}) as {
+    cliente_id?: string;
+    oportunidad_id?: string;
+    existente?: boolean;
+  };
+  if (!clienteId || !oppId) return { error: "No se pudo cargar el contacto de la feria" };
+  const opp = { id: oppId };
 
   // Foto de la credencial → documentos del cliente (subida por el servidor)
   if (input.fotoBase64) {
