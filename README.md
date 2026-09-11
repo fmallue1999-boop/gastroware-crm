@@ -1,79 +1,70 @@
 # GastroWare CRM
 
-Cockpit de ventas mobile-first para GastroWare / Zumex. Seguimiento comercial,
-venta guiada y cartera de clientes con recompra de consumibles.
+CRM propio de GastroWare Argentina (Zumex, licuadoras GX, café Jetinno,
+hornos Rational y su service). Pensado para un equipo chico con poca
+afinidad tecnológica: se usa desde el celular y la computadora, y la regla
+es cargar rápido primero y completar después.
 
-El plan técnico completo está en [PLAN.md](./PLAN.md).
+El plan de trabajo está en [`docs/PLAN-OS.md`](docs/PLAN-OS.md); cada
+etapa tiene su especificación en `docs/etapas/`.
 
-## Puesta en marcha (una sola vez, ~15 minutos)
+## Stack
 
-### 1. Crear el proyecto de Supabase
+Next.js 16 (App Router) · React 19 · Tailwind 4 · Supabase (Postgres, Auth,
+Storage, RLS) · Vercel (deploy y crons) · Resend (email) · Anthropic (IA).
 
-1. Entrar a [supabase.com](https://supabase.com) y crear una cuenta gratuita.
-2. **New project** → nombre `gastroware-crm`, región *South America (São Paulo)*,
-   elegir una contraseña de base de datos (guardarla).
-3. Esperar 1-2 minutos a que el proyecto se cree.
+## Puesta en marcha
 
-### 2. Cargar el esquema de la base
+1. Crear un proyecto en [supabase.com](https://supabase.com) y correr, en
+   orden, `supabase/schema.sql` y después cada archivo de
+   `supabase/migrations/` en el SQL Editor.
+2. Copiar `.env.example` a `.env.local` y completar las variables (el
+   archivo dice para qué sirve cada una y de dónde sale).
+3. `npm install` y `npm run dev` → http://localhost:3000. El primer usuario
+   se crea en Supabase → Authentication → Users; el rol se asigna en la
+   tabla `usuarios` (o desde Administración → Usuarios una vez logueado
+   como dirección).
+4. Deploy: importar el repo en Vercel, cargar las mismas variables en
+   Settings → Environment Variables y redeployar. Los crons de
+   `vercel.json` (recompras y garantías a las 9:00, resumen push a las
+   8:30, hora argentina) necesitan `CRON_SECRET` y
+   `SUPABASE_SERVICE_ROLE_KEY`.
 
-1. En el dashboard de Supabase: **SQL Editor** → **New query**.
-2. Copiar TODO el contenido de [`supabase/schema.sql`](./supabase/schema.sql), pegarlo y **Run**.
-3. Debería terminar sin errores (crea tablas, seguridad, productos y plantillas).
+## Cómo se usa
 
-### 3. Crear los usuarios
+- **Contactos** es la pantalla de inicio: buscador, quién es cada uno, cómo
+  contactarlo, qué le interesa, último movimiento y próxima fecha.
+- **Nuevo interés** (botón +): primero qué le interesa, después quién (se
+  busca en la base o se carga nuevo con nombre y teléfono). Si no hay
+  stock, queda en lista de espera.
+- **Ficha del contacto**: caja "¿Qué pasó?" para anotar y elegir cuándo
+  volver a contactar; intereses con "Le vendí" / "No se dio"; ventas,
+  equipos, services e historial completo.
+- **Ventas**: Vendido → Preparar → Facturar → Entregado, un botón por paso.
+- **Stock**: qué hay, qué llega y cuándo, quiénes esperan cada equipo.
+- **Services**: próximos y hechos; el técnico carga un service hecho en un
+  paso y administración lo revisa y cobra.
+- **HOTELGA**: seguimiento de los contactos de la feria (estado, quién lo
+  contactó, calificación, asignación a vendedor).
+- **Movimientos**: todo lo que anotó, vendió y arregló el equipo, por día.
 
-1. **Authentication** → **Users** → **Add user** → **Create new user**.
-2. Cargar email y contraseña de cada vendedor (y el tuyo).
-3. (Opcional) Para marcarte como admin: **SQL Editor** →
-   `update usuarios set rol = 'admin' where id = (select id from auth.users where email = 'TU_EMAIL');`
-
-### 4. Configurar las variables de entorno
-
-1. Copiar `.env.example` a `.env.local`.
-2. En Supabase: **Settings** → **API** → copiar:
-   - *Project URL* → `NEXT_PUBLIC_SUPABASE_URL`
-   - *anon public* key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - *service_role* key → `SUPABASE_SERVICE_ROLE_KEY` (solo para el cron)
-3. Inventar un texto largo para `CRON_SECRET`.
-
-### 5. Correr en local
-
-```bash
-npm install
-npm run dev
-```
-
-Abrir http://localhost:3000 y entrar con el usuario creado en el paso 3.
-
-### 6. Deploy en Vercel (igual que zumex.com.ar)
-
-1. Subir el repo a GitHub.
-2. En [vercel.com](https://vercel.com): **Add New Project** → importar el repo.
-3. En **Environment Variables** cargar las cuatro variables de `.env.local`.
-4. Deploy. El cron de recompras (`vercel.json`) queda activo solo: corre todos
-   los días a las 9:00 (hora argentina) y genera las tareas de recompra vencidas.
-
-## Cómo se usa (flujo del vendedor)
-
-1. **Entra una consulta** → botón ➕ **Nuevo**: teléfono (detecta duplicados),
-   nombre, rubro, producto, origen. 30 segundos.
-2. **Diagnóstico** → en la oportunidad, completar las preguntas del producto.
-   Para Zumex la cuenta de recupero se calcula sola.
-3. **Cotizar** → registrar monto y adjuntar el PDF. Al guardar se generan solas
-   las tareas de seguimiento D+2, D+5, D+10 y D+20.
-4. **Hoy** → cada mañana muestra qué seguimientos tocan, con el mensaje listo
-   para copiar o mandar directo por WhatsApp.
-5. **Cierre** → Ganada registra el equipo instalado y activa postventa y
-   recurrencias de consumibles. Perdida exige el motivo.
-6. **Recompra** → cuando vence el ciclo de un consumible (ej. pastillas
-   Rational cada 45 días) aparece la tarea en Hoy automáticamente.
+No hay recordatorios automáticos: solo aparece lo que alguien agenda a mano.
 
 ## Estructura
 
-- `app/(app)/hoy` — centro de tareas del día
-- `app/(app)/alta` — alta rápida de lead
-- `app/(app)/pipeline` — kanban por etapa
-- `app/(app)/clientes` — cartera filtrable por rubro
-- `app/(app)/oportunidades/[id]` — ficha con diagnóstico, cotización y plantillas
-- `lib/actions.ts` — toda la lógica de negocio (cadencias, regla de oro, recurrencias)
-- `supabase/schema.sql` — esquema + seeds (productos y plantillas de mensajes)
+- `app/(app)/` — pantallas (una carpeta por ruta); `app/api/` — crons,
+  webhooks, exportación, baja de email; `app/{comprobante,cotizacion,inspeccion,propuesta-financiacion}` — hojas imprimibles.
+- `components/` — formularios y controles (client components).
+- `lib/actions.ts` — todas las server actions; `lib/auth.ts` — rol y
+  chequeos de gestor; `lib/dinero.ts` — totales por moneda;
+  `lib/stock.ts`, `lib/ventas.ts`, `lib/financiacion.ts`, `lib/format.ts`.
+- `lib/core/` — email (Resend), IA (Anthropic), storage (URLs firmadas).
+- `supabase/schema.sql` + `supabase/migrations/` — esquema, RLS y funciones.
+- `tests/unit/` — tests con Vitest (`npm test`); `npm run lint`,
+  `npx tsc --noEmit`. CI en `.github/workflows/ci.yml`.
+
+## Documentación
+
+`docs/PLAN-OS.md` (plan maestro), `docs/etapas/` (especificaciones),
+`docs/DATA_MODEL.md`, `docs/PERMISSIONS_MATRIX.md`, `docs/archive/` (planes
+anteriores, solo historia).

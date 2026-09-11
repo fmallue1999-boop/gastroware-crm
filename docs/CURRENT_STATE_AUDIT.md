@@ -13,7 +13,7 @@ servicio técnico con circuito administrativo de facturación. Todo lo listado c
 La brecha principal contra la especificación objetivo no es funcional sino de
 solidez: la seguridad por roles es solo visual (RLS permisiva), no hay auditoría
 de cambios, el storage es público y no hay tests. El plan de transformación
-(docs/IMPLEMENTATION_PLAN.md) ataca eso primero.
+(docs/archive/IMPLEMENTATION_PLAN.md) ataca eso primero.
 
 ## Stack
 
