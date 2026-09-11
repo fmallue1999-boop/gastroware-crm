@@ -1,23 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * Baja de comunicaciones desde el link del email (público, sin login).
- * El token es un HMAC del id del cliente con CRON_SECRET: solo los links
- * generados por el sistema funcionan.
+ * El token es un HMAC del id del cliente con BAJA_SECRET (CRON_SECRET como
+ * compatibilidad): solo los links generados por el sistema funcionan.
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const clienteId = url.searchParams.get("c") ?? "";
   const token = url.searchParams.get("t") ?? "";
-  const secreto = process.env.CRON_SECRET ?? "";
+  const secreto = process.env.BAJA_SECRET || process.env.CRON_SECRET || "";
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
 
   const esperado = createHmac("sha256", secreto)
     .update(clienteId)
     .digest("hex")
     .slice(0, 32);
+  // Comparación en tiempo constante: no filtra por cuántos caracteres coinciden
+  const a = Buffer.from(token);
+  const b = Buffer.from(esperado);
+  const tokenValido = a.length === b.length && timingSafeEqual(a, b);
 
   const pagina = (titulo: string, texto: string, status = 200) =>
     new NextResponse(
@@ -30,7 +34,7 @@ export async function GET(request: Request) {
       { status, headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
 
-  if (!clienteId || !token || !secreto || token !== esperado)
+  if (!clienteId || !token || !secreto || !tokenValido)
     return pagina("Link inválido", "El link no es válido o ya venció.", 400);
   if (!serviceKey)
     return pagina("Error", "No se pudo procesar la baja. Escribinos a info@gastroware.com.ar.", 500);

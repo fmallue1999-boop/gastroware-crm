@@ -96,7 +96,12 @@ export default function CotizacionForm({
         archivoPath,
         notas,
         vigenciaDias: vigencia ? Number(vigencia) : null,
-        items: lineas.map(({ clave: _clave, ...resto }) => resto),
+        items: lineas.map((l) => ({
+          productoId: l.productoId,
+          descripcion: l.descripcion,
+          cantidad: l.cantidad,
+          precioUnit: l.precioUnit,
+        })),
       });
       if (res && "error" in res && res.error) {
         setError(res.error);

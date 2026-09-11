@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { enviarEmail } from "@/lib/core/email";
 import { exigirGestor, rolActual } from "@/lib/auth";
-import { must, mensajeDe } from "@/lib/supabase/must";
 import { hoyISO, sumarDias, sumarMeses, normalizarTelefono, diasDesde, fechaCorta } from "@/lib/format";
 import { PEDIDO_ESTADOS, RUBROS } from "@/lib/constants";
 import type { Cliente, Etapa, PedidoEstado } from "@/lib/types";
@@ -1894,7 +1893,9 @@ export async function marcarDestinatario(
 
 /** Link de baja firmado (HMAC con CRON_SECRET): nadie puede dar de baja a otro. */
 function urlBaja(clienteId: string): string {
-  const secreto = process.env.CRON_SECRET ?? "";
+  // Secreto propio para los links de baja (BAJA_SECRET); CRON_SECRET solo
+  // como compatibilidad hasta que esté cargado en Vercel.
+  const secreto = process.env.BAJA_SECRET || process.env.CRON_SECRET || "";
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createHmac } = require("crypto") as typeof import("crypto");
   const token = createHmac("sha256", secreto).update(clienteId).digest("hex").slice(0, 32);

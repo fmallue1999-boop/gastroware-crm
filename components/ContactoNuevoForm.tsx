@@ -57,13 +57,11 @@ export default function ContactoNuevoForm({
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Aviso de duplicado por teléfono mientras escribe
+  // Aviso de duplicado por teléfono mientras escribe (el reset a null se hace
+  // en el onChange del campo; el efecto solo dispara la búsqueda diferida)
   useEffect(() => {
     const digitos = normalizarTelefono(telefono);
-    if (digitos.length < 8) {
-      setDuplicado(null);
-      return;
-    }
+    if (digitos.length < 8) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       setDuplicado(await buscarClientePorTelefono(digitos));
@@ -128,11 +126,15 @@ export default function ContactoNuevoForm({
         type="tel"
         placeholder="Teléfono / WhatsApp (pegalo como venga)"
         value={telefono}
-        onChange={(e) => setTelefono(e.target.value)}
+        onChange={(e) => {
+          setTelefono(e.target.value);
+          setDuplicado(null);
+        }}
         onBlur={() => setTelefono(telefono ? telefonoProlijo(telefono) : "")}
         onPaste={(e) => {
           e.preventDefault();
           setTelefono(telefonoProlijo(e.clipboardData.getData("text")));
+          setDuplicado(null);
         }}
         className={inputCls}
       />
