@@ -1,236 +1,255 @@
-# Etapa 1 — Núcleo comercial que empuja
+# Etapa 1 — Núcleo comercial simple
 
 > Especificación para ejecutar en Claude Code sobre `gastroware-crm`, después de terminar la Etapa 0.
 > Contexto: este documento, `docs/PLAN-OS.md` y `ETAPA-0`. Rama `etapa-1`. Un commit por punto.
-> Antes de escribir código, leer `AGENTS.md`, `lib/constants.ts`, `lib/actions.ts` (secciones de tareas, oportunidades y cotizaciones), `app/(app)/clientes/page.tsx`, `app/(app)/clientes/[id]/page.tsx`, `app/(app)/oportunidades/[id]/page.tsx` y los componentes `InteresNuevoForm`, `InteresControl`, `EtapaControl`, `AnotarContacto`, `SeguimientoItem`, `TareaItem`, `PosponerPanel`, `CotizacionForm`, `VentaPaso`.
+> Reemplaza la versión anterior de esta etapa. Cambio de fondo: **no hay motor de tareas para ventas**. Cada interés tiene una sola próxima fecha, y los pendientes se calculan a partir de eso. Nada se acumula, nada se agenda solo.
+> Antes de escribir código, leer `AGENTS.md`, `lib/constants.ts`, `lib/stock.ts`, `lib/actions.ts`, `app/(app)/clientes/page.tsx`, `app/(app)/clientes/[id]/page.tsx`, `app/(app)/oportunidades/[id]/page.tsx`, `app/(app)/stock/page.tsx`, `app/(app)/movimientos/page.tsx` y los componentes `InteresNuevoForm`, `InteresControl`, `EtapaControl`, `AnotarContacto`, `SeguimientoItem`, `TareaItem`, `PosponerPanel`, `CotizacionForm`, `VentaPaso`, `StockAdmin`.
 
-## Objetivo
+## Lo que pidió la dirección (criterios de aceptación en sus palabras)
 
-Que un vendedor abra la app y no necesite pensar a quién llamar. Que no exista ningún interés abierto sin fecha. Que una cotización enviada tenga seguimiento sin que nadie lo cargue. Que las mejores herramientas de venta estén a un toque desde la ficha.
+1. Al abrir: todos los contactos, cómo contactarlos, y toda la información de cada uno.
+2. Lo que está pendiente tiene que entenderse de un vistazo. Hoy no se entiende.
+3. Se carga el **interés** primero (qué quiere comprar) y después a quién pertenece. No se cargan todas las consultas, solo los interesados reales.
+4. Seguimiento muy simple: una fecha para volver a contactar, si hace falta. Sin recordatorios automáticos.
+5. Si no hay stock, el interés va a lista de espera. Todos los vendedores ven el stock disponible y lo que va a ingresar, con fecha.
+6. Todo lo que se hizo y se habló con cada cliente queda registrado como movimientos.
+7. Vendido → preparar → facturar → entregado.
+8. El técnico carga un service si lo hizo, con o sin agenda.
+9. Se usa desde el teléfono y desde la computadora, por gente con poca afinidad con la tecnología.
 
-## Vocabulario (aplica a toda la interfaz)
-
-| Se dice | No se dice más | Tabla |
-|---|---|---|
-| Contacto | cliente / lead / prospecto (como sustantivo en UI) | `clientes` |
-| Interés | oportunidad / consulta | `oportunidades` (etapas abiertas) |
-| Venta | pedido | `oportunidades` (etapa `ganada`, con `pedido_estado`) |
-| Seguimiento | tarea | `tareas` |
-
-"Cliente" e "interesado" se mantienen como **estado** del contacto (chip), no como nombre de la entidad.
-
----
-
-## 1.1 Motor de seguimiento asistido
-
-### Regla central: una tarea automática viva por contacto
-
-Crear en `lib/seguimiento.ts` (funciones puras, testeables) y en `lib/actions/seguimiento.ts` (server actions):
-
-```ts
-// lib/seguimiento.ts
-export type Disparador =
-  | { tipo: "interes_nuevo"; temperatura: "caliente" | "tibio" | "frio" }
-  | { tipo: "seguimiento_cerrado"; resultado: "hablamos" | "no_atendio" | "quedo_en_avisar" | "le_mande_info" }
-  | { tipo: "cotizacion_enviada"; vigenciaDias: number | null }
-  | { tipo: "cotizacion_por_vencer" }
-  | { tipo: "perdida"; motivo: string }
-  | { tipo: "entregado"; tieneConsumible: boolean };
-
-export type Propuesta = { dias: number; titulo: string; tipo: TareaTipo; prioridad: "alta" | "normal" | "baja" } | null;
-
-export function proponerSiguiente(d: Disparador): Propuesta
-```
-
-Tabla de propuestas (implementar exactamente así; los textos van en `lib/constants.ts` como `PROPUESTAS_SEGUIMIENTO`):
-
-| Disparador | Días | Título | Tipo | Prioridad |
-|---|---|---|---|---|
-| interés nuevo, caliente | 1 | Volver a contactar | seguimiento | alta |
-| interés nuevo, tibio | 3 | Volver a contactar | seguimiento | normal |
-| interés nuevo, frío | 14 | Volver a contactar | seguimiento | baja |
-| cerrado: no atendió | 1 | Volver a llamar (no atendió) | seguimiento | alta |
-| cerrado: quedó en avisar | 7 | Preguntar si decidió | seguimiento | normal |
-| cerrado: le mandé info | 3 | Preguntar qué le pareció | seguimiento | normal |
-| cerrado: hablamos | *pide fecha* (chips 1/3/7/14/30, preseleccionado 7) | Próximo contacto | seguimiento | normal |
-| cotización enviada | 3 | Seguir la cotización N° X | seguimiento | alta |
-| cotización por vencer | vigencia − 2 | Vence la cotización N° X | seguimiento | alta |
-| perdida, motivo "más adelante" | 45 | Reactivar: dijo más adelante | reactivacion | baja |
-| perdida, motivo "precio" | 90 | Reactivar: precio | reactivacion | baja |
-| perdida, otros motivos | — | ninguna | — | — |
-| entregado | 7 | Preguntar cómo anda el equipo | postventa | normal |
-| entregado con consumible | (ya lo hace `recurrencias`) | — | recompra | normal |
-
-Server action `agendarPropuesta({ clienteId, oportunidadId?, propuesta, confirmadaPor })`:
-
-1. Cancela (`cancelada = true`) cualquier tarea `auto = true` pendiente del mismo `cliente_id`. **Una sola automática viva por contacto.**
-2. Inserta la nueva con `auto = true`, `usuario_id` = comercial responsable de la oportunidad (o del cliente), `vence_el = hoy + dias`, `prioridad`.
-3. Registra actividad "Se agendó: {titulo} para {fecha}".
-
-La UI siempre muestra la propuesta como chip preseleccionado y el usuario confirma con un toque (o cambia la fecha, o elige "Sin fecha por ahora", que deja el interés marcado en ámbar). Nunca se agenda sin que el usuario vea la propuesta, salvo "cotización por vencer" y "recompra", que son de sistema.
-
-### Dónde se dispara
-
-| Pantalla / acción | Cambio |
-|---|---|
-| `InteresNuevoForm` → `crearInteres` | Al elegir nivel de interés, el chip de fecha se preselecciona según la tabla. Al guardar, llama `agendarPropuesta`. |
-| `SeguimientoItem` → `cerrarSeguimiento` | Al elegir resultado, aparece la propuesta con chip preseleccionado y botón "Listo". No se cierra la tarea sin pasar por esa pantalla (salvo "Sin fecha por ahora"). |
-| `CotizacionForm` → `registrarCotizacion` | Al guardar: propuesta a 3 días (confirmable) + tarea de sistema "por vencer" si hay `vigencia_dias`. |
-| `EtapaControl` "No se dio" → `cambiarEtapa("perdida")` | Según motivo, propuesta de reactivación (confirmable). |
-| `VentaPaso` "Entregado" → `avanzarPedido` | Propuesta postventa a 7 días (confirmable). |
-| `PosponerPanel` | Se mantiene; posponer nunca crea una segunda tarea. |
-
-### Corregir la invisibilidad de las automáticas
-
-- `app/(app)/clientes/page.tsx` líneas ~86 y ~218: quitar `.eq("auto", false)`.
-- `app/api/cron/resumen/route.ts` línea ~47: quitar `.eq("auto", false)`.
-- El push matutino incluye recompras, garantías y leads web. Ordenar por `prioridad` y `vence_el`.
+Buena parte de esto ya existe desde el commit `900d9a8` (7 sep). Esta etapa **no lo rehace**: lo simplifica donde está confuso, completa lo que falta y unifica el modelo.
 
 ---
 
-## 1.2 Inicio del vendedor (`/`)
+## 1.1 El modelo: un interés, una próxima fecha
 
-Nueva página `app/(app)/page.tsx` (hoy redirige a `/clientes`). Para rol `comercial`; para `direccion`/`admin` se mantiene la redirección a `/clientes` hasta la Etapa 2; para `tecnico`, a `/servicio`.
-
-Estructura (Server Component, una sola consulta por bloque, todo filtrado por `usuario_id = yo` salvo donde se indica):
-
-1. **Encabezado**: "Hola, {nombre}" + fecha. Botón **+ Interés** fijo (ya existe como FAB).
-2. **Vencidos** (rojo): tareas pendientes con `vence_el < hoy`, ordenadas por más atrasada primero. Cada fila: nombre del contacto, título de la tarea, "hace N días", botones WhatsApp / Llamar / Hecho / Posponer. Si no hay: no se muestra el bloque.
-3. **Hoy**: `vence_el = hoy`, ordenadas por prioridad.
-4. **Sin responder** (ámbar): oportunidades con `origen in ('Web','Feria','WhatsApp')`, `etapa = 'nueva'`, sin ninguna actividad del vendedor, asignadas a mí, creadas hace más de 2 horas. Muestra "hace N horas". Acción: Abrir / WhatsApp.
-5. **Cotizaciones por vencer**: versiones con `created_at + vigencia_dias` entre hoy y hoy+2, de mis oportunidades abiertas. Acción: Abrir / Reenviar por WhatsApp.
-6. **Sin próxima acción** (ámbar): mis oportunidades en etapa abierta que no tienen ninguna tarea pendiente. Acción: Abrir → la ficha abre con el panel de propuesta.
-7. **Próximos 7 días** plegado.
-
-Reglas:
-- Cada bloque muestra el conteo en el título ("Vencidos · 4").
-- Si todos los bloques 2 a 6 están vacíos: mensaje "Al día. Nada pendiente para hoy." y el bloque de próximos 7 días abierto.
-- Chip "Ver de todo el equipo" solo para gestores (Etapa 2).
-- Reutilizar `TareaItem`, `SeguimientoItem`, `PosponerPanel` y `linkWhatsApp`. No crear componentes nuevos si uno existente sirve.
-- `BottomNav`: primer ítem pasa a ser "Inicio" (`/`), luego Contactos, +Interés, Ventas, Más. `Sidebar` igual.
-
----
-
-## 1.3 Una sola ficha de venta
-
-Objetivo: todo lo que hoy vive en `app/(app)/oportunidades/[id]/page.tsx` pasa a la ficha del contacto, dentro de cada interés.
-
-En `app/(app)/clientes/[id]/page.tsx`, sección "Le interesa": cada interés abierto se expande (acordeón, uno abierto a la vez, el más reciente por defecto) y muestra pestañas:
-
-| Pestaña | Contenido (mover, no reescribir) |
-|---|---|
-| Situación | etapa, temperatura, días sin movimiento, próxima tarea, "Sin próxima acción" en ámbar con botón "Agendar" que abre la propuesta |
-| Cotizar | `CotizacionForm` + lista de versiones con "Enviar por WhatsApp" y "Ver hoja" |
-| Guiones | `AccionAhora`, `PlantillaCopiar`, `ObjecionControl` |
-| Diagnóstico | `DiagnosticoForm` + `CalculadoraZumex` (solo si el producto es Zumex) |
-| Material | `MaterialItem` del producto |
-| IA | `IAMensaje`, `IAResumenCliente` |
-
-Cambios asociados:
-- `/oportunidades/[id]` redirige (301) a `/clientes/[cliente_id]?interes=[id]` y se elimina su contenido.
-- `/buscar` se elimina; el buscador global (`BuscadorGlobal`) vive en el encabezado de Contactos y en el Sidebar.
-- `/hoy` se elimina (Etapa 0 ya corrigió el manifest).
-- `pipeline` se mantiene como "Ventas por etapa" dentro de Más, con las tarjetas linkeando a la ficha del contacto con el interés abierto.
-- Todo texto de UI que diga "oportunidad" o "consulta" pasa a "interés"; "pedido" pasa a "venta". Buscar con grep en `app/` y `components/`.
-
-Cierre con confirmación: al marcar "Me compró", mostrar un panel de resultado (no solo refresh): "Venta registrada · Equipo {modelo} N° {serie} · Garantía hasta {fecha} · Primera recompra de {consumible} el {fecha}" con botón "Ver venta" que lleva a `/pedidos`.
-
----
-
-## 1.4 Cotización viva
-
-### Base (migración `026_cotizacion_viva.sql`)
+### Cambio de base (migración `026_interes_simple.sql`)
 
 ```sql
-alter table cotizacion_versiones
-  add column if not exists token_publico text unique default encode(gen_random_bytes(18), 'base64url'),
-  add column if not exists enviada_at timestamptz,
-  add column if not exists enviada_via text check (enviada_via in ('whatsapp','email','impresa')),
-  add column if not exists abierta_at timestamptz,
-  add column if not exists aperturas int not null default 0;
+-- Próximo contacto vive en el interés, no en una tabla de tareas.
+alter table oportunidades
+  add column if not exists proximo_contacto date,
+  add column if not exists proximo_nota text,
+  add column if not exists ultimo_movimiento_at timestamptz not null default now();
+
+create index if not exists opps_proximo_idx on oportunidades (comercial_id, proximo_contacto)
+  where etapa in ('nueva','cotizada','seguimiento','espera');
+
+-- Migrar las tareas manuales pendientes de ventas al interés (la más próxima por oportunidad).
+update oportunidades o set
+  proximo_contacto = t.vence_el,
+  proximo_nota = t.titulo
+from (
+  select distinct on (oportunidad_id) oportunidad_id, vence_el, titulo
+  from tareas
+  where completada_at is null and not cancelada and oportunidad_id is not null
+    and tipo in ('seguimiento','otro')
+  order by oportunidad_id, vence_el
+) t
+where o.id = t.oportunidad_id and o.etapa in ('nueva','cotizada','seguimiento','espera');
+
+-- Las tareas migradas se cancelan (se conserva el historial).
+update tareas set cancelada = true
+where completada_at is null and not cancelada and oportunidad_id is not null
+  and tipo in ('seguimiento','otro');
+
+-- Trigger: cualquier actividad sobre un interés actualiza ultimo_movimiento_at.
+create or replace function fn_toca_interes() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.oportunidad_id is not null then
+    update oportunidades set ultimo_movimiento_at = now() where id = new.oportunidad_id;
+  end if;
+  return new;
+end $$;
+drop trigger if exists trg_toca_interes on actividades;
+create trigger trg_toca_interes after insert on actividades
+  for each row execute function fn_toca_interes();
 ```
 
-### Página pública `app/c/[token]/page.tsx`
+La tabla `tareas` queda para servicio técnico, recompras y (Etapa 4) cobranzas. **Ninguna acción del módulo comercial inserta en `tareas`.** Buscar y eliminar en `lib/actions.ts` toda creación de tareas desde `crearInteres`, `anotarContacto`, `cambiarEtapa`, `registrarCotizacion`, `avanzarPedido`, `cargarServiceHecho`.
 
-- Sin login (agregar `c/` al `matcher` de exclusión en `proxy.ts`).
-- Consulta con service role por `token_publico`; si no existe, 404.
-- Renderiza la misma hoja que `app/cotizacion/[id]/page.tsx` (extraer el componente de hoja a `components/HojaCotizacion.tsx` y usarlo en ambas).
-- Al cargar, incrementa `aperturas` y setea `abierta_at` si es null (RPC `fn_registrar_apertura(token)` security definer, que solo toca esas dos columnas).
-- Sin botones de edición; botón "Descargar PDF" (print) y "Responder por WhatsApp" con el número del vendedor (`usuarios.telefono`; agregar la columna si no existe).
+### Reglas
 
-### Enviar por WhatsApp
-
-En la lista de versiones (pestaña Cotizar) y en el bloque "Cotizaciones por vencer" del inicio: botón que abre `linkWhatsApp(cliente.telefono, texto)` con:
-
-```
-Hola {nombre}, te paso la cotización N° {numero} de {producto}: {NEXT_PUBLIC_APP_URL}/c/{token}
-Válida hasta el {fecha}. Cualquier duda me decís. {vendedor}
-```
-
-Al tocar, server action `marcarEnviada(versionId, "whatsapp")` → setea `enviada_at`, `enviada_via`, registra actividad "Cotización N° X enviada por WhatsApp" y dispara la propuesta de seguimiento a 3 días si no existe una viva.
-
-En la ficha, cada versión muestra: "Enviada {fecha} · Abierta {fecha} ({n} veces)" o "No abierta todavía" en gris.
-
-### Recotizar sin retroceder
-
-`registrarCotizacion`: si la etapa es `ganada`, crear la versión y **no** cambiar etapa ni `pedido_estado` (ya cubierto en Etapa 0; verificar).
+- Un interés abierto puede tener **una** próxima fecha o ninguna. Cambiarla reemplaza la anterior.
+- Anotar un movimiento ("¿Qué pasó?") siempre ofrece los chips **Mañana / 3 días / 1 semana / 2 semanas / 1 mes / Sin fecha**. Ninguno preseleccionado. Un toque y listo.
+- "Sin fecha" es válido y visible: el interés aparece en gris en "Sin fecha" (ver 1.3), no en rojo. No es un error, es información.
+- Las **únicas** cosas que el sistema hace solo:
+  1. Cuando administración marca un ingreso de stock como recibido, los intereses en **lista de espera** de ese producto pasan a `proximo_contacto = hoy` con `proximo_nota = "Llegó stock"`. Nada más.
+  2. Las recurrencias de consumibles siguen creando tareas de recompra (ya existen), pero se muestran en un bloque aparte, plegado, y solo si hay (ver 1.3).
+- No hay cadencias, no hay reactivación automática, no hay "cómo anda" automático, no hay avisos de vigencia. Si la dirección los quiere más adelante, se agregan como chips sugeridos, nunca como tareas silenciosas.
 
 ---
 
-## 1.5 Asignación visible
+## 1.2 Vocabulario y estados
 
-- `DatosClienteForm`: campo "Vendedor responsable" (select de usuarios con rol comercial) que ya soporta `actualizarCliente` (`comercial_id`).
-- `InteresNuevoForm` y ficha del interés: mostrar y permitir cambiar `comercial_id` de la oportunidad (solo gestores o el propio responsable).
-- Lista de Contactos: para gestores, selección múltiple + acción "Reasignar a…" (server action `reasignarClientes(ids[], comercialId)` que actualiza `clientes.comercial_id` y las oportunidades abiertas de esos clientes, y registra actividad en cada uno).
-- Al reasignar, las tareas pendientes de esos clientes pasan al nuevo `usuario_id`.
+| Se dice | Reemplaza a | Dónde vive |
+|---|---|---|
+| Contacto | cliente / lead / prospecto | `clientes` |
+| Interés | oportunidad / consulta | `oportunidades` (etapas abiertas) |
+| Venta | pedido | `oportunidades` en `ganada` + `pedido_estado` |
+| Movimiento | actividad / nota / seguimiento | `actividades` |
 
----
+Etapas del interés, visibles como chips en la ficha (reemplazan a `ETAPAS` en `lib/constants.ts`; la base ya las soporta):
 
-## 1.6 Poda de esta etapa
+| Etapa | Cuándo |
+|---|---|
+| Interesado | recién cargado (`nueva`) |
+| Cotizado | tiene al menos una cotización (`cotizada`) |
+| En seguimiento | hubo contacto después de cotizar (`seguimiento`) — se pone sola al anotar un movimiento sobre un interés cotizado |
+| Lista de espera | quiere comprar y no hay stock (`espera`) |
+| Vendido | `ganada` → entra al circuito de venta |
+| No se dio | `perdida`, con motivo |
 
-- Eliminar de la UI el stock numérico manual: `StockAdmin` deja de mostrar el campo `stock` editable y `ingresos_stock`; se conserva únicamente la **lista de espera** (`etapa = 'espera'`) y su bloque en `InteresNuevoForm`. Las columnas quedan en la base hasta la Etapa 4.
-- `BottomNav` del vendedor: Inicio · Contactos · +Interés · Ventas · Más. "Stock" sale del nav (la lista de espera se ve desde Contactos, chip "Lista de espera").
-- Mover a "Más herramientas": HOTELGA, Financiación, Calculadora, Biblioteca, Instalaciones.
+Nivel de interés (ya existe como `temperatura`): **Muy interesado / Interesado / Solo preguntó**. Se muestra como puntito de color al lado del interés en todas las listas.
 
----
-
-## 1.7 Partir `lib/actions.ts`
-
-Antes de tocar lógica, partir el archivo por sus separadores `// ====` en:
-
-```
-lib/actions/contactos.ts
-lib/actions/intereses.ts      (oportunidades, etapas, cotizaciones)
-lib/actions/seguimiento.ts    (tareas, propuestas, posponer)
-lib/actions/ventas.ts         (pedidos)
-lib/actions/servicio.ts
-lib/actions/marketing.ts
-lib/actions/admin.ts          (usuarios, catálogo, stock, importador)
-lib/actions/index.ts          (re-exporta todo, para no romper imports)
-lib/auth.ts                   (usuarioActual, rolActual, exigirGestor)
-```
-
-Cada archivo empieza con `"use server"`. Commit propio, sin cambios de lógica, verificado con `tsc`.
+Estado del contacto (chip en la ficha y en la lista): **Interesado** (nunca compró) / **Cliente** (tiene al menos una venta o un equipo).
 
 ---
 
-## 1.8 Tests mínimos de la etapa
+## 1.3 Qué aparece al abrir la app
 
-- `tests/unit/seguimiento.test.ts`: `proponerSiguiente` para cada fila de la tabla 1.1 (14 casos).
-- `tests/unit/dinero.test.ts`: `sumarPorMoneda` con ARS y USD mezclados.
-- `tests/e2e/vendedor.spec.ts`: login como comercial → crear interés caliente → aparece en Inicio › Hoy o mañana → cerrar con "no atendió" → aparece mañana en Hoy. Requiere usuario de prueba `comercial` en el proyecto de Supabase de staging (documentar en `.env.example`: `E2E_USER`, `E2E_PASS`).
+### Vendedor y dirección: `/` = Contactos, con Pendientes arriba
+
+Una sola pantalla, `app/(app)/page.tsx` (hoy redirige a `/clientes`; `/clientes` pasa a ser esta misma página). Tres zonas, de arriba a abajo:
+
+**Zona 1 · Buscador y botón principal.** Buscador grande ("Buscar por nombre, teléfono, empresa o serie") y el botón **+ Interés** (en celular, el botón central del BottomNav; en PC, arriba a la derecha). No hay botón "Nuevo contacto" en ningún lado visible (queda dentro del flujo de + Interés y en Más).
+
+**Zona 2 · Pendientes.** Bloques calculados desde `oportunidades`, filtrados por `comercial_id = yo` (dirección y admin ven un selector "Míos / De todos / Por vendedor" que se recuerda). Cada bloque muestra el conteo en el título y no aparece si está vacío:
+
+| Bloque | Regla | Orden |
+|---|---|---|
+| **Atrasados** (rojo) | `proximo_contacto < hoy` | más atrasado primero |
+| **Hoy** | `proximo_contacto = hoy` | Muy interesado primero |
+| **Llegó stock** (verde) | `etapa = 'espera'` y `proximo_nota = 'Llegó stock'` | — |
+| **Próximos 7 días** (plegado) | `proximo_contacto` entre mañana y hoy+7 | por fecha |
+| **Sin fecha** (gris, plegado) | interés abierto sin `proximo_contacto`, con `ultimo_movimiento_at` hace más de 7 días | más viejo primero |
+| **Recompras** (plegado, solo si hay) | tareas `tipo = 'recompra'` pendientes | por fecha |
+
+Cada fila, igual en todos los bloques: **nombre del contacto · qué le interesa (con puntito de nivel) · nota del próximo contacto** · botones **WhatsApp**, **Llamar**, **Anotar**. "Anotar" abre el mismo panel "¿Qué pasó?" de la ficha, sin salir de la pantalla, y al guardar la fila se va del bloque (porque cambió la fecha) o queda (si eligió "Sin fecha" pasa a Sin fecha).
+
+Si los bloques Atrasados, Hoy y Llegó stock están vacíos: una línea "Al día." y nada más. La zona 2 nunca muestra más de 3 bloques abiertos a la vez.
+
+**Zona 3 · Contactos.** La lista actual (`clientes/page.tsx`), con chips **Recientes / Interesados / Clientes / Lista de espera / Todos**. Cada fila: nombre, empresa, chip Interesado/Cliente, qué le interesa (último interés abierto con puntito), último movimiento ("hace 3 días: le mandé la cotización"), próxima fecha si tiene, botones WhatsApp y Llamar. Recientes = últimos 60 con movimiento, **míos** por defecto para vendedores.
+
+### Técnico: `/` = Services
+
+Misma estructura, otro contenido:
+- Botón principal **Cargar service hecho** (ya existe; se mantiene como está: cliente por texto, equipo opcional, qué se hizo, horas/repuestos/foto opcionales).
+- **Hoy**: OTs asignadas a mí con `fecha_programada = hoy` (si hay agenda; si no, el bloque no aparece).
+- **Pendientes de cerrar**: OTs mías en `en_proceso` o `cerrada_tecnico` sin firma o sin fotos.
+- **Próximos** plegado.
+- Lista de **mis últimos services** con cliente, equipo y estado.
+
+### Administración: `/` = igual que dirección + bandeja
+
+Igual que dirección, y arriba de Pendientes un bloque **Ventas para facturar** (`pedido_estado = 'facturar'`) y **Services para revisar** (`cerrada_tecnico`), con conteo y link a `/pedidos` y `/servicio`. (El resto del inicio de administración es Etapa 4.)
+
+---
+
+## 1.4 + Interés: primero qué, después quién
+
+`InteresNuevoForm` ya funciona así. Ajustes para que sea el único camino de entrada:
+
+**Pantalla 1 · ¿Qué le interesa?** Lista de productos activos agrupados por categoría, con buscador arriba y "Otro (escribir)" al final. Al lado de cada producto, el texto de stock de `lib/stock.ts`: "Hay 3" / "Sin stock, llegan 5 el 20 sep" / "Sin stock, sin ingreso previsto". Debajo, el nivel: **Muy interesado / Interesado / Solo preguntó** (obligatorio, sin default).
+
+**Pantalla 2 · ¿Quién?** Un solo campo: "Nombre, empresa o teléfono". Mientras escribe, busca en `clientes` (nombre, empresa, teléfono normalizado, email) y muestra coincidencias con chip Interesado/Cliente y su ciudad. Tocar una = asignar. Si no hay coincidencia: aparecen nombre, teléfono (obligatorio uno de los dos: teléfono o email), empresa y rubro (opcionales, plegados: "Más datos"). Al guardar se crea el contacto con `comercial_id = yo`.
+
+**Pantalla 3 · ¿Algo más?** (opcional, se puede saltear con "Guardar"): nota libre ("consultó por WhatsApp, quiere para diciembre"), origen (chips: WhatsApp / Llamada / Web / Feria / Recomendado / Visita), y **¿Cuándo volver a contactar?** con los chips de 1.1 (ninguno preseleccionado). Si el producto no tiene stock, aparece un chip destacado **Poner en lista de espera** que setea `etapa = 'espera'`.
+
+Al guardar: va a la ficha del contacto con el interés abierto y un aviso corto "Interés cargado" (2 segundos). Se registra el movimiento "Nuevo interés: {producto}" con quién lo cargó.
+
+Compartir desde WhatsApp (share target) sigue entrando por acá, con el teléfono detectado y ya buscado en pantalla 2.
+
+---
+
+## 1.5 La ficha del contacto: toda la información en una pantalla
+
+`app/(app)/clientes/[id]/page.tsx`. Orden fijo, de arriba a abajo, en celular y en PC (en PC, dos columnas: izquierda 1-3, derecha 4-6):
+
+1. **Cabecera**: nombre, empresa, chip Interesado/Cliente, ciudad, vendedor responsable (editable por gestores). Botones grandes: **WhatsApp · Llamar · Email**. Teléfonos y emails adicionales plegados.
+2. **¿Qué pasó?**: caja de texto + chips de próxima fecha + "Guardar". Si el contacto tiene más de un interés abierto, un selector "Sobre: {interés}" (preseleccionado el más reciente). Guardar crea el movimiento y actualiza `proximo_contacto`/`proximo_nota` del interés elegido.
+3. **Le interesa**: cada interés abierto como tarjeta: producto, puntito de nivel, etapa (chip), próxima fecha y nota, "hace N días sin movimiento" si > 7. Botones por tarjeta: **Cotizar · Me compró · Lista de espera · No se dio · Más** (Más despliega: cambiar nivel, cambiar producto, guiones, diagnóstico Zumex, calculadora, IA, material; todo lo que hoy vive en `/oportunidades/[id]`, movido acá como paneles plegados). Al final, **+ Otro interés**.
+4. **Ventas**: cada venta con su paso actual (Vendido / Preparar / Facturar / Entregado) y el botón del paso siguiente (mismo `VentaPaso`). Al facturar pide factura y serie ahí mismo.
+5. **Equipos y services**: equipos con serie, garantía (vigente/vencida) y último service; botón "Cargar service" para técnicos y gestores.
+6. **Movimientos**: todo el historial, más reciente arriba, cada línea con fecha, quién, y texto ("Cotización N° 12 enviada", "Anotó: no atendió", "Nuevo interés: JL15", "Pasó a lista de espera", "Service OT-41 cerrado"). Es la misma tabla `actividades`; verificar que **toda** acción del sistema escriba ahí (crear interés, cambiar etapa, cotizar, anotar, pasar de paso la venta, cargar service, cambiar nivel, reasignar). Si alguna no lo hace, agregarlo.
+7. **Datos** (plegado al fondo): fiscales, sucursales, notas internas, cotizaciones y archivos.
+
+`/oportunidades/[id]` redirige a `/clientes/[cliente_id]?interes=[id]` (abre esa tarjeta expandida) y su contenido se elimina. `/buscar` y `/hoy` se eliminan.
+
+---
+
+## 1.6 Stock: lo que hay, lo que llega, quién espera
+
+`app/(app)/stock/page.tsx` ya existe. Ajustes:
+
+- Visible para **todos** los roles en el nav (celular: dentro de Más; PC: en el Sidebar principal). Solo gestores editan.
+- Por producto, tres columnas claras: **Hay** (número grande), **Llega** ("5 el 20 sep", o "sin ingreso previsto"), **Esperan** (N, con los nombres al tocar y botón WhatsApp por cada uno).
+- Botón de gestor **"Llegó"** en cada ingreso previsto: marca `recibido_at`, suma al stock y dispara la única automatización (1.1): los intereses en espera de ese producto pasan a `proximo_contacto = hoy`, nota "Llegó stock", y aparecen en el bloque verde del inicio de cada vendedor. Se registra el movimiento "Llegó stock de {producto}" en cada contacto en espera.
+- Al vender (`pedido_estado` pasa a `entregado`) se descuenta 1 del stock del producto de forma atómica (RPC `fn_ajustar_stock(producto_id, delta)`). Al pasar de `entregado` hacia atrás, se suma. Es el único descuento automático; los ajustes manuales siguen siendo de gestores.
+- En **+ Interés** (1.4) y en la tarjeta de interés (1.5) se muestra siempre el texto de stock del producto.
+
+Queda documentado en `PLAN-OS.md` que en la Etapa 4 el stock pasa a leerse del Excel de ZEUS y esta pantalla deja de editarse a mano.
+
+---
+
+## 1.7 Movimientos (feed del equipo)
+
+`app/(app)/movimientos/page.tsx` ya existe. Ajustes:
+
+- Filtro **Míos / De todos / Por vendedor / Por técnico** (gestores) y **por tipo** (interés, cotización, venta, service, nota).
+- Cada línea linkea al contacto; en PC, panel lateral con la ficha resumida al pasar.
+- Es la respuesta a "ver todo lo que hicimos": no se construye nada más para eso.
+
+---
+
+## 1.8 Navegación
+
+**Celular (BottomNav)**, por rol:
+- Vendedor / dirección / admin: **Inicio · Contactos · [+ Interés] · Ventas · Más**. (Inicio y Contactos son la misma página con scroll; "Contactos" salta a la zona 3.)
+- Técnico: **Inicio · Services · [Cargar service] · Equipos · Más**.
+
+**PC (Sidebar)**: Inicio, Contactos, Ventas, Stock, Services, Equipos, Movimientos, Reportes (gestores), Admin (gestores), Más herramientas (HOTELGA, Financiación, Calculadora, Biblioteca, Marketing, Importar).
+
+Todo lo que no está en esta lista sale del nav. Nada se borra de la base.
+
+---
+
+## 1.9 Textos y ergonomía
+
+- Tamaño mínimo de texto 15 px en celular; botones de acción de 44 px de alto; los tres botones de contacto (WhatsApp, Llamar, Anotar) siempre en el mismo orden y lugar en todas las filas.
+- Cero jerga: "Interés", "Contacto", "Venta", "Service", "Movimiento", "Lista de espera". Nunca "oportunidad", "lead", "pipeline", "tarea", "etapa" en la interfaz. Buscar con grep en `app/` y `components/` y reemplazar.
+- Confirmaciones cortas y visibles después de cada acción ("Guardado", "Pasó a lista de espera", "Venta registrada · garantía hasta {fecha}"). Nunca un refresh mudo.
+- `loading.tsx` y `error.tsx` en `app/(app)/` (si no se hicieron en Etapa 0).
+
+---
+
+## 1.10 Orden de trabajo y tests
+
+1. Partir `lib/actions.ts` por módulo (`contactos`, `intereses`, `ventas`, `servicio`, `marketing`, `admin`, `stock`) con `index.ts` que re-exporta. Sin cambios de lógica. Commit propio.
+2. Migración 026 y eliminación de la creación de tareas comerciales.
+3. Ficha del contacto (1.5) — es el centro; todo lo demás apunta acá.
+4. + Interés (1.4).
+5. Inicio con Pendientes (1.3).
+6. Stock y "Llegó" (1.6).
+7. Movimientos y navegación (1.7, 1.8).
+8. Textos (1.9).
+
+Tests:
+- `tests/unit/pendientes.test.ts`: función pura `clasificarPendientes(intereses, hoy)` que devuelve los bloques de 1.3 (atrasado / hoy / llegó stock / próximos / sin fecha).
+- `tests/unit/stock.test.ts`: `textoStock` y `fn_ajustar_stock` (vía RPC en staging).
+- `tests/e2e/interes.spec.ts`: login comercial → + Interés (producto sin stock) → contacto nuevo → Lista de espera → gestor marca "Llegó" → el interés aparece en "Llegó stock" del vendedor.
 
 ---
 
 ## Definición de terminado
 
-- [ ] Un usuario comercial entra y ve `/` con los bloques Vencidos, Hoy, Sin responder, Por vencer, Sin próxima acción; cada fila tiene WhatsApp, Llamar, Hecho y Posponer.
-- [ ] Crear un interés sin tocar la fecha deja una tarea agendada según la temperatura.
-- [ ] Cerrar un seguimiento con "no atendió" crea uno para mañana sin cargar nada; nunca hay dos tareas automáticas pendientes para el mismo contacto (verificar con una consulta SQL).
-- [ ] Guardar una cotización agenda seguimiento a 3 días y, si tiene vigencia, un aviso a vigencia−2.
-- [ ] El link `/c/{token}` abre sin login, registra la apertura y la ficha lo muestra.
-- [ ] Recompras, garantías y leads web aparecen en Inicio y en el push matutino.
-- [ ] `/oportunidades/[id]` redirige a la ficha; no queda ningún texto "oportunidad" ni "consulta" en la UI.
-- [ ] Un gestor reasigna tres contactos a otro vendedor desde la lista y las tareas pendientes cambian de dueño.
-- [ ] Tests de 1.8 en verde en CI.
-- [ ] Una semana de uso real del equipo sin volver a pedir que se apaguen las tareas automáticas. Si lo piden: revisar prioridades y textos, no apagar el motor.
+- [ ] Al abrir la app, un vendedor ve arriba Atrasados / Hoy / Llegó stock (solo los que tienen algo) y abajo sus contactos con WhatsApp y Llamar. Nada más.
+- [ ] Un interés abierto nunca tiene más de una próxima fecha; la tabla `tareas` no recibe filas nuevas desde ninguna acción comercial (verificar con consulta SQL después de un día de uso).
+- [ ] Cargar un interés por una licuadora para alguien que no está en la base lleva tres pantallas y menos de 30 segundos; el contacto queda creado y asignado.
+- [ ] Un interés sin stock puede pasar a lista de espera desde el alta y desde la ficha; cuando un gestor marca "Llegó", aparece en verde en el inicio del vendedor.
+- [ ] Todos los roles ven Stock con Hay / Llega / Esperan.
+- [ ] En la ficha de cualquier contacto se ve en una sola pantalla: cómo contactarlo, qué le interesa, sus ventas y su paso, sus equipos y services, y todos los movimientos con fecha y quién.
+- [ ] El técnico carga un service hecho sin tener agenda y queda en "Services para revisar" de administración.
+- [ ] No queda ningún texto "oportunidad", "lead", "pipeline", "tarea" ni "etapa" en la interfaz.
+- [ ] Una semana de uso del equipo completo sin que nadie pregunte "qué es esto" sobre la pantalla de inicio.
