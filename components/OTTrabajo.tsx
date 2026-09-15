@@ -47,7 +47,6 @@ export default function OTTrabajo({
   tiempos,
   repuestos,
   editable,
-  fotoUrls,
   firmaUrl,
   transicionesTecnico,
 }: {
@@ -57,7 +56,6 @@ export default function OTTrabajo({
   tiempos: OTTiempo[];
   repuestos: Repuesto[];
   editable: boolean;
-  fotoUrls?: never;
   firmaUrl: string | null;
   transicionesTecnico: string[];
 }) {

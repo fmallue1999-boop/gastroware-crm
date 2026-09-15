@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   }
 
   webpush.setVapidDetails(
-    "mailto:fmallue1999@gmail.com",
+    process.env.VAPID_SUBJECT || "mailto:info@gastroware.com.ar",
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
   );

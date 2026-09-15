@@ -57,10 +57,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  // La función fn_webhook_wa solo es ejecutable por service_role (025):
+  // mismo cliente administrativo que usan los crons.
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
+  if (!serviceKey) {
+    console.error("fn_webhook_wa: falta SUPABASE_SERVICE_ROLE_KEY");
+    return NextResponse.json({ ok: true });
+  }
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
   const { error } = await supabase.rpc("fn_webhook_wa", { p_payload: payload });
   if (error) {
     // Respondemos 200 igual: si devolvemos error, Meta reintenta en loop

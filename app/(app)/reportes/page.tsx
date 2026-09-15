@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { hoyISO } from "@/lib/format";
+import { sumarPorMoneda } from "@/lib/dinero";
+import Montos from "@/components/Montos";
 import { MOTIVOS_PERDIDA } from "@/lib/constants";
 
 interface OppRow {
@@ -16,8 +18,10 @@ interface OppRow {
   cliente: { rubro: string } | null;
 }
 
-const dinero = (n: number) =>
-  "$" + new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(n);
+/** ISO de hace N días (fuera del render: el reloj no es una función pura). */
+function fechaHaceDias(dias: number): string {
+  return new Date(Date.now() - dias * 86400000).toISOString();
+}
 
 export default async function ReportesPage({
   searchParams,
@@ -26,7 +30,7 @@ export default async function ReportesPage({
 }) {
   const { dias } = await searchParams;
   const rango = Number(dias) || 90;
-  const desde = new Date(Date.now() - rango * 86400000).toISOString();
+  const desde = fechaHaceDias(rango);
 
   const supabase = await createClient();
   const [oppsRes, vencidasRes] = await Promise.all([
@@ -60,8 +64,13 @@ export default async function ReportesPage({
     ["cotizada", "seguimiento", "ganada", "perdida"].includes(o.etapa)
   );
 
-  const montoGanado = ganadas.reduce((s, o) => s + (o.monto_estimado ?? 0), 0);
-  const pipeline = abiertas.reduce((s, o) => s + (o.monto_estimado ?? 0), 0);
+  // Totales por moneda: una venta en USD y otra en ARS nunca se suman entre sí
+  const montoGanado = sumarPorMoneda(
+    ganadas.map((o) => ({ monto: o.monto_estimado, moneda: o.moneda }))
+  );
+  const pipeline = sumarPorMoneda(
+    abiertas.map((o) => ({ monto: o.monto_estimado, moneda: o.moneda }))
+  );
 
   const agrupar = (rows: OppRow[], clave: (o: OppRow) => string) => {
     const m = new Map<string, { total: number; ganadas: number }>();
@@ -130,8 +139,8 @@ export default async function ReportesPage({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Metrica label="Leads" valor={String(opps.length)} />
         <Metrica label="Ganadas" valor={String(ganadas.length)} />
-        <Metrica label="Vendido" valor={dinero(montoGanado)} />
-        <Metrica label="Pipeline abierto" valor={dinero(pipeline)} />
+        <Metrica label="Vendido" valor={<Montos por={montoGanado} />} />
+        <Metrica label="Pipeline abierto" valor={<Montos por={pipeline} />} />
       </div>
 
       <Seccion titulo={`Tasa de cotización: ${pct(cotizadas.length, opps.length)} · Tasa de cierre: ${pct(ganadas.length, cotizadas.length)}${promedioCierre != null ? ` · Cierre promedio: ${promedioCierre} días` : ""}`} />
@@ -170,7 +179,7 @@ function pct(parte: number, total: number) {
   return total > 0 ? Math.round((parte / total) * 100) + "%" : "—";
 }
 
-function Metrica({ label, valor }: { label: string; valor: string }) {
+function Metrica({ label, valor }: { label: string; valor: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-borde bg-white shadow-sm p-3">
       <p className="text-lg font-semibold truncate">{valor}</p>

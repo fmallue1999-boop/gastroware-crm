@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 
 function aCSV(filas: Record<string, unknown>[], columnas: string[]): string {
   const esc = (v: unknown) => {
-    const s = v == null ? "" : String(v);
+    let s = v == null ? "" : String(v);
+    // Una celda que empieza con = + - @ (o tab/retorno) Excel la ejecuta como
+    // fórmula: se antepone un apóstrofo para que quede como texto.
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const lineas = [columnas.join(";")];
@@ -28,6 +31,14 @@ export async function GET(request: Request) {
   let columnas: string[] = [];
 
   if (tipo === "clientes") {
+    // La base completa de contactos solo la exporta dirección/administración
+    const { data: rol } = await supabase.rpc("fn_rol");
+    if (!["direccion", "admin"].includes((rol as string) ?? "")) {
+      return NextResponse.json(
+        { error: "Solo dirección o administración pueden exportar los contactos" },
+        { status: 403 }
+      );
+    }
     const { data } = await supabase
       .from("clientes")
       .select(

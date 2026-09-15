@@ -2,11 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
-  // Sin variables de entorno todavía (primer arranque): dejar pasar.
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
+    // En producción, sin Supabase configurado no hay login ni datos: mejor
+    // un 503 claro que dejar pasar sin sesión.
+    if (process.env.VERCEL_ENV === "production") {
+      return new NextResponse("Configuración incompleta", { status: 503 });
+    }
+    // Primer arranque en local: dejar pasar.
     return NextResponse.next();
   }
 
