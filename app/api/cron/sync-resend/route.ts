@@ -5,10 +5,17 @@ export const maxDuration = 60;
 
 /**
  * Sincroniza los clientes contactables (email válido, sin baja) hacia una
- * audiencia de Resend, para diseñar y enviar campañas desde Resend Broadcasts.
- * Protegido con CRON_SECRET. Procesa un lote por llamada (cursor en config):
- * se invoca repetidas veces hasta terminar. Idempotente: los emails que ya
- * están en la audiencia se saltean.
+ * audiencia (segmento) de Resend, para diseñar y enviar campañas desde Resend
+ * Broadcasts. Protegido con CRON_SECRET. Procesa un lote por llamada (cursor
+ * en config): se invoca repetidas veces hasta terminar. Idempotente: los
+ * emails que ya están en la audiencia se saltean.
+ *
+ * Modos:
+ * - Sin parámetros: toda la base, opcionalmente partida por rango de ids
+ *   (?desde=&hasta=) y con nombre de audiencia (?nombre=).
+ * - ?feria=HOTELGA%202026: solo los contactos escaneados en esa feria
+ *   (feria_leads), usando el email de la credencial y, si no tiene, el de la
+ *   ficha. El nombre de la audiencia es el de la feria salvo ?nombre=.
  */
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
@@ -36,7 +43,9 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   // Audiencia destino y rango opcional de ids (para partir la base en tandas)
-  const nombreAudiencia = url.searchParams.get("nombre")?.trim() || "Clientes GastroWare";
+  const feria = url.searchParams.get("feria")?.trim() || "";
+  const nombreAudiencia =
+    url.searchParams.get("nombre")?.trim() || feria || "Clientes GastroWare";
   const desdeId = url.searchParams.get("desde")?.trim() || "";
   const hastaId = url.searchParams.get("hasta")?.trim() || "";
   const slug = nombreAudiencia.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 30);
@@ -86,20 +95,66 @@ export async function GET(request: Request) {
     50
   );
 
-  let q = supabase
-    .from("clientes")
-    .select("id, nombre_comercial, email")
-    .is("deleted_at", null)
-    .eq("no_contactar", false)
-    .not("email", "is", null)
-    .neq("email", "")
-    .order("id")
-    .limit(lote);
+  type Destinatario = {
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+  };
   const piso = cursor || desdeId;
-  if (piso) q = q.gt("id", piso);
-  if (hastaId) q = q.lte("id", hastaId);
-  const { data: clientes } = await q;
-  const lista = clientes ?? [];
+  let lista: Destinatario[] = [];
+  if (feria) {
+    // Contactos de la feria: el cursor avanza por cliente_id. El email de la
+    // credencial manda; si no tiene, va el de la ficha del contacto.
+    type LeadFila = {
+      cliente_id: string;
+      nombre: string | null;
+      email: string | null;
+      cliente: { nombre_comercial: string | null; email: string | null } | null;
+    };
+    let q = supabase
+      .from("feria_leads")
+      .select(
+        "cliente_id, nombre, email, cliente:clientes!inner(nombre_comercial, email, deleted_at, no_contactar)"
+      )
+      .eq("feria", feria)
+      .is("cliente.deleted_at", null)
+      .eq("cliente.no_contactar", false)
+      .order("cliente_id")
+      .limit(lote);
+    if (piso) q = q.gt("cliente_id", piso);
+    if (hastaId) q = q.lte("cliente_id", hastaId);
+    const { data } = await q;
+    lista = ((data ?? []) as unknown as LeadFila[]).map((l) => {
+      const partes = (l.nombre ?? "").trim().split(/\s+/).filter(Boolean);
+      return {
+        id: l.cliente_id,
+        email: (l.email ?? "").trim() || (l.cliente?.email ?? ""),
+        first_name: partes[0] ?? l.cliente?.nombre_comercial ?? "",
+        last_name: partes.slice(1).join(" "),
+      };
+    });
+  } else {
+    type ClienteFila = { id: string; nombre_comercial: string | null; email: string | null };
+    let q = supabase
+      .from("clientes")
+      .select("id, nombre_comercial, email")
+      .is("deleted_at", null)
+      .eq("no_contactar", false)
+      .not("email", "is", null)
+      .neq("email", "")
+      .order("id")
+      .limit(lote);
+    if (piso) q = q.gt("id", piso);
+    if (hastaId) q = q.lte("id", hastaId);
+    const { data } = await q;
+    lista = ((data ?? []) as unknown as ClienteFila[]).map((c) => ({
+      id: c.id,
+      email: c.email ?? "",
+      first_name: c.nombre_comercial ?? "",
+      last_name: "",
+    }));
+  }
 
   let agregados = 0;
   let yaEstaban = 0;
@@ -121,7 +176,7 @@ export async function GET(request: Request) {
   for (const c of lista) {
     // Presupuesto de tiempo: cortar prolijo antes del timeout de la función
     if (Date.now() - arranque > 42000) break;
-    const email = (c.email ?? "").trim().toLowerCase();
+    const email = c.email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       invalidos++;
       ultimoOk = c.id;
@@ -131,7 +186,8 @@ export async function GET(request: Request) {
       method: "POST",
       body: JSON.stringify({
         email,
-        first_name: c.nombre_comercial?.slice(0, 50) ?? "",
+        first_name: c.first_name.slice(0, 50),
+        ...(c.last_name ? { last_name: c.last_name.slice(0, 50) } : {}),
         unsubscribed: false,
       }),
     });
@@ -170,26 +226,42 @@ export async function GET(request: Request) {
 
   await guardarCursor();
 
-  let qRestantes = supabase
-    .from("clientes")
-    .select("id", { count: "exact", head: true })
-    .is("deleted_at", null)
-    .eq("no_contactar", false)
-    .not("email", "is", null)
-    .neq("email", "")
-    .gt("id", ultimoOk || desdeId || "00000000-0000-0000-0000-000000000000");
-  if (hastaId) qRestantes = qRestantes.lte("id", hastaId);
-  const { count: restantes } = await qRestantes;
+  const pisoRestantes =
+    ultimoOk || desdeId || "00000000-0000-0000-0000-000000000000";
+  let restantes = 0;
+  if (feria) {
+    let qr = supabase
+      .from("feria_leads")
+      .select("cliente_id, cliente:clientes!inner(id)", { count: "exact", head: true })
+      .eq("feria", feria)
+      .is("cliente.deleted_at", null)
+      .eq("cliente.no_contactar", false)
+      .gt("cliente_id", pisoRestantes);
+    if (hastaId) qr = qr.lte("cliente_id", hastaId);
+    restantes = (await qr).count ?? 0;
+  } else {
+    let qr = supabase
+      .from("clientes")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .eq("no_contactar", false)
+      .not("email", "is", null)
+      .neq("email", "")
+      .gt("id", pisoRestantes);
+    if (hastaId) qr = qr.lte("id", hastaId);
+    restantes = (await qr).count ?? 0;
+  }
 
   return NextResponse.json({
     audiencia: nombreAudiencia,
+    feria: feria || null,
     audienceId,
     procesados: lista.length,
     agregados,
     yaEstaban,
     invalidos,
     limiteAlcanzado,
-    restantes: restantes ?? 0,
+    restantes,
     terminado: !limiteAlcanzado && lista.length < lote,
   });
 }
