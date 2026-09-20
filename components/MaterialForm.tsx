@@ -207,7 +207,7 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
       </div>
       <p className="text-[11px] text-piedra">
         Los archivos subidos quedan con un link compartible que no vence: se
-        mandan por WhatsApp desde acá o desde cualquier oportunidad.
+        mandan por WhatsApp desde acá o desde cualquier interés.
       </p>
     </form>
   );

@@ -218,7 +218,7 @@ export const ACCION_POR_OBJECION: Record<string, string> = {
   "Está comparando":
     "Registrar la marca comparada y enviar la matriz comparativa.",
   "Desaparece / no responde":
-    "Seguir la cadencia D+2/D+5/D+10 y cerrar con la reactivación D+20.",
+    "Anotar un próximo contacto a los 2, 5 y 10 días; si sigue sin responder, cerrarlo a los 20.",
 };
 
 export const CADENCIA_COTIZACION = [

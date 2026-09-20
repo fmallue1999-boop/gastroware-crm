@@ -42,7 +42,7 @@ export default async function BibliotecaPage() {
         <h1 className="text-2xl font-bold tracking-tight mb-1">Biblioteca comercial</h1>
         <p className="text-sm text-piedra">
           Fichas, videos, comparativas y casos — listos para mandar desde cada
-          oportunidad.
+          interés.
         </p>
       </div>
 

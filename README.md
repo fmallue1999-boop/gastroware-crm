@@ -55,7 +55,7 @@ No hay recordatorios automáticos: solo aparece lo que alguien agenda a mano.
 - `app/(app)/` — pantallas (una carpeta por ruta); `app/api/` — crons,
   webhooks, exportación, baja de email; `app/{comprobante,cotizacion,inspeccion,propuesta-financiacion}` — hojas imprimibles.
 - `components/` — formularios y controles (client components).
-- `lib/actions.ts` — todas las server actions; `lib/auth.ts` — rol y
+- `lib/actions/` — las server actions por módulo (contactos, intereses, ventas, equipos, servicio, marketing, feria, admin, stock) con `index.ts` que re-exporta; `lib/auth.ts` — rol y
   chequeos de gestor; `lib/dinero.ts` — totales por moneda;
   `lib/stock.ts`, `lib/ventas.ts`, `lib/financiacion.ts`, `lib/format.ts`.
 - `lib/core/` — email (Resend), IA (Anthropic), storage (URLs firmadas).

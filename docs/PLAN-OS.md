@@ -39,7 +39,7 @@ estados del contacto, no nombres de entidad.
 | Etapa | Objetivo | Especificación |
 |---|---|---|
 | 0 — Sanear y asegurar | Sistema seguro y con cifras confiables: RLS de storage por entidad, facturación y aprobación solo para gestores, transacciones en los flujos críticos, totales por moneda, entorno documentado, CI | [`docs/etapas/ETAPA-0-sanear-y-asegurar.md`](etapas/ETAPA-0-sanear-y-asegurar.md) |
-| 1 — Núcleo comercial que empuja | Que un vendedor no necesite pensar a quién llamar: seguimiento asistido con una tarea viva por contacto, cotizaciones con vencimiento, herramientas de venta a un toque | [`docs/etapas/ETAPA-1-nucleo-comercial.md`](etapas/ETAPA-1-nucleo-comercial.md) |
+| 1 — Núcleo comercial simple | Un interés, una próxima fecha: pendientes calculados desde los intereses (sin motor de tareas para ventas), ficha con toda la información en una pantalla, + Interés en tres pantallas, stock con Llegó, movimientos y navegación simple | [`docs/etapas/ETAPA-1-nucleo-comercial.md`](etapas/ETAPA-1-nucleo-comercial.md) |
 
 Reglas de trabajo por etapa: rama propia (`etapa-N`), un commit por punto,
 sin funcionalidad nueva fuera de lo especificado, leer `AGENTS.md` antes de

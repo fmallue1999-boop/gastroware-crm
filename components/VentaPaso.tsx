@@ -39,6 +39,12 @@ export default function VentaPaso({
   const [fecha, setFecha] = useState(entregaEstimada ?? "");
   const [facturando, setFacturando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  function avisar(texto: string) {
+    setAviso(texto);
+    setTimeout(() => setAviso(null), 2000);
+  }
 
   const actual = estado ?? "comprometido";
   const idx = pasoDe(estado);
@@ -62,6 +68,7 @@ export default function VentaPaso({
     startTransition(async () => {
       const res = await avanzarPedido(oportunidadId, nuevo);
       if (res && "error" in res && res.error) setError(res.error);
+      else avisar(`Pasó a ${VENTA_PASOS[pasoDe(nuevo)]?.label ?? "el paso siguiente"}`);
       router.refresh();
     });
   }
@@ -72,7 +79,10 @@ export default function VentaPaso({
     startTransition(async () => {
       const res = await facturarPedido(oportunidadId, factura, serie);
       if (res && "error" in res && res.error) setError(res.error);
-      else setFacturando(false);
+      else {
+        setFacturando(false);
+        avisar("Factura guardada. Falta entregar.");
+      }
       router.refresh();
     });
   }
@@ -196,6 +206,7 @@ export default function VentaPaso({
           </button>
         )
       )}
+      {aviso && <p className="mt-1 text-xs font-medium text-green-700">✓ {aviso}</p>}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );

@@ -140,7 +140,7 @@ export default async function ReportesPage({
         <Metrica label="Leads" valor={String(opps.length)} />
         <Metrica label="Ganadas" valor={String(ganadas.length)} />
         <Metrica label="Vendido" valor={<Montos por={montoGanado} />} />
-        <Metrica label="Pipeline abierto" valor={<Montos por={pipeline} />} />
+        <Metrica label="Intereses abiertos" valor={<Montos por={pipeline} />} />
       </div>
 
       <Seccion titulo={`Tasa de cotización: ${pct(cotizadas.length, opps.length)} · Tasa de cierre: ${pct(ganadas.length, cotizadas.length)}${promedioCierre != null ? ` · Cierre promedio: ${promedioCierre} días` : ""}`} />

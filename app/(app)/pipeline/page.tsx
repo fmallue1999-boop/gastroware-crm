@@ -69,7 +69,7 @@ export default async function PipelinePage({
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-1">
-        <h1 className="text-2xl font-bold tracking-tight">Pipeline</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Tablero de intereses</h1>
         <span className="text-sm text-piedra">
           {oportunidades.length} abiertas · <Montos por={totalPipeline} inline />
         </span>
