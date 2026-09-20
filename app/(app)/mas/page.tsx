@@ -15,6 +15,7 @@ import {
   Smartphone,
   Tent,
   TrendingUp,
+  UserPlus,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -74,6 +75,12 @@ export default async function MasPage() {
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">
           Para el trabajo
         </h2>
+        <MenuLink
+          href="/clientes/nuevo"
+          icono={UserPlus}
+          titulo="Contacto sin interés"
+          detalle="Cargar a alguien sin una consulta puntual (cliente de service, cartera)"
+        />
         <MenuLink
           href="/stock"
           icono={Boxes}

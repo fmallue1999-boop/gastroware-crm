@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { X } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { Check, ChevronLeft, Search } from "lucide-react";
 import { buscarClientes, registrarInteres } from "@/lib/actions";
 import {
   fechaCorta,
@@ -14,7 +13,7 @@ import {
 import {
   CATEGORIAS_PRODUCTO,
   NIVELES_INTERES,
-  ORIGENES,
+  ORIGENES_INTERES,
   RUBROS,
   SEGUIMIENTO_RAPIDO,
 } from "@/lib/constants";
@@ -22,17 +21,19 @@ import { textoStock, type InfoStock } from "@/lib/stock";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-tinta";
+  "min-h-12 w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base shadow-sm outline-none focus:border-tinta";
 const chipCls = (activo: boolean) =>
-  `rounded-full px-3.5 py-2 text-sm font-medium ${
+  `min-h-11 rounded-full px-3.5 py-2 text-[15px] font-medium ${
     activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
   }`;
+const botonPrimario =
+  "min-h-12 w-full rounded-2xl bg-tinta py-3.5 text-base font-semibold text-white disabled:opacity-50";
 const pareceTelefono = (s: string) => /^[\d\s+\-().]{6,}$/.test(s.trim());
 
 /**
- * Nuevo interés: primero qué quiere (el producto), después quién. El
- * "quién" se busca en la base mientras se escribe; si no está, se carga
- * con nombre y teléfono ahí mismo. Todo lo demás es opcional.
+ * + Interés en tres pantallas (Etapa 1, 1.4): primero qué le interesa y
+ * cuánto, después quién (de la base o nuevo), y al final, opcional, una nota,
+ * de dónde viene, cuándo volver a contactar y lista de espera si no hay stock.
  */
 export default function InteresNuevoForm({
   productos,
@@ -46,12 +47,14 @@ export default function InteresNuevoForm({
   notaInicial?: string;
 }) {
   const [pending, startTransition] = useTransition();
-  // 1. Qué
+  const [paso, setPaso] = useState<1 | 2 | 3>(1);
+  // 1 · Qué
+  const [filtro, setFiltro] = useState("");
   const [productoIds, setProductoIds] = useState<string[]>([]);
+  const [otro, setOtro] = useState(false);
   const [interesTexto, setInteresTexto] = useState("");
-  const [nivel, setNivel] = useState("tibio");
-  const [enEspera, setEnEspera] = useState(false);
-  // 2. Quién
+  const [nivel, setNivel] = useState("");
+  // 2 · Quién
   const [q, setQ] = useState(telefonoInicial);
   const [resultados, setResultados] = useState<Cliente[]>([]);
   const [buscando, setBuscando] = useState(false);
@@ -61,33 +64,61 @@ export default function InteresNuevoForm({
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [empresa, setEmpresa] = useState("");
-  const [esCliente, setEsCliente] = useState(false);
   const [rubro, setRubro] = useState("");
   const [ciudad, setCiudad] = useState("");
-  const [origen, setOrigen] = useState("");
-  // 3. Extras
+  // 3 · Algo más
   const [nota, setNota] = useState(notaInicial);
+  const [origen, setOrigen] = useState("");
   const [volverEl, setVolverEl] = useState("");
+  const [sinFecha, setSinFecha] = useState(false);
+  const [enEspera, setEnEspera] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Compartido desde WhatsApp: el teléfono ya viene buscado en la pantalla 2
+  useEffect(() => {
+    if (telefonoInicial.trim().length < 2) return;
+    let vivo = true;
+    buscarClientes(telefonoInicial).then((r) => {
+      if (vivo) setResultados(r);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [telefonoInicial]);
+
   const sinStock = productoIds.some((id) => (stockInfo[id]?.stock ?? 1) <= 0);
-  const hayInteres = productoIds.length > 0 || interesTexto.trim().length > 0;
+  const hayInteres = productoIds.length > 0 || (otro && interesTexto.trim().length > 0);
+  const paso1Listo = hayInteres && !!nivel;
   const hayQuien =
     !!cliente ||
-    (esNuevo && nombre.trim().length > 0 && (normalizarTelefono(telefono).length >= 6 || email.trim().length > 0));
+    (esNuevo &&
+      nombre.trim().length > 0 &&
+      (normalizarTelefono(telefono).length >= 6 || email.trim().length > 0));
 
+  const f = filtro.trim().toLowerCase();
   const grupos = Object.entries(CATEGORIAS_PRODUCTO)
     .map(([cat, label]) => ({
       label,
-      items: productos.filter((p) => p.categoria === cat),
+      items: productos.filter(
+        (p) => p.categoria === cat && (!f || p.nombre.toLowerCase().includes(f))
+      ),
     }))
     .filter((g) => g.items.length > 0);
 
-  function agregarProducto(id: string) {
-    if (!id || productoIds.includes(id)) return;
-    setProductoIds([...productoIds, id]);
-    if ((stockInfo[id]?.stock ?? 1) <= 0) setEnEspera(true);
+  const nombreInteres =
+    [
+      ...productoIds.map((id) => productos.find((p) => p.id === id)?.nombre).filter(Boolean),
+      otro && interesTexto.trim() ? interesTexto.trim() : null,
+    ]
+      .filter(Boolean)
+      .join(", ") || "—";
+  const nombreQuien = cliente?.nombre_comercial ?? (esNuevo ? empresa.trim() || nombre.trim() : "");
+
+  function alternarProducto(id: string) {
+    const quitar = productoIds.includes(id);
+    setProductoIds(quitar ? productoIds.filter((x) => x !== id) : [...productoIds, id]);
+    if (!quitar && (stockInfo[id]?.stock ?? 1) <= 0) setEnEspera(true);
   }
 
   function buscar(valor: string) {
@@ -113,13 +144,23 @@ export default function InteresNuevoForm({
     else setNombre(t);
   }
 
-  function enviar(e: React.FormEvent) {
-    e.preventDefault();
+  function elegirChipFecha(dias: number | null) {
+    if (dias == null) {
+      setSinFecha(!sinFecha);
+      setVolverEl("");
+      return;
+    }
+    const fecha = sumarDias(dias);
+    setSinFecha(false);
+    setVolverEl(volverEl === fecha ? "" : fecha);
+  }
+
+  function guardar() {
     setError(null);
     startTransition(async () => {
       const res = await registrarInteres({
         productoIds,
-        interesTexto,
+        interesTexto: otro ? interesTexto : "",
         nivel,
         enEspera: enEspera && sinStock,
         clienteId: cliente?.id,
@@ -127,7 +168,6 @@ export default function InteresNuevoForm({
         telefono: esNuevo ? telefono : undefined,
         email: esNuevo ? email : undefined,
         empresa: esNuevo ? empresa : undefined,
-        esCliente: esNuevo ? esCliente : undefined,
         origen: origen || undefined,
         rubro: rubro || undefined,
         ciudad,
@@ -138,149 +178,145 @@ export default function InteresNuevoForm({
     });
   }
 
-  return (
-    <form onSubmit={enviar} className="space-y-4">
-      {/* 1. Qué le interesa */}
-      <section className="rounded-2xl border border-borde bg-white p-3.5 shadow-sm">
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
-          1 · ¿Qué le interesa?
-        </p>
-        {productoIds.length > 0 && (
-          <div className="mb-1.5 flex flex-wrap gap-1.5">
-            {productoIds.map((id) => {
-              const p = productos.find((x) => x.id === id);
-              return (
-                <span
-                  key={id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-tinta px-3 py-1.5 text-sm text-white"
-                >
-                  {p?.nombre ?? "Producto"}
-                  <button
-                    type="button"
-                    onClick={() => setProductoIds(productoIds.filter((x) => x !== id))}
-                    aria-label="Quitar"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-        )}
-        <select
-          autoFocus
-          value=""
-          onChange={(e) => agregarProducto(e.target.value)}
-          className={inputCls}
+  const cabecera = (n: number, texto: string) => (
+    <div className="mb-3 flex items-center gap-2">
+      {n > 1 && (
+        <button
+          type="button"
+          onClick={() => setPaso((n - 1) as 1 | 2)}
+          aria-label="Volver"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-borde bg-white"
         >
-          <option value="">
-            {productoIds.length === 0 ? "Elegir del catálogo…" : "Agregar otro…"}
-          </option>
-          {grupos.map((g) => (
-            <optgroup key={g.label} label={g.label}>
-              {g.items.map((p) => (
-                <option key={p.id} value={p.id} disabled={productoIds.includes(p.id)}>
-                  {p.nombre}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="…o escribilo con tus palabras (ej: una licuadora para jugos)"
-          value={interesTexto}
-          onChange={(e) => setInteresTexto(e.target.value)}
-          className={`${inputCls} mt-1.5`}
-        />
-        {productoIds.length > 0 && (
-          <div className="mt-1.5 space-y-0.5">
-            {productoIds.map((id) => {
-              const info = stockInfo[id];
-              if (!info) return null;
-              return (
-                <p
-                  key={id}
-                  className={`text-xs ${info.stock > 0 ? "text-green-700" : "text-amber-700"}`}
-                >
-                  {productos.find((p) => p.id === id)?.nombre}: {textoStock(info, fechaCorta)}
-                </p>
-              );
-            })}
-          </div>
-        )}
-        {hayInteres && (
-          <div className="mt-3">
-            <p className="mb-1.5 text-xs text-piedra">¿Cuánto le interesa?</p>
-            <div className="flex flex-wrap gap-1.5">
-              {NIVELES_INTERES.map((n) => (
-                <button
-                  key={n.value}
-                  type="button"
-                  onClick={() => setNivel(n.value)}
-                  className={chipCls(nivel === n.value)}
-                >
-                  {n.label}
-                </button>
-              ))}
-            </div>
-            {sinStock && (
-              <label className="mt-2 flex cursor-pointer items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
-                <input
-                  type="checkbox"
-                  checked={enEspera}
-                  onChange={(e) => setEnEspera(e.target.checked)}
-                  className="h-4 w-4 accent-tinta"
-                />
-                Ponerlo en lista de espera: lo quiere y no hay stock
-              </label>
-            )}
-          </div>
-        )}
-      </section>
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      )}
+      <p className="text-[15px] font-semibold">
+        <span className="text-piedra">{n} de 3 · </span>
+        {texto}
+      </p>
+    </div>
+  );
 
-      {/* 2. Quién */}
-      <section className="rounded-2xl border border-borde bg-white p-3.5 shadow-sm">
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
-          2 · ¿Quién consulta?
-        </p>
-        {cliente ? (
-          <div className="flex items-center justify-between rounded-2xl bg-celeste-soft px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{cliente.nombre_comercial}</p>
-              <p className="text-xs text-piedra">
-                {cliente.estado === "cliente_activo" ? "Cliente" : "Interesado"}
-                {cliente.telefono ? ` · ${telefonoProlijo(cliente.telefono)}` : ""}
-                {cliente.ciudad ? ` · ${cliente.ciudad}` : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setCliente(null);
-                setQ("");
-              }}
-              className="shrink-0 text-xs text-sky-800 underline"
-            >
-              Cambiar
-            </button>
+  // ---------- 1 · ¿Qué le interesa? ----------
+  if (paso === 1) {
+    return (
+      <div className="space-y-3">
+        {cabecera(1, "¿Qué le interesa?")}
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-piedra" />
+          <input
+            type="search"
+            autoFocus
+            placeholder="Buscar producto…"
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+            className={`${inputCls} pl-11`}
+          />
+        </div>
+        <div className="space-y-3">
+          {grupos.map((g) => (
+            <section key={g.label}>
+              <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-piedra">{g.label}</p>
+              <div className="space-y-1.5">
+                {g.items.map((p) => {
+                  const elegido = productoIds.includes(p.id);
+                  const info = stockInfo[p.id];
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => alternarProducto(p.id)}
+                      className={`flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border px-4 py-2.5 text-left ${
+                        elegido ? "border-tinta bg-tinta text-white" : "border-borde bg-white"
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-[15px] font-medium">{p.nombre}</span>
+                        {info && (
+                          <span
+                            className={`block text-xs ${
+                              elegido ? "text-white/80" : info.stock > 0 ? "text-green-700" : "text-amber-700"
+                            }`}
+                          >
+                            {textoStock(info, fechaCorta)}
+                          </span>
+                        )}
+                      </span>
+                      {elegido && <Check className="h-5 w-5 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+          {grupos.length === 0 && (
+            <p className="text-[15px] text-piedra">Ningún producto con “{filtro}”. Podés escribirlo abajo.</p>
+          )}
+          <button
+            type="button"
+            onClick={() => setOtro(!otro)}
+            className={`flex min-h-12 w-full items-center justify-between rounded-2xl border px-4 py-2.5 text-left text-[15px] font-medium ${
+              otro ? "border-tinta bg-tinta text-white" : "border-dashed border-borde bg-white"
+            }`}
+          >
+            Otro (escribir)
+            {otro && <Check className="h-5 w-5 shrink-0" />}
+          </button>
+          {otro && (
+            <input
+              type="text"
+              autoFocus
+              placeholder="Qué le interesa, con tus palabras (ej: una licuadora para jugos)"
+              value={interesTexto}
+              onChange={(e) => setInteresTexto(e.target.value)}
+              className={inputCls}
+            />
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-borde bg-white p-3.5 shadow-sm">
+          <p className="mb-1.5 text-[15px] font-semibold">¿Cuánto le interesa?</p>
+          <div className="flex flex-wrap gap-1.5">
+            {NIVELES_INTERES.map((n) => (
+              <button key={n.value} type="button" onClick={() => setNivel(n.value)} className={chipCls(nivel === n.value)}>
+                {n.label}
+              </button>
+            ))}
           </div>
-        ) : esNuevo ? (
-          <div className="space-y-2.5">
+        </div>
+
+        <button type="button" disabled={!paso1Listo} onClick={() => setPaso(2)} className={botonPrimario}>
+          Siguiente: ¿quién?
+        </button>
+        <p className="text-center text-xs text-piedra">
+          {!hayInteres ? "Tocá un producto (o Otro)." : !nivel ? "Falta cuánto le interesa." : `${nombreInteres} · ${NIVELES_INTERES.find((n) => n.value === nivel)?.label}`}
+        </p>
+      </div>
+    );
+  }
+
+  // ---------- 2 · ¿Quién? ----------
+  if (paso === 2) {
+    return (
+      <div className="space-y-3">
+        {cabecera(2, "¿Quién?")}
+        <p className="text-sm text-piedra">
+          Le interesa <span className="font-medium text-tinta">{nombreInteres}</span>
+        </p>
+
+        {esNuevo ? (
+          <div className="space-y-2.5 rounded-2xl border border-borde bg-white p-3.5 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Es alguien nuevo</p>
-              <button
-                type="button"
-                onClick={() => setEsNuevo(false)}
-                className="text-xs text-sky-800 underline"
-              >
+              <p className="text-[15px] font-semibold">Es alguien nuevo</p>
+              <button type="button" onClick={() => setEsNuevo(false)} className="text-sm text-sky-700 underline">
                 Buscar en la base
               </button>
             </div>
             <input
               type="text"
               required
-              placeholder="Nombre de la persona o del negocio"
+              autoFocus={!nombre}
+              placeholder="Nombre de la persona"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               className={inputCls}
@@ -297,41 +333,21 @@ export default function InteresNuevoForm({
               }}
               className={inputCls}
             />
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => setEsCliente(false)}
-                className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
-                  !esCliente ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
-                }`}
-              >
-                Interesado
-              </button>
-              <button
-                type="button"
-                onClick={() => setEsCliente(true)}
-                className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
-                  esCliente ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
-                }`}
-              >
-                Ya es cliente
-              </button>
-            </div>
+            <input
+              type="email"
+              placeholder="Email (si no tenés teléfono)"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputCls}
+            />
             <details>
-              <summary className="cursor-pointer text-sm text-sky-700 underline list-none [&::-webkit-details-marker]:hidden">
-                Más datos (opcional): email, empresa, rubro, ciudad, de dónde viene
+              <summary className="cursor-pointer list-none text-[15px] text-sky-700 underline [&::-webkit-details-marker]:hidden">
+                Más datos (opcional): empresa, rubro, ciudad
               </summary>
               <div className="mt-2 space-y-2.5">
                 <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputCls}
-                />
-                <input
                   type="text"
-                  placeholder="Empresa o negocio (si el nombre es de una persona)"
+                  placeholder="Empresa o negocio"
                   value={empresa}
                   onChange={(e) => setEmpresa(e.target.value)}
                   className={inputCls}
@@ -351,32 +367,25 @@ export default function InteresNuevoForm({
                   onChange={(e) => setCiudad(e.target.value)}
                   className={inputCls}
                 />
-                <div className="flex flex-wrap gap-1.5">
-                  {ORIGENES.map((o) => (
-                    <button
-                      key={o}
-                      type="button"
-                      onClick={() => setOrigen(origen === o ? "" : o)}
-                      className={chipCls(origen === o)}
-                    >
-                      {o}
-                    </button>
-                  ))}
-                </div>
               </div>
             </details>
+            <p className="text-xs text-piedra">Con nombre y teléfono (o email) alcanza. Queda asignado a vos.</p>
           </div>
         ) : (
           <>
-            <input
-              type="search"
-              placeholder="Nombre o teléfono: buscamos en la base"
-              value={q}
-              onChange={(e) => buscar(e.target.value)}
-              className={inputCls}
-            />
-            <div className="mt-1.5 space-y-1.5">
-              {buscando && <p className="text-xs text-piedra">Buscando…</p>}
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-piedra" />
+              <input
+                type="search"
+                autoFocus
+                placeholder="Nombre, empresa o teléfono"
+                value={q}
+                onChange={(e) => buscar(e.target.value)}
+                className={`${inputCls} pl-11`}
+              />
+            </div>
+            <div className="space-y-1.5">
+              {buscando && <p className="px-1 text-sm text-piedra">Buscando…</p>}
               {resultados.map((c) => (
                 <button
                   key={c.id}
@@ -384,14 +393,22 @@ export default function InteresNuevoForm({
                   onClick={() => {
                     setCliente(c);
                     setResultados([]);
+                    setPaso(3);
                   }}
-                  className="block w-full rounded-2xl border border-borde bg-white p-3 text-left text-sm shadow-sm"
+                  className="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-borde bg-white px-4 py-2.5 text-left shadow-sm"
                 >
-                  <span className="font-medium">{c.nombre_comercial}</span>
-                  <span className="text-piedra">
-                    {c.estado === "cliente_activo" ? " · Cliente" : ""}
-                    {c.ciudad ? ` · ${c.ciudad}` : ""}
-                    {c.telefono ? ` · ${telefonoProlijo(c.telefono)}` : ""}
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-medium">{c.nombre_comercial}</span>
+                    <span className="block text-xs text-piedra">
+                      {[c.ciudad, c.telefono ? telefonoProlijo(c.telefono) : null].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      c.estado === "cliente_activo" ? "bg-green-100 text-green-700" : "bg-celeste-soft text-sky-800"
+                    }`}
+                  >
+                    {c.estado === "cliente_activo" ? "Cliente" : "Interesado"}
                   </span>
                 </button>
               ))}
@@ -399,85 +416,120 @@ export default function InteresNuevoForm({
                 <button
                   type="button"
                   onClick={cargarloNuevo}
-                  className="block w-full rounded-2xl border border-dashed border-borde bg-white p-3 text-left text-sm text-tinta"
+                  className="flex min-h-12 w-full items-center rounded-2xl border border-dashed border-borde bg-white px-4 py-2.5 text-left text-[15px]"
                 >
                   {resultados.length === 0 ? "No está en la base. " : "No es ninguno. "}
-                  <span className="font-medium underline">Cargarlo como nuevo</span>
+                  <span className="ml-1 font-medium underline">Cargarlo nuevo</span>
                 </button>
               )}
               {q.trim().length < 2 && (
-                <button
-                  type="button"
-                  onClick={cargarloNuevo}
-                  className="text-xs text-sky-700 underline"
-                >
+                <button type="button" onClick={cargarloNuevo} className="px-1 text-[15px] text-sky-700 underline">
                   Es alguien nuevo, cargarlo
                 </button>
               )}
             </div>
           </>
         )}
-      </section>
 
-      {/* 3. Opcional */}
-      <section className="space-y-3">
-        <textarea
-          placeholder="Nota (opcional): qué hablaron, qué tiene, qué necesita…"
-          value={nota}
-          onChange={(e) => setNota(e.target.value)}
-          rows={2}
-          className={inputCls}
-        />
-        <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
-            ¿Volver a contactar? (opcional)
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {SEGUIMIENTO_RAPIDO.map((o) => {
-              if (o.dias == null) return null;
-            const fecha = sumarDias(o.dias);
-              return (
-                <button
-                  key={o.label}
-                  type="button"
-                  onClick={() => setVolverEl(volverEl === fecha ? "" : fecha)}
-                  className={chipCls(volverEl === fecha)}
-                >
-                  {o.label}
-                </button>
-              );
-            })}
-            <input
-              type="date"
-              value={volverEl}
-              min={hoyISO()}
-              onChange={(e) => setVolverEl(e.target.value)}
-              className="rounded-full border border-borde bg-white px-3 py-1.5 text-sm outline-none focus:border-tinta"
-            />
-          </div>
+        {esNuevo && (
+          <>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <button type="button" disabled={!hayQuien} onClick={() => setPaso(3)} className={botonPrimario}>
+              Siguiente: ¿algo más?
+            </button>
+            <button
+              type="button"
+              disabled={pending || !hayQuien}
+              onClick={guardar}
+              className="min-h-12 w-full rounded-2xl border border-borde bg-white py-3 text-base font-medium disabled:opacity-50"
+            >
+              {pending ? "Guardando…" : "Guardar sin más datos"}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- 3 · ¿Algo más? ----------
+  return (
+    <div className="space-y-3">
+      {cabecera(3, "¿Algo más?")}
+      <p className="text-sm text-piedra">
+        <span className="font-medium text-tinta">{nombreQuien || "—"}</span> · le interesa{" "}
+        <span className="font-medium text-tinta">{nombreInteres}</span>
+        {" · "}
+        <button type="button" onClick={() => setPaso(2)} className="underline">
+          cambiar
+        </button>
+      </p>
+
+      <textarea
+        autoFocus
+        placeholder="Nota (opcional): consultó por WhatsApp, quiere para diciembre…"
+        value={nota}
+        onChange={(e) => setNota(e.target.value)}
+        rows={2}
+        className={inputCls}
+      />
+
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">¿De dónde viene?</p>
+        <div className="flex flex-wrap gap-1.5">
+          {ORIGENES_INTERES.map((o) => (
+            <button key={o} type="button" onClick={() => setOrigen(origen === o ? "" : o)} className={chipCls(origen === o)}>
+              {o}
+            </button>
+          ))}
         </div>
-      </section>
+      </div>
+
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">¿Cuándo volver a contactar?</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {SEGUIMIENTO_RAPIDO.map((o) => {
+            const activo = o.dias == null ? sinFecha : !!volverEl && volverEl === sumarDias(o.dias);
+            return (
+              <button key={o.label} type="button" onClick={() => elegirChipFecha(o.dias)} className={chipCls(activo)}>
+                {o.label}
+              </button>
+            );
+          })}
+          <input
+            type="date"
+            value={volverEl}
+            min={hoyISO()}
+            onChange={(e) => {
+              setVolverEl(e.target.value);
+              setSinFecha(false);
+            }}
+            aria-label="Otra fecha"
+            className="min-h-11 rounded-full border border-borde bg-white px-3 py-1.5 text-sm outline-none focus:border-tinta"
+          />
+        </div>
+      </div>
+
+      {sinStock && (
+        <button
+          type="button"
+          onClick={() => setEnEspera(!enEspera)}
+          className={`flex min-h-12 w-full items-center justify-between rounded-2xl border px-4 py-2.5 text-left text-[15px] font-medium ${
+            enEspera ? "border-orange-400 bg-orange-100 text-orange-900" : "border-amber-200 bg-amber-50 text-amber-900"
+          }`}
+        >
+          <span>
+            Poner en lista de espera
+            <span className="block text-xs font-normal">Lo quiere y no hay stock: aparece cuando llegue.</span>
+          </span>
+          {enEspera && <Check className="h-5 w-5 shrink-0" />}
+        </button>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={pending || !hayInteres || !hayQuien}
-        className="w-full rounded-2xl bg-tinta py-4 text-base font-semibold text-white disabled:opacity-60"
-      >
-        {pending ? "Guardando…" : "Guardar interés"}
+      <button type="button" disabled={pending || !hayQuien} onClick={guardar} className={botonPrimario}>
+        {pending ? "Guardando…" : "Guardar"}
       </button>
-      <p className="text-center text-xs text-piedra">
-        {!hayInteres
-          ? "Primero elegí qué le interesa."
-          : !hayQuien
-            ? "Falta a quién asignarlo: buscalo en la base o cargalo nuevo."
-            : "Se guarda en la ficha del contacto y queda en Movimientos."}
-        {" "}
-        <Link href="/clientes/nuevo" className="underline">
-          ¿Solo un contacto, sin interés?
-        </Link>
-      </p>
-    </form>
+      <p className="text-center text-xs text-piedra">Se guarda en la ficha del contacto y queda en Movimientos.</p>
+    </div>
   );
 }

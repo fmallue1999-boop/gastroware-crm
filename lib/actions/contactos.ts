@@ -520,11 +520,18 @@ export async function iaResumenCliente(clienteId: string) {
 // =====================================================================
 
 export async function buscarClientes(q: string): Promise<Cliente[]> {
-  const t = q.trim();
+  // Comas y paréntesis rompen el filtro "or" de PostgREST
+  const t = q.trim().replace(/[,()]/g, " ").trim();
   if (t.length < 2) return [];
   const supabase = await createClient();
   const digitos = t.replace(/\D/g, "");
-  const filtros = [`nombre_comercial.ilike.%${t}%`, `razon_social.ilike.%${t}%`];
+  // Nombre, empresa (razón social o "Contacto: X" en notas), email, teléfono, CUIT
+  const filtros = [
+    `nombre_comercial.ilike.%${t}%`,
+    `razon_social.ilike.%${t}%`,
+    `email.ilike.%${t}%`,
+    `notas.ilike.%${t}%`,
+  ];
   if (digitos.length >= 4) {
     filtros.push(`telefono.ilike.%${digitos}%`);
     filtros.push(`cuit.ilike.%${digitos}%`);
