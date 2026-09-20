@@ -3,24 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   Bell,
-  HardDrive,
-  HardHat,
-  Landmark,
-  Users,
-  Wrench,
-  TrendingUp,
-  Citrus,
   BookOpen,
-  Settings,
-  ShieldCheck,
+  Boxes,
+  Citrus,
+  HardDrive,
+  Home,
+  Landmark,
   Megaphone,
+  Menu,
   Package,
   Plus,
+  ShieldCheck,
   Tent,
-  Activity,
-  BarChart3,
-  Boxes,
+  TrendingUp,
+  Upload,
+  Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -28,28 +28,30 @@ import Logo from "@/components/Logo";
 type Item = { href: string; label: string; icono: LucideIcon; roles?: string[] };
 
 const GESTORES = ["direccion", "admin"];
+const VENDEN = ["direccion", "admin", "comercial", "marketing", "distribuidor"];
 
-/** Lo de todos los días, arriba. El resto, plegado en "Más herramientas". */
+/** Lo de todos los días (Etapa 1, 1.8). */
 const PRINCIPAL: Item[] = [
-  { href: "/clientes", label: "Contactos", icono: Users },
-  { href: "/pedidos", label: "Ventas", icono: Package, roles: ["direccion", "admin", "comercial", "marketing", "distribuidor"] },
+  { href: "/", label: "Inicio", icono: Home },
+  { href: "/clientes#contactos", label: "Contactos", icono: Users },
+  { href: "/pedidos", label: "Ventas", icono: Package, roles: VENDEN },
   { href: "/stock", label: "Stock", icono: Boxes },
   { href: "/servicio", label: "Services", icono: Wrench },
-  { href: "/movimientos", label: "Movimientos", icono: Activity },
-];
-
-const HERRAMIENTAS: Item[] = [
-  { href: "/hotelga", label: "HOTELGA", icono: Tent, roles: ["direccion", "admin", "comercial", "marketing"] },
   { href: "/equipos", label: "Equipos", icono: HardDrive },
-  { href: "/instalaciones", label: "Instalaciones", icono: HardHat, roles: ["direccion", "admin", "tecnico"] },
-  { href: "/pipeline", label: "Ventas por etapa", icono: BarChart3, roles: ["direccion", "admin", "comercial"] },
-  { href: "/financiacion", label: "Financiación", icono: Landmark, roles: ["direccion", "admin", "comercial", "distribuidor"] },
-  { href: "/calculadora", label: "Calculadora Zumex", icono: Citrus, roles: ["direccion", "admin", "comercial", "distribuidor"] },
-  { href: "/biblioteca", label: "Biblioteca", icono: BookOpen, roles: ["direccion", "admin", "comercial", "marketing", "distribuidor"] },
-  { href: "/marketing", label: "Marketing", icono: Megaphone, roles: ["direccion", "admin", "marketing"] },
+  { href: "/movimientos", label: "Movimientos", icono: Activity },
   { href: "/reportes", label: "Reportes", icono: TrendingUp, roles: GESTORES },
   { href: "/admin", label: "Administración", icono: ShieldCheck, roles: GESTORES },
-  { href: "/mas", label: "Configuración", icono: Settings },
+];
+
+/** El resto, plegado. */
+const HERRAMIENTAS: Item[] = [
+  { href: "/hotelga", label: "HOTELGA", icono: Tent, roles: ["direccion", "admin", "comercial", "marketing"] },
+  { href: "/financiacion", label: "Financiación", icono: Landmark, roles: VENDEN },
+  { href: "/calculadora", label: "Calculadora Zumex", icono: Citrus, roles: VENDEN },
+  { href: "/biblioteca", label: "Biblioteca", icono: BookOpen, roles: VENDEN },
+  { href: "/marketing", label: "Marketing", icono: Megaphone, roles: ["direccion", "admin", "marketing"] },
+  { href: "/clientes/importar", label: "Importar", icono: Upload, roles: GESTORES },
+  { href: "/mas", label: "Más", icono: Menu },
 ];
 
 export default function Sidebar({
@@ -68,14 +70,16 @@ export default function Sidebar({
   const crear =
     rol === "tecnico"
       ? { href: "/servicio/cargar", label: "Cargar service" }
-      : { href: "/alta", label: "Nuevo interés" };
+      : { href: "/alta", label: "Interés" };
 
   const activo = (href: string) =>
-    href === "/clientes"
-      ? pathname === "/" || pathname.startsWith("/clientes")
-      : href === "/servicio"
-        ? pathname === "/servicio" || /^\/servicio\/(?!cargar)/.test(pathname)
-        : pathname.startsWith(href);
+    href === "/"
+      ? pathname === "/"
+      : href.startsWith("/clientes")
+        ? pathname.startsWith("/clientes") && !pathname.startsWith("/clientes/importar")
+        : href === "/servicio"
+          ? pathname === "/servicio" || /^\/servicio\/(?!cargar)/.test(pathname)
+          : pathname.startsWith(href);
 
   const renderItem = (item: Item) => {
     const Icono = item.icono;
@@ -84,16 +88,11 @@ export default function Sidebar({
       <Link
         key={item.href}
         href={item.href}
-        className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
-          act
-            ? "bg-celeste-soft font-semibold text-tinta"
-            : "text-piedra hover:bg-crema hover:text-tinta"
+        className={`flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[15px] transition-colors ${
+          act ? "bg-celeste-soft font-semibold text-tinta" : "text-piedra hover:bg-crema hover:text-tinta"
         }`}
       >
-        <Icono
-          className={`h-[17px] w-[17px] ${act ? "text-celeste-deep" : ""}`}
-          strokeWidth={act ? 2.3 : 2}
-        />
+        <Icono className={`h-[17px] w-[17px] ${act ? "text-celeste-deep" : ""}`} strokeWidth={act ? 2.3 : 2} />
         {item.label}
       </Link>
     );
@@ -114,13 +113,13 @@ export default function Sidebar({
       <div className="px-3">
         <Link
           href={crear.href}
-          className="flex items-center justify-center gap-1.5 rounded-xl bg-tinta py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.99]"
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-tinta py-2.5 text-[15px] font-semibold text-white transition-transform active:scale-[0.99]"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} /> {crear.label}
         </Link>
         <Link
           href="/notificaciones"
-          className="mt-2 flex items-center justify-between rounded-xl border border-borde px-3 py-2 text-sm text-piedra transition-colors hover:bg-crema"
+          className="mt-2 flex min-h-10 items-center justify-between rounded-xl border border-borde px-3 py-2 text-sm text-piedra transition-colors hover:bg-crema"
         >
           <span className="flex items-center gap-2">
             <Bell className="h-4 w-4" /> Notificaciones

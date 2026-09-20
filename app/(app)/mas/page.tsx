@@ -143,8 +143,8 @@ export default async function MasPage() {
           <MenuLink
             href="/pipeline"
             icono={BarChart3}
-            titulo="Ventas por etapa"
-            detalle="Vista avanzada de las consultas abiertas, por etapa"
+            titulo="Tablero de intereses"
+            detalle="Todos los intereses abiertos, en columnas según en qué están"
           />
         </section>
       )}
