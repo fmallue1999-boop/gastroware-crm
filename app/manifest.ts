@@ -1,12 +1,12 @@
 export default function manifest() {
   return {
-    name: "GastroWare CRM",
-    short_name: "CRM",
-    description: "Cockpit de ventas GastroWare / Zumex",
+    name: "GastroWare",
+    short_name: "GastroWare",
+    description: "Ventas, servicio técnico y contactos en un solo lugar",
     start_url: "/",
     display: "standalone",
-    background_color: "#f5f6f8",
-    theme_color: "#101828",
+    background_color: "#f4f2ec",
+    theme_color: "#17233a",
     icons: [
       {
         src: "/icon.svg",

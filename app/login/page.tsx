@@ -47,7 +47,7 @@ export default function LoginPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo tamano="lg" />
           <h1 className="mt-4 text-2xl font-bold tracking-tight">
-            GastroWare <span className="font-medium text-piedra">CRM</span>
+            GastroWare
           </h1>
           <p className="mt-1 text-sm text-piedra">
             Ventas, servicio técnico y clientes en un solo lugar
@@ -88,7 +88,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={cargando}
-              className="w-full rounded-2xl bg-tinta py-3.5 font-semibold text-white transition-transform active:scale-[0.99] disabled:opacity-60"
+              className="w-full rounded-2xl bg-verde py-3.5 text-base font-extrabold text-white transition-transform active:scale-[0.99] disabled:opacity-60"
             >
               {cargando ? "Entrando…" : "Entrar"}
             </button>
