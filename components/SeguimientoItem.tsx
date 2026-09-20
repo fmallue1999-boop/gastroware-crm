@@ -4,15 +4,15 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, CalendarClock, MessageCircle, Phone } from "lucide-react";
-import { cerrarSeguimiento, posponerTarea } from "@/lib/actions";
+import { completarTarea, posponerTarea } from "@/lib/actions";
 import { fechaCorta, hoyISO, linkWhatsApp } from "@/lib/format";
 import PosponerPanel from "@/components/PosponerPanel";
 
-const RESULTADOS = ["Hablamos", "No atendió", "Quedó en avisar", "Le mandé info"];
+const RESULTADOS = ["Compró", "Hablamos", "No atendió", "Quedó en avisar"];
 
 /**
- * Un "volver a contactar" pendiente: a quién, cuándo, y dos botones:
- * Hecho o Cambiar fecha. Sin rojos: si venció, se avisa en ámbar.
+ * Un aviso de recompra pendiente (tabla tareas, tipo recompra): a quién,
+ * cuándo, y dos botones: Hecho o Cambiar fecha. Si venció, se avisa en ámbar.
  */
 export default function SeguimientoItem({
   tarea,
@@ -38,7 +38,7 @@ export default function SeguimientoItem({
 
   function hecho(resultado?: string) {
     startTransition(async () => {
-      await cerrarSeguimiento(tarea.id, resultado);
+      await completarTarea(tarea.id, resultado);
       setCerrando(false);
       router.refresh();
     });

@@ -3,6 +3,7 @@
 // Contactos: alta, edición, búsqueda, notas, seguimientos y documentos.
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
@@ -873,28 +874,14 @@ export async function anotarContacto(
   return { ok: true as const, oportunidadId: interes?.id ?? null };
 }
 
-/** Marca hecho el "volver a contactar" y deja constancia en el historial. */
-export async function cerrarSeguimiento(tareaId: string, resultado?: string) {
-  const supabase = await createClient();
-  const user = await usuarioActual();
-  const { data: tarea } = await supabase
-    .from("tareas")
-    .select("id, cliente_id, titulo")
-    .eq("id", tareaId)
-    .single();
-  if (!tarea) return { error: "No se encontró el seguimiento" };
-  const { error } = await supabase
-    .from("tareas")
-    .update({ completada_at: new Date().toISOString() })
-    .eq("id", tareaId);
-  if (error) return { error: error.message };
-  await supabase.from("actividades").insert({
-    cliente_id: tarea.cliente_id,
-    tipo: "nota",
-    contenido: resultado?.trim()
-      ? `Contactado: ${resultado.trim()}`
-      : "Contactado (seguimiento hecho)",
-    created_by: user?.id ?? null,
+/** De quién ver los pendientes del inicio (gestores): mios / todos / id de vendedor. Se recuerda. */
+export async function guardarPreferenciaPendientes(quien: string) {
+  const valor = quien.trim().slice(0, 40);
+  const cookieStore = await cookies();
+  cookieStore.set("pendientes_quien", valor, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
   });
   revalidatePath("/", "layout");
   return { ok: true as const };

@@ -1,7 +1,7 @@
 import Inicio from "@/components/inicio/Inicio";
 
-/** Contactos = la misma pantalla que el inicio; el nav salta a la zona de contactos. */
-export default async function ContactosPage({
+/** Inicio: pendientes arriba, contactos abajo (Etapa 1, 1.3). */
+export default async function InicioPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; vista?: string; producto?: string }>;
