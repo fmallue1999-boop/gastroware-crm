@@ -434,7 +434,8 @@ export default function InteresNuevoForm({
           </p>
           <div className="flex flex-wrap items-center gap-1.5">
             {SEGUIMIENTO_RAPIDO.map((o) => {
-              const fecha = sumarDias(o.dias);
+              if (o.dias == null) return null;
+            const fecha = sumarDias(o.dias);
               return (
                 <button
                   key={o.label}

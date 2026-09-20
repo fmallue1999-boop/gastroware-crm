@@ -284,6 +284,7 @@ export default function ContactoNuevoForm({
         </p>
         <div className="flex flex-wrap gap-1.5">
           {SEGUIMIENTO_RAPIDO.map((o) => {
+            if (o.dias == null) return null;
             const fecha = sumarDias(o.dias);
             return (
               <button

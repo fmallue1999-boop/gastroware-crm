@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { exigirGestor } from "@/lib/auth";
 import { hoyISO, normalizarTelefono } from "@/lib/format";
-import type { Cliente } from "@/lib/types";
 import { usuarioActual } from "./comun";
 import { buscarClientePorTelefono } from "./contactos";
 

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirGestor } from "@/lib/auth";
 import { normalizarTelefono } from "@/lib/format";
 import { PEDIDO_ESTADOS } from "@/lib/constants";
-import type { Cliente, PedidoEstado } from "@/lib/types";
+import type { PedidoEstado } from "@/lib/types";
 import { usuarioActual } from "./comun";
 import { buscarClientePorTelefono } from "./contactos";
 import { cambiarEtapa } from "./intereses";

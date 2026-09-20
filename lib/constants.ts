@@ -18,13 +18,18 @@ export const ESTADOS_CLIENTE = [
   { value: "inactivo", label: "Inactivos" },
 ] as const;
 
-/** Accesos rápidos para agendar "volver a contactar". */
+/**
+ * Chips de "¿cuándo volver a contactar?": un toque y listo. Ninguno
+ * preseleccionado. "Sin fecha" (dias null) es válido: el interés queda
+ * visible en gris, sin próxima fecha.
+ */
 export const SEGUIMIENTO_RAPIDO = [
   { label: "Mañana", dias: 1 },
-  { label: "En 3 días", dias: 3 },
-  { label: "En 1 semana", dias: 7 },
-  { label: "En 2 semanas", dias: 14 },
-  { label: "En 1 mes", dias: 30 },
+  { label: "3 días", dias: 3 },
+  { label: "1 semana", dias: 7 },
+  { label: "2 semanas", dias: 14 },
+  { label: "1 mes", dias: 30 },
+  { label: "Sin fecha", dias: null },
 ] as const;
 
 export const ORIGENES = [

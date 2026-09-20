@@ -190,6 +190,12 @@ export interface Oportunidad {
   entregado_at: string | null;
   entrega_estimada: string | null;
   nro_factura: string | null;
+  /** Próxima fecha para volver a contactar por este interés (una sola, o ninguna). */
+  proximo_contacto: string | null;
+  /** Qué hacer en ese contacto ("Llegó stock", "mandar cotización"…). */
+  proximo_nota: string | null;
+  /** Se actualiza sola con cada movimiento (trigger en actividades). */
+  ultimo_movimiento_at: string;
   created_at: string;
   closed_at: string | null;
   cliente?: Cliente;

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { rolActual } from "@/lib/auth";
 import { hoyISO, sumarDias, normalizarTelefono, fechaCorta } from "@/lib/format";
-import { RUBROS } from "@/lib/constants";
+import { ETAPAS_ABIERTAS, RUBROS } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
 import { usuarioActual, type SupabaseServidor } from "./comun";
 
@@ -590,47 +590,81 @@ export async function borrarDocumento(id: string) {
   return { ok: true };
 }
 /**
- * Agenda (o mueve) el "volver a contactar" de un contacto. Hay uno solo por
- * contacto: si ya tenía una fecha pendiente, se reemplaza por la nueva.
+ * Interés abierto sobre el que se anota: el indicado (si es del contacto),
+ * o el más reciente. Con `crear`, si el contacto no tiene ninguno se crea
+ * uno mínimo con el texto como interés, para que el pendiente tenga dónde
+ * vivir. Devuelve null si no hay interés y no se pidió crear.
+ */
+async function interesObjetivo(
+  supabase: SupabaseServidor,
+  clienteId: string,
+  usuarioId: string | null,
+  oportunidadId?: string | null,
+  crear = false,
+  texto?: string
+): Promise<{ id: string; etapa: string } | null> {
+  if (oportunidadId) {
+    const { data } = await supabase
+      .from("oportunidades")
+      .select("id, etapa")
+      .eq("id", oportunidadId)
+      .eq("cliente_id", clienteId)
+      .maybeSingle();
+    if (data) return data as { id: string; etapa: string };
+  }
+  const { data: ultimo } = await supabase
+    .from("oportunidades")
+    .select("id, etapa")
+    .eq("cliente_id", clienteId)
+    .in("etapa", [...ETAPAS_ABIERTAS])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (ultimo) return ultimo as { id: string; etapa: string };
+  if (!crear) return null;
+  const { data: nuevo } = await supabase
+    .from("oportunidades")
+    .insert({
+      cliente_id: clienteId,
+      comercial_id: usuarioId,
+      origen: "Otro",
+      pedido: "general",
+      etapa: "nueva",
+      mensaje_inicial: texto?.trim().slice(0, 120) || "Seguimiento",
+    })
+    .select("id, etapa")
+    .single();
+  return (nuevo as { id: string; etapa: string } | null) ?? null;
+}
+
+/**
+ * Próximo contacto de un interés: uno solo, cambiarlo reemplaza el anterior.
+ * Vive en oportunidades.proximo_contacto / proximo_nota (migración 026); el
+ * módulo comercial no agenda tareas. `fecha` null = "Sin fecha": el interés
+ * queda visible en gris, sin próxima fecha. Si el contacto no tiene interés
+ * abierto, se crea uno mínimo.
  */
 async function agendarVolver(
   supabase: SupabaseServidor,
   clienteId: string,
-  fecha: string,
+  fecha: string | null,
   usuarioId: string | null,
-  motivo?: string
-) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha < hoyISO())
+  nota?: string,
+  oportunidadId?: string | null
+): Promise<{ error: string } | { ok: true; oportunidadId: string }> {
+  if (fecha && (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha < hoyISO()))
     return { error: "Elegí una fecha de hoy en adelante" };
-  const titulo = motivo ? `Volver a contactar: ${motivo}` : "Volver a contactar";
-  const { data: pendiente } = await supabase
-    .from("tareas")
-    .select("id")
-    .eq("cliente_id", clienteId)
-    .eq("auto", false)
-    .is("completada_at", null)
-    .eq("cancelada", false)
-    .order("vence_el")
-    .limit(1)
-    .maybeSingle();
-  if (pendiente) {
-    const { error } = await supabase
-      .from("tareas")
-      .update({ vence_el: fecha, titulo })
-      .eq("id", pendiente.id);
-    if (error) return { error: error.message };
-  } else {
-    const { error } = await supabase.from("tareas").insert({
-      cliente_id: clienteId,
-      usuario_id: usuarioId,
-      tipo: "seguimiento",
-      titulo,
-      vence_el: fecha,
-      auto: false,
-    });
-    if (error) return { error: error.message };
-  }
-  return { ok: true as const };
+  const interes = await interesObjetivo(supabase, clienteId, usuarioId, oportunidadId, true, nota);
+  if (!interes) return { error: "No se pudo ubicar el interés del contacto" };
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({
+      proximo_contacto: fecha,
+      proximo_nota: fecha ? nota?.trim().slice(0, 80) || null : null,
+    })
+    .eq("id", interes.id);
+  if (error) return { error: error.message };
+  return { ok: true as const, oportunidadId: interes.id };
 }
 /**
  * Alta de contacto (cliente o interesado) con lo mínimo: nombre y un modo de
@@ -750,41 +784,78 @@ export async function crearContacto(input: {
 }
 
 /**
- * "¿Qué pasó?": guarda la nota en el historial del contacto y, si se eligió
- * fecha, agenda el volver a contactar. Es la acción diaria del equipo.
+ * "¿Qué pasó?": guarda el movimiento en el historial del contacto (sobre el
+ * interés elegido, o el más reciente) y, si se eligió fecha, la deja como
+ * próximo contacto de ese interés. "Sin fecha" la borra. Un interés cotizado
+ * pasa solo a "En seguimiento" cuando hubo contacto después de cotizar.
+ * Es la acción diaria del equipo.
  */
 export async function anotarContacto(
   clienteId: string,
   texto: string,
-  volverEl?: string | null
+  volverEl?: string | null,
+  opciones?: { oportunidadId?: string | null; sinFecha?: boolean }
 ) {
   const contenido = texto.trim();
-  if (!contenido && !volverEl)
-    return { error: "Escribí qué pasó o elegí una fecha para volver a contactar" };
+  const sinFecha = !!opciones?.sinFecha && !volverEl;
+  if (!contenido && !volverEl && !sinFecha)
+    return { error: "Escribí qué pasó o elegí cuándo volver a contactar" };
   const supabase = await createClient();
   const user = await usuarioActual();
+  const usuarioId = user?.id ?? null;
 
-  if (contenido) {
-    const { error } = await supabase.from("actividades").insert({
-      cliente_id: clienteId,
-      tipo: "nota",
-      contenido,
-      created_by: user?.id ?? null,
-    });
-    if (error) return { error: error.message };
-  }
+  // Interés sobre el que se anota: si hay fecha y el contacto no tiene
+  // ninguno abierto, se crea uno mínimo (el pendiente necesita dónde vivir).
+  const interes = await interesObjetivo(
+    supabase,
+    clienteId,
+    usuarioId,
+    opciones?.oportunidadId,
+    !!volverEl,
+    contenido
+  );
+
+  const { error } = await supabase.from("actividades").insert({
+    cliente_id: clienteId,
+    oportunidad_id: interes?.id ?? null,
+    tipo: "nota",
+    contenido:
+      contenido ||
+      (volverEl
+        ? `Volver a contactar el ${fechaCorta(volverEl)}`
+        : "Queda sin próxima fecha"),
+    created_by: usuarioId,
+  });
+  if (error) return { error: error.message };
+
   if (volverEl) {
     const r = await agendarVolver(
       supabase,
       clienteId,
       volverEl,
-      user?.id ?? null,
-      contenido ? contenido.slice(0, 60) : undefined
+      usuarioId,
+      contenido || undefined,
+      interes?.id
     );
     if ("error" in r) return { error: r.error };
+  } else if (sinFecha && interes) {
+    const { error: errSin } = await supabase
+      .from("oportunidades")
+      .update({ proximo_contacto: null, proximo_nota: null })
+      .eq("id", interes.id);
+    if (errSin) return { error: errSin.message };
   }
+
+  if (interes?.etapa === "cotizada" && contenido) {
+    await supabase
+      .from("oportunidades")
+      .update({ etapa: "seguimiento" })
+      .eq("id", interes.id)
+      .eq("etapa", "cotizada");
+  }
+
   revalidatePath("/", "layout");
-  return { ok: true as const };
+  return { ok: true as const, oportunidadId: interes?.id ?? null };
 }
 
 /** Marca hecho el "volver a contactar" y deja constancia en el historial. */

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { normalizarTelefono, diasDesde } from "@/lib/format";
 import { RUBROS } from "@/lib/constants";
-import type { Cliente, Etapa } from "@/lib/types";
+import type { Etapa } from "@/lib/types";
 import { usuarioActual } from "./comun";
 import { anotarContacto, buscarClientePorTelefono } from "./contactos";
 
@@ -50,6 +50,9 @@ export async function cambiarEtapa(
   if (etapa === "perdida") {
     update.closed_at = new Date().toISOString();
     update.motivo_perdida = motivo;
+    // Un interés cerrado no tiene próximo contacto
+    update.proximo_contacto = null;
+    update.proximo_nota = null;
   }
   // El circuito de la venta arranca al ganar; si se reabre o se pierde, se apaga
   update.pedido_estado = null;
@@ -313,28 +316,33 @@ export async function crearInteres(input: {
     ? await supabase.from("productos").select("id, nombre").in("id", productoIds)
     : { data: [] };
   const nombres = (prods ?? []).map((p) => p.nombre).join(", ");
-  const { error } = await supabase.from("oportunidades").insert({
-    cliente_id: input.clienteId,
-    producto_id: productoIds[0] ?? null,
-    productos_extra: productoIds.slice(1),
-    comercial_id: user?.id ?? null,
-    origen: input.origen || "Otro",
-    pedido: "general",
-    etapa: input.enEspera ? "espera" : "nueva",
-    temperatura: nivel,
-    mensaje_inicial: texto,
-  });
-  if (error) return { error: error.message };
+  const { data: nuevo, error } = await supabase
+    .from("oportunidades")
+    .insert({
+      cliente_id: input.clienteId,
+      producto_id: productoIds[0] ?? null,
+      productos_extra: productoIds.slice(1),
+      comercial_id: user?.id ?? null,
+      origen: input.origen || "Otro",
+      pedido: "general",
+      etapa: input.enEspera ? "espera" : "nueva",
+      temperatura: nivel,
+      mensaje_inicial: texto,
+    })
+    .select("id")
+    .single();
+  if (error || !nuevo) return { error: error?.message ?? "No se pudo guardar el interés" };
   await supabase.from("actividades").insert({
     cliente_id: input.clienteId,
-    tipo: "nota",
-    contenido: `Le interesa: ${[nombres, texto].filter(Boolean).join(" — ") || "un producto"}${
+    oportunidad_id: nuevo.id,
+    tipo: "interes",
+    contenido: `Nuevo interés: ${[nombres, texto].filter(Boolean).join(" — ") || "un producto"}${
       nivel === "caliente" ? " (muy interesado)" : ""
     }${input.enEspera ? " — en lista de espera (sin stock)" : ""}`,
     created_by: user?.id ?? null,
   });
   revalidatePath("/", "layout");
-  return { ok: true as const };
+  return { ok: true as const, id: nuevo.id as string };
 }
 // =====================================================================
 // Nuevo interés: primero qué quiere, después quién (de la base o nuevo)
@@ -434,10 +442,12 @@ export async function registrarInteres(input: {
   if ("error" in r) return { error: r.error };
 
   if (input.nota?.trim() || input.volverEl) {
-    const a = await anotarContacto(clienteId, input.nota ?? "", input.volverEl || null);
+    const a = await anotarContacto(clienteId, input.nota ?? "", input.volverEl || null, {
+      oportunidadId: r.id,
+    });
     if ("error" in a) return { error: a.error };
   }
 
   revalidatePath("/", "layout");
-  redirect(`/clientes/${clienteId}`);
+  redirect(`/clientes/${clienteId}?aviso=interes`);
 }
