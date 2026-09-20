@@ -123,9 +123,9 @@ export function IngresosProducto({
               type="button"
               disabled={pending}
               onClick={() => accion(() => recibirIngresoStock(i.id))}
-              className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
+              className="min-h-9 rounded-lg bg-green-600 px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
             >
-              Ya llegó
+              Llegó
             </button>
             <button
               type="button"

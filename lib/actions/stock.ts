@@ -5,6 +5,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirGestor } from "@/lib/auth";
+import { hoyISO } from "@/lib/format";
+import { NOTA_LLEGO_STOCK } from "@/lib/pendientes";
 import { usuarioActual } from "./comun";
 
 // =====================================================================
@@ -48,36 +50,63 @@ export async function crearIngresoStock(input: {
   return { ok: true as const };
 }
 
-/** Marca un ingreso como recibido: suma las unidades al stock del producto. */
+/**
+ * "Llegó": marca un ingreso como recibido y suma las unidades al stock (de
+ * forma atómica, fn_ajustar_stock). Es la única automatización del módulo
+ * comercial: los intereses en lista de espera de ese producto pasan a
+ * proximo_contacto = hoy con la nota "Llegó stock", y aparecen en el bloque
+ * verde del inicio de cada vendedor. Nada más.
+ */
 export async function recibirIngresoStock(ingresoId: string) {
   const bloqueo = await exigirGestor();
   if (bloqueo) return bloqueo;
   const supabase = await createClient();
+  const user = await usuarioActual();
   const { data: ing } = await supabase
     .from("ingresos_stock")
-    .select("id, producto_id, cantidad, recibido_at")
+    .select("id, producto_id, cantidad, recibido_at, producto:productos(nombre)")
     .eq("id", ingresoId)
     .single();
   if (!ing) return { error: "No se encontró el ingreso" };
   if (ing.recibido_at) return { error: "Ese ingreso ya fue recibido" };
-  const { data: prod } = await supabase
-    .from("productos")
-    .select("stock")
-    .eq("id", ing.producto_id)
-    .single();
-  const nuevo = (prod?.stock ?? 0) + ing.cantidad;
-  const { error: e1 } = await supabase
-    .from("productos")
-    .update({ stock: nuevo })
-    .eq("id", ing.producto_id);
-  if (e1) return { error: e1.message };
+
+  const { data: nuevo, error: e1 } = await supabase.rpc("fn_ajustar_stock", {
+    p_producto_id: ing.producto_id,
+    p_delta: ing.cantidad,
+  });
+  if (e1) return { error: `sumar al stock: ${e1.message}` };
   const { error: e2 } = await supabase
     .from("ingresos_stock")
     .update({ recibido_at: new Date().toISOString() })
     .eq("id", ingresoId);
   if (e2) return { error: e2.message };
+
+  const { data: esperando } = await supabase
+    .from("oportunidades")
+    .select("id, cliente_id")
+    .eq("etapa", "espera")
+    .eq("producto_id", ing.producto_id);
+  const nombreProducto =
+    (ing.producto as unknown as { nombre: string } | null)?.nombre ?? "el producto";
+  if (esperando?.length) {
+    const { error: e3 } = await supabase
+      .from("oportunidades")
+      .update({ proximo_contacto: hoyISO(), proximo_nota: NOTA_LLEGO_STOCK })
+      .eq("etapa", "espera")
+      .eq("producto_id", ing.producto_id);
+    if (e3) return { error: `avisar a los que esperan: ${e3.message}` };
+    await supabase.from("actividades").insert(
+      esperando.map((o) => ({
+        cliente_id: o.cliente_id,
+        oportunidad_id: o.id,
+        tipo: "stock",
+        contenido: `Llegó stock de ${nombreProducto}`,
+        created_by: user?.id ?? null,
+      }))
+    );
+  }
   revalidatePath("/", "layout");
-  return { ok: true as const, stock: nuevo };
+  return { ok: true as const, stock: nuevo as number, avisados: esperando?.length ?? 0 };
 }
 
 export async function borrarIngresoStock(ingresoId: string) {

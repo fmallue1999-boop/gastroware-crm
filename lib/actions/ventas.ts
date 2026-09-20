@@ -116,12 +116,12 @@ export async function avanzarPedido(
   const user = await usuarioActual();
   const { data: opp } = await supabase
     .from("oportunidades")
-    .select("cliente_id, comercial_id, etapa, pedido_estado, entregado_at")
+    .select("cliente_id, comercial_id, etapa, pedido_estado, entregado_at, producto_id")
     .eq("id", oportunidadId)
     .single();
-  if (!opp) return { error: "Oportunidad no encontrada" };
+  if (!opp) return { error: "No se encontró la venta" };
   if (opp.etapa !== "ganada")
-    return { error: "El pedido se sigue una vez ganada la venta" };
+    return { error: "La venta se sigue una vez vendida" };
 
   const update: Record<string, unknown> = { pedido_estado: estado };
   if (estado === "entregado" && !opp.entregado_at)
@@ -132,13 +132,33 @@ export async function avanzarPedido(
     .eq("id", oportunidadId);
   if (error) return { error: error.message };
 
+  // Único descuento automático de stock: al entregar se resta 1 del producto
+  // (fn_ajustar_stock, atómico); si se vuelve atrás desde Entregado, se suma.
+  let notaStock = "";
+  if (opp.producto_id) {
+    const estaba = opp.pedido_estado === "entregado";
+    const queda = estado === "entregado";
+    const delta = queda && !estaba ? -1 : estaba && !queda ? 1 : 0;
+    if (delta !== 0) {
+      const { error: eStock } = await supabase.rpc("fn_ajustar_stock", {
+        p_producto_id: opp.producto_id,
+        p_delta: delta,
+      });
+      notaStock = eStock
+        ? " (no se pudo ajustar el stock)"
+        : delta < 0
+          ? " · stock descontado"
+          : " · stock devuelto";
+    }
+  }
+
   const label =
     PEDIDO_ESTADOS.find((p) => p.value === estado)?.label ?? estado;
   await supabase.from("actividades").insert({
     cliente_id: opp.cliente_id,
     oportunidad_id: oportunidadId,
     tipo: "pedido",
-    contenido: `Venta: ${label}`,
+    contenido: `Venta: ${label}${notaStock}`,
     created_by: user?.id ?? null,
   });
 

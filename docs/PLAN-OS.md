@@ -52,3 +52,8 @@ una consulta.
 - `docs/DATA_MODEL.md` — modelo de datos.
 - `docs/PERMISSIONS_MATRIX.md` — qué puede hacer cada rol.
 - `docs/TARGET_ARCHITECTURE.md`, `docs/AI_AND_INTEGRATIONS.md`, `docs/FORMULARIO_WEB.md`, `docs/PRODUCT_REQUIREMENTS.md`, `docs/CURRENT_STATE_AUDIT.md`.
+
+## Decisiones registradas para etapas siguientes
+
+- **Stock (Etapa 4):** el stock pasa a leerse del Excel de ZEUS y la pantalla `/stock` deja de editarse a mano. Hasta entonces la mantiene administración: cantidades, ingresos previstos y el botón "Llegó", que es la única automatización del módulo comercial (los intereses en lista de espera de ese producto pasan a "Hoy" con la nota "Llegó stock").
+- **Descuento de stock:** al pasar una venta a Entregado se descuenta 1 del producto (RPC `fn_ajustar_stock`, migración 026); si se vuelve atrás, se suma. Los ajustes manuales siguen siendo de gestores.
