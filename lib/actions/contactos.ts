@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
-import { rolActual } from "@/lib/auth";
+import { exigirGestor, rolActual } from "@/lib/auth";
 import { hoyISO, sumarDias, normalizarTelefono, fechaCorta } from "@/lib/format";
 import { ETAPAS_ABIERTAS, RUBROS } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
@@ -111,7 +111,7 @@ export async function crearLead(input: {
   });
 
   revalidatePath("/", "layout");
-  redirect(`/oportunidades/${opp.id}${pedido === "precio" ? "?pidio=precio" : ""}`);
+  redirect(`/clientes/${clienteId}?interes=${opp.id}`);
 }
 
 /** Alta de cliente directo, sin crear una consulta (para cargar la cartera). */
@@ -406,26 +406,34 @@ export async function posponerTarea(
   return { ok: true };
 }
 
-export async function crearTarea(input: {
-  clienteId: string;
-  oportunidadId?: string | null;
-  titulo: string;
-  dias: number;
-  tipo?: string;
-}) {
+/**
+ * Vendedor responsable del contacto (solo dirección/administración). Con
+ * eso pasa a verlo ese vendedor (y dirección/administración). Queda en
+ * Movimientos.
+ */
+export async function asignarComercial(clienteId: string, usuarioId: string | null) {
+  const bloqueo = await exigirGestor();
+  if (bloqueo) return bloqueo;
   const supabase = await createClient();
   const user = await usuarioActual();
-  const { error } = await supabase.from("tareas").insert({
-    cliente_id: input.clienteId,
-    oportunidad_id: input.oportunidadId ?? null,
-    usuario_id: user?.id ?? null,
-    tipo: input.tipo ?? "seguimiento",
-    titulo: input.titulo,
-    vence_el: sumarDias(input.dias),
+  const { error } = await supabase
+    .from("clientes")
+    .update({ comercial_id: usuarioId })
+    .eq("id", clienteId);
+  if (error) return { error: error.message };
+  let nombre = "un vendedor";
+  if (usuarioId) {
+    const { data: u } = await supabase.from("usuarios").select("nombre").eq("id", usuarioId).single();
+    nombre = u?.nombre ?? nombre;
+  }
+  await supabase.from("actividades").insert({
+    cliente_id: clienteId,
+    tipo: "nota",
+    contenido: usuarioId ? `Ahora lo atiende ${nombre}` : "Queda sin vendedor asignado",
+    created_by: user?.id ?? null,
   });
-  if (error) return { error: `crear seguimiento: ${error.message}` };
   revalidatePath("/", "layout");
-  return { ok: true };
+  return { ok: true as const };
 }
 export async function setNoContactar(clienteId: string, valor: boolean) {
   const supabase = await createClient();

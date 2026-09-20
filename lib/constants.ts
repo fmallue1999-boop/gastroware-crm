@@ -116,13 +116,14 @@ export const CONDICIONES_FISCALES = [
   { value: "consumidor_final", label: "Consumidor Final" },
 ] as const;
 
+/** Etapas del interés, con el nombre que se dice en la interfaz (Etapa 1, 1.2). */
 export const ETAPAS = [
-  { value: "nueva", label: "Nueva" },
-  { value: "cotizada", label: "Cotizada" },
-  { value: "seguimiento", label: "Seguimiento" },
+  { value: "nueva", label: "Interesado" },
+  { value: "cotizada", label: "Cotizado" },
+  { value: "seguimiento", label: "En seguimiento" },
   { value: "espera", label: "Lista de espera" },
-  { value: "ganada", label: "Ganada" },
-  { value: "perdida", label: "Perdida" },
+  { value: "ganada", label: "Vendido" },
+  { value: "perdida", label: "No se dio" },
 ] as const;
 
 export const ETAPAS_ABIERTAS = ["nueva", "cotizada", "seguimiento", "espera"] as const;

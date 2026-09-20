@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bell, Search } from "lucide-react";
+import { Bell } from "lucide-react";
 import { createClient, supabaseConfigurado } from "@/lib/supabase/server";
 import BottomNav from "@/components/BottomNav";
 import Sidebar from "@/components/Sidebar";
@@ -59,13 +59,6 @@ export default async function AppLayout({
                   {noLeidas > 9 ? "9+" : noLeidas}
                 </span>
               )}
-            </Link>
-            <Link
-              href="/buscar"
-              aria-label="Buscar cliente o número de serie"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-borde bg-white text-tinta/70 shadow-sm transition-colors hover:text-tinta"
-            >
-              <Search className="h-[18px] w-[18px]" strokeWidth={2.2} />
             </Link>
           </div>
         </header>

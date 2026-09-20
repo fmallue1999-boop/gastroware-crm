@@ -9,7 +9,6 @@ import {
   Landmark,
   Users,
   Wrench,
-  Search,
   TrendingUp,
   Citrus,
   BookOpen,
@@ -118,12 +117,6 @@ export default function Sidebar({
           className="flex items-center justify-center gap-1.5 rounded-xl bg-tinta py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.99]"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} /> {crear.label}
-        </Link>
-        <Link
-          href="/buscar"
-          className="mt-2 flex items-center gap-2 rounded-xl border border-borde px-3 py-2 text-sm text-piedra transition-colors hover:bg-crema"
-        >
-          <Search className="h-4 w-4" /> Buscar…
         </Link>
         <Link
           href="/notificaciones"

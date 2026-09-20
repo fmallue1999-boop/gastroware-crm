@@ -15,7 +15,7 @@ export default async function MarketingPage() {
   const supabase = await createClient();
   const { data: rol } = await supabase.rpc("fn_rol");
   if (!["direccion", "admin", "marketing"].includes(rol ?? ""))
-    redirect("/hoy");
+    redirect("/");
 
   const { data } = await supabase
     .from("campanias")

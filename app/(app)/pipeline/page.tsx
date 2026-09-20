@@ -113,7 +113,7 @@ export default async function PipelinePage({
                   {items.map((o) => (
                     <Link
                       key={o.id}
-                      href={`/oportunidades/${o.id}`}
+                      href={`/clientes/${o.cliente_id}?interes=${o.id}`}
                       className="block rounded-2xl border border-borde bg-white shadow-sm p-3"
                     >
                       <div className="flex flex-wrap items-center gap-1.5">

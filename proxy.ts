@@ -51,7 +51,7 @@ export async function proxy(request: NextRequest) {
   }
   if (user && esLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/hoy";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

@@ -25,7 +25,7 @@ export default async function CampaniaPage({
   const supabase = await createClient();
   const { data: rol } = await supabase.rpc("fn_rol");
   if (!["direccion", "admin", "marketing"].includes(rol ?? ""))
-    redirect("/hoy");
+    redirect("/");
 
   // Contadores exactos por consulta (traer todas las filas se corta en 1000)
   const contar = (estado: string) =>

@@ -6,8 +6,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
-import { normalizarTelefono, diasDesde } from "@/lib/format";
-import { RUBROS } from "@/lib/constants";
+import { dinero, normalizarTelefono, diasDesde } from "@/lib/format";
+import { NIVELES_INTERES, RUBROS } from "@/lib/constants";
 import type { Etapa } from "@/lib/types";
 import { usuarioActual } from "./comun";
 import { anotarContacto, buscarClientePorTelefono } from "./contactos";
@@ -76,11 +76,11 @@ export async function cambiarEtapa(
   // no agende nada solo. Los seguimientos los carga cada persona a mano.
 
   const TEXTO_ETAPA: Record<string, string> = {
-    nueva: "Consulta nueva",
-    cotizada: "Cotizada",
+    nueva: "Vuelve a Interesado",
+    cotizada: "Cotizado",
     seguimiento: "En seguimiento",
-    espera: "En lista de espera (sin stock)",
-    ganada: "Venta cerrada",
+    espera: "Pasó a lista de espera (sin stock)",
+    ganada: "Vendido",
     perdida: "No se dio",
   };
   await supabase.from("actividades").insert({
@@ -137,13 +137,14 @@ export async function registrarCotizacion(input: {
 
   const { data: existente } = await supabase
     .from("cotizaciones")
-    .select("id, versiones:cotizacion_versiones(version)")
+    .select("id, numero, versiones:cotizacion_versiones(version)")
     .eq("oportunidad_id", input.oportunidadId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   let cotizacionId = existente?.id as string | undefined;
+  let numeroCot = (existente?.numero as number | undefined) ?? null;
   let version = 1;
   if (cotizacionId) {
     const versiones = (existente?.versiones ?? []) as { version: number }[];
@@ -152,10 +153,11 @@ export async function registrarCotizacion(input: {
     const { data: nueva, error } = await supabase
       .from("cotizaciones")
       .insert({ oportunidad_id: input.oportunidadId })
-      .select("id")
+      .select("id, numero")
       .single();
     if (error || !nueva) return { error: error?.message ?? "No se pudo crear" };
     cotizacionId = nueva.id;
+    numeroCot = nueva.numero as number;
   }
 
   // Con ítems del catálogo, el total se calcula solo; si no, vale el monto a mano
@@ -202,13 +204,24 @@ export async function registrarCotizacion(input: {
     .eq("id", input.oportunidadId);
   if (errMonto) return { error: `guardar monto: ${errMonto.message}` };
 
-  // Una venta ya cerrada (ganada/perdida) no vuelve a "cotizada": solo
-  // queda registrada la nueva versión.
   const { data: actual } = await supabase
     .from("oportunidades")
-    .select("etapa")
+    .select("etapa, cliente_id")
     .eq("id", input.oportunidadId)
     .single();
+  if (actual)
+    await supabase.from("actividades").insert({
+      cliente_id: actual.cliente_id,
+      oportunidad_id: input.oportunidadId,
+      tipo: "cotizacion",
+      contenido: `Cotización N° ${numeroCot ?? "?"}${version > 1 ? ` v${version}` : ""} armada${
+        total != null ? ` · ${dinero(total, input.moneda)}` : ""
+      }`,
+      created_by: user?.id ?? null,
+    });
+
+  // Una venta ya cerrada (ganada/perdida) no vuelve a "cotizada": solo
+  // queda registrada la nueva versión.
   if (actual && ["ganada", "perdida"].includes(actual.etapa)) {
     revalidatePath("/", "layout");
     return { ok: true };
@@ -226,14 +239,69 @@ export async function setObjecion(oportunidadId: string, objecion: string) {
   return { ok: true };
 }
 
+/** Nivel de interés (Muy interesado / Interesado / Solo preguntó). Queda en Movimientos. */
 export async function setTemperatura(oportunidadId: string, temperatura: string) {
   const supabase = await createClient();
-  await supabase
+  const user = await usuarioActual();
+  const { data: opp } = await supabase
+    .from("oportunidades")
+    .select("cliente_id, temperatura")
+    .eq("id", oportunidadId)
+    .single();
+  if (!opp) return { error: "No se encontró el interés" };
+  const { error } = await supabase
     .from("oportunidades")
     .update({ temperatura: temperatura || null })
     .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  const label = NIVELES_INTERES.find((n) => n.value === temperatura)?.label;
+  if (label && opp.temperatura !== temperatura)
+    await supabase.from("actividades").insert({
+      cliente_id: opp.cliente_id,
+      oportunidad_id: oportunidadId,
+      tipo: "interes",
+      contenido: `Nivel de interés: ${label}`,
+      created_by: user?.id ?? null,
+    });
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/** Cambia el producto (o el texto) de un interés abierto. Queda en Movimientos. */
+export async function cambiarProductoInteres(
+  oportunidadId: string,
+  productoIds: string[],
+  texto?: string
+) {
+  const ids = productoIds.filter(Boolean);
+  const t = texto?.trim() || null;
+  if (!ids.length && !t) return { error: "Elegí un producto o escribí qué le interesa" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: opp } = await supabase
+    .from("oportunidades")
+    .select("id, cliente_id")
+    .eq("id", oportunidadId)
+    .single();
+  if (!opp) return { error: "No se encontró el interés" };
+  const { data: prods } = ids.length
+    ? await supabase.from("productos").select("id, nombre").in("id", ids)
+    : { data: [] };
+  const nombres = (prods ?? []).map((p) => p.nombre).join(", ");
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({ producto_id: ids[0] ?? null, productos_extra: ids.slice(1), mensaje_inicial: t })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  await supabase.from("actividades").insert({
+    cliente_id: opp.cliente_id,
+    oportunidad_id: oportunidadId,
+    tipo: "interes",
+    contenido: `Ahora le interesa: ${[nombres, t].filter(Boolean).join(" — ")}`,
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
 }
 export async function iaRedactarMensaje(
   oportunidadId: string,

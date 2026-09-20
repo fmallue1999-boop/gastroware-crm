@@ -11,6 +11,6 @@ test("la pantalla de login carga con la marca y el formulario", async ({
 });
 
 test("una ruta protegida redirige a login sin sesión", async ({ page }) => {
-  await page.goto("/hoy");
+  await page.goto("/clientes");
   await expect(page).toHaveURL(/\/login/);
 });
