@@ -15,7 +15,7 @@ import PendienteFila, { type Pendiente } from "@/components/inicio/PendienteFila
 import SelectorQuien from "@/components/inicio/SelectorQuien";
 import InicioTecnico from "@/components/inicio/InicioTecnico";
 import SeguimientoItem from "@/components/SeguimientoItem";
-import { PuntoNivel } from "@/components/InteresTarjeta";
+import { PuntoNivel } from "@/components/PuntoNivel";
 import type { Cliente } from "@/lib/types";
 
 const SELECT_CLI = "*, sucursales(ciudad, es_principal)";

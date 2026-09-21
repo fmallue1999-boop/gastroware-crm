@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MessageCircle, PenLine, Phone } from "lucide-react";
 import { linkWhatsApp } from "@/lib/format";
 import AnotarContacto from "@/components/AnotarContacto";
-import { PuntoNivel } from "@/components/InteresTarjeta";
+import { PuntoNivel } from "@/components/PuntoNivel";
 
 export type Pendiente = {
   id: string;

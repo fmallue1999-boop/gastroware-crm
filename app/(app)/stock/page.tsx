@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
 import { fechaCorta, linkWhatsApp } from "@/lib/format";
 import { IngresosProducto, StockEditable } from "@/components/StockAdmin";
-import { PuntoNivel } from "@/components/InteresTarjeta";
+import { PuntoNivel } from "@/components/PuntoNivel";
 import type { IngresoStock, Producto } from "@/lib/types";
 
 type Esperando = { id: string; nombre: string; telefono: string | null; nivel: string | null };
