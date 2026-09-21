@@ -80,4 +80,7 @@ begin
   returning stock into v_stock;
   return v_stock;
 end $$;
-revoke execute on function fn_ajustar_stock(uuid, int) from anon;
+-- Postgres da EXECUTE a PUBLIC por defecto: hay que sacárselo a PUBLIC (no
+-- alcanza con anon) y dárselo solo a los logueados y al service role.
+revoke execute on function fn_ajustar_stock(uuid, int) from public, anon;
+grant execute on function fn_ajustar_stock(uuid, int) to authenticated, service_role;
