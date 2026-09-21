@@ -36,7 +36,7 @@ export default function AvisoFlash() {
   return (
     <div
       role="status"
-      className="fixed inset-x-4 bottom-24 z-30 mx-auto max-w-sm rounded-2xl bg-tinta px-4 py-3 text-center text-[15px] font-medium text-white shadow-lg lg:bottom-8"
+      className="fixed inset-x-4 bottom-24 z-30 mx-auto max-w-sm rounded-2xl bg-marino px-4 py-3 text-center text-[15px] font-medium text-white shadow-lg lg:bottom-8"
     >
       ✓ {TEXTOS[clave] ?? "Guardado"}
     </div>

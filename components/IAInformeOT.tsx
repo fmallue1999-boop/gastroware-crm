@@ -61,7 +61,7 @@ export default function IAInformeOT({ otId }: { otId: string }) {
               value={diagnostico}
               onChange={(e) => setDiagnostico(e.target.value)}
               rows={2}
-              className="w-full rounded-xl border border-borde px-3 py-2 text-sm outline-none focus:border-tinta"
+              className="w-full rounded-xl border border-borde px-3 py-2 text-sm outline-none focus:border-marino"
             />
           </div>
           <div>
@@ -70,7 +70,7 @@ export default function IAInformeOT({ otId }: { otId: string }) {
               value={trabajo ?? ""}
               onChange={(e) => setTrabajo(e.target.value)}
               rows={4}
-              className="w-full rounded-xl border border-borde px-3 py-2 text-sm outline-none focus:border-tinta"
+              className="w-full rounded-xl border border-borde px-3 py-2 text-sm outline-none focus:border-marino"
             />
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function IAInformeOT({ otId }: { otId: string }) {
 
       {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
       {aplicado && (
-        <p className="mb-2 rounded-lg bg-green-50 border border-green-200 px-3 py-1.5 text-sm text-green-800">
+        <p className="mb-2 rounded-lg bg-verde-soft border border-verde-soft px-3 py-1.5 text-sm text-verde">
           Aplicado a la orden: ya sale así en el comprobante.
         </p>
       )}
@@ -101,7 +101,7 @@ export default function IAInformeOT({ otId }: { otId: string }) {
             type="button"
             disabled={pending}
             onClick={aplicar}
-            className="rounded-xl bg-tinta px-3.5 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="rounded-xl bg-marino px-3.5 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
             Aprobar y usar este texto
           </button>

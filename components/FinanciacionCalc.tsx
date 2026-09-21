@@ -6,7 +6,7 @@ import { calcularOpciones } from "@/lib/financiacion";
 import { dinero } from "@/lib/format";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3 text-base outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3 text-base outline-none focus:border-marino";
 
 function numero(v: string): number {
   // Acepta "3664,18", "3.664,18" o "3664.18"
@@ -56,7 +56,7 @@ export default function FinanciacionCalc({ tnaDefault }: { tnaDefault: number })
             onClick={() => setModo("usd")}
             className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
               modo === "usd"
-                ? "bg-tinta text-white"
+                ? "bg-marino text-white"
                 : "border border-borde bg-white text-piedra"
             }`}
           >
@@ -67,7 +67,7 @@ export default function FinanciacionCalc({ tnaDefault }: { tnaDefault: number })
             onClick={() => setModo("pesos")}
             className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
               modo === "pesos"
-                ? "bg-tinta text-white"
+                ? "bg-marino text-white"
                 : "border border-borde bg-white text-piedra"
             }`}
           >
@@ -252,7 +252,7 @@ export default function FinanciacionCalc({ tnaDefault }: { tnaDefault: number })
                     }
                     className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                       activo
-                        ? "bg-tinta text-white"
+                        ? "bg-marino text-white"
                         : "border border-borde bg-white text-piedra line-through"
                     }`}
                   >
@@ -280,7 +280,7 @@ export default function FinanciacionCalc({ tnaDefault }: { tnaDefault: number })
               className={`mt-3 flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-medium ${
                 incluidas.length === 0
                   ? "pointer-events-none bg-crema-deep text-piedra"
-                  : "bg-tinta text-white"
+                  : "bg-marino text-white"
               }`}
             >
               <FileText className="h-4 w-4" /> Generar hoja para el cliente

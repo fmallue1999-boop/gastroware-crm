@@ -66,13 +66,13 @@ export default function PosponerPanel({
           value={fecha}
           min={hoyISO()}
           onChange={(e) => setFecha(e.target.value)}
-          className="rounded-xl border border-borde bg-white px-3 py-1.5 text-xs outline-none focus:border-tinta"
+          className="rounded-xl border border-borde bg-white px-3 py-1.5 text-xs outline-none focus:border-marino"
         />
         <button
           type="button"
           onClick={() => fecha && onElegir(fecha, m)}
           disabled={pending || !fecha}
-          className="rounded-xl bg-tinta px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          className="rounded-xl bg-marino px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
         >
           Pasar a esa fecha
         </button>
@@ -83,7 +83,7 @@ export default function PosponerPanel({
         placeholder="Motivo (opcional): está de vacaciones, pidió que lo llamen ese día…"
         value={motivo}
         onChange={(e) => setMotivo(e.target.value)}
-        className="w-full rounded-xl border border-borde bg-white px-3 py-1.5 text-xs outline-none focus:border-tinta"
+        className="w-full rounded-xl border border-borde bg-white px-3 py-1.5 text-xs outline-none focus:border-marino"
       />
 
       <button

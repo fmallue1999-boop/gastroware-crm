@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 const chip = (activo: boolean) =>
   `min-h-11 shrink-0 rounded-full px-3.5 py-2 text-[15px] font-medium ${
-    activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+    activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
   }`;
 
 export const TIPOS_MOVIMIENTO = [

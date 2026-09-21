@@ -16,10 +16,10 @@ import { textoStock, type InfoStock } from "@/lib/stock";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-marino";
 const chipCls = (activo: boolean) =>
   `rounded-full px-3.5 py-2 text-sm font-medium ${
-    activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+    activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
   }`;
 
 /**
@@ -140,13 +140,13 @@ export default function ContactoNuevoForm({
       />
 
       {duplicado && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="rounded-2xl border border-ambar-soft bg-ambar-soft p-3 text-sm text-ambar">
           <p className="font-medium">
             Ese teléfono ya está cargado: {duplicado.nombre_comercial}
           </p>
           <Link
             href={`/clientes/${duplicado.id}`}
-            className="mt-1 inline-block rounded-xl bg-tinta px-3 py-1.5 text-sm font-medium text-white"
+            className="mt-1 inline-block rounded-xl bg-marino px-3 py-1.5 text-sm font-medium text-white"
           >
             Abrir su ficha
           </Link>
@@ -158,7 +158,7 @@ export default function ContactoNuevoForm({
           type="button"
           onClick={() => setEsCliente(false)}
           className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
-            !esCliente ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+            !esCliente ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
           }`}
         >
           Interesado
@@ -167,7 +167,7 @@ export default function ContactoNuevoForm({
           type="button"
           onClick={() => setEsCliente(true)}
           className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
-            esCliente ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+            esCliente ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
           }`}
         >
           Ya es cliente
@@ -185,7 +185,7 @@ export default function ContactoNuevoForm({
               return (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-tinta px-3 py-1.5 text-sm text-white"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-marino px-3 py-1.5 text-sm text-white"
                 >
                   {p?.nombre ?? "Producto"}
                   <button
@@ -229,7 +229,7 @@ export default function ContactoNuevoForm({
               return (
                 <p
                   key={id}
-                  className={`text-xs ${info.stock > 0 ? "text-green-700" : "text-amber-700"}`}
+                  className={`text-xs ${info.stock > 0 ? "text-verde" : "text-ambar"}`}
                 >
                   {productos.find((p) => p.id === id)?.nombre}: {textoStock(info, fechaCorta)}
                 </p>
@@ -257,7 +257,7 @@ export default function ContactoNuevoForm({
             ))}
           </div>
           {sinStock && (
-            <label className="mt-2 flex cursor-pointer items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+            <label className="mt-2 flex cursor-pointer items-center gap-2.5 rounded-2xl border border-ambar-soft bg-ambar-soft px-3.5 py-3 text-sm text-ambar">
               <input
                 type="checkbox"
                 checked={enEspera}
@@ -302,13 +302,13 @@ export default function ContactoNuevoForm({
             value={volverEl}
             min={hoyISO()}
             onChange={(e) => setVolverEl(e.target.value)}
-            className="rounded-full border border-borde bg-white px-3 py-1.5 text-sm outline-none focus:border-tinta"
+            className="rounded-full border border-borde bg-white px-3 py-1.5 text-sm outline-none focus:border-marino"
           />
         </div>
       </div>
 
       <details>
-        <summary className="cursor-pointer text-sm text-sky-700 underline list-none [&::-webkit-details-marker]:hidden">
+        <summary className="cursor-pointer text-sm text-azul underline list-none [&::-webkit-details-marker]:hidden">
           Más datos (opcional): email, empresa, rubro, ciudad, de dónde viene
         </summary>
         <div className="mt-2 space-y-2.5">
@@ -361,7 +361,7 @@ export default function ContactoNuevoForm({
       <button
         type="submit"
         disabled={pending || !!duplicado || !nombre.trim()}
-        className="w-full rounded-2xl bg-tinta py-4 text-base font-semibold text-white disabled:opacity-60"
+        className="w-full rounded-2xl bg-marino py-4 text-base font-semibold text-white disabled:opacity-60"
       >
         {pending ? "Guardando…" : "Guardar contacto"}
       </button>

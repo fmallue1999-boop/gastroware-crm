@@ -46,7 +46,7 @@ export default async function ComprobantePage({
 
   return (
     <div className="mx-auto max-w-xl bg-white p-8 text-tinta print:p-0">
-      <div className="mb-4 flex items-start justify-between border-b-2 border-tinta pb-4">
+      <div className="mb-4 flex items-start justify-between border-b-2 border-marino pb-4">
         <div className="flex items-center gap-3">
           <LogoEmpresa />
           <div>
@@ -114,7 +114,7 @@ export default async function ComprobantePage({
 
       <table className="mb-4 w-full text-sm">
         <thead>
-          <tr className="border-b border-tinta text-left">
+          <tr className="border-b border-marino text-left">
             <th className="py-1">Detalle</th>
             <th className="py-1 text-right">Cant.</th>
             <th className="py-1 text-right">Importe</th>
@@ -164,7 +164,7 @@ export default async function ComprobantePage({
         <div className="mb-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={firmaUrl} alt="Firma del cliente" className="h-20" />
-          <p className="border-t border-tinta pt-1 text-sm">
+          <p className="border-t border-marino pt-1 text-sm">
             Firma y conformidad: {ot.firmante ?? "Cliente"}
           </p>
         </div>

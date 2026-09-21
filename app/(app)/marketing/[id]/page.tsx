@@ -62,7 +62,7 @@ export default async function CampaniaPage({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/marketing" className="text-sm text-sky-700">
+      <Link href="/marketing" className="text-sm text-azul">
         ← Campañas
       </Link>
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
@@ -72,7 +72,7 @@ export default async function CampaniaPage({
 
       <div className={`mt-3 grid gap-2 text-center ${(conError ?? 0) > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
         <div className="rounded-2xl border border-borde bg-white p-3 shadow-sm">
-          <p className="text-xl font-bold text-green-700">{enviados ?? 0}</p>
+          <p className="text-xl font-bold text-verde">{enviados ?? 0}</p>
           <p className="text-xs text-piedra">Enviados</p>
         </div>
         <div className="rounded-2xl border border-borde bg-white p-3 shadow-sm">

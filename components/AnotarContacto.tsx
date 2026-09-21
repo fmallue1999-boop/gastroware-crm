@@ -8,7 +8,7 @@ import { SEGUIMIENTO_RAPIDO } from "@/lib/constants";
 
 const chipCls = (activo: boolean) =>
   `min-h-11 rounded-full px-3.5 py-2 text-[15px] font-medium ${
-    activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+    activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
   }`;
 
 export type InteresResumen = { id: string; texto: string };
@@ -98,7 +98,7 @@ export default function AnotarContacto({
           <select
             value={sobre}
             onChange={(e) => setSobre(e.target.value)}
-            className="min-h-11 min-w-0 flex-1 rounded-2xl border border-borde bg-white px-3 py-2 text-[15px] outline-none focus:border-tinta"
+            className="min-h-11 min-w-0 flex-1 rounded-2xl border border-borde bg-white px-3 py-2 text-[15px] outline-none focus:border-marino"
           >
             {intereses.map((i) => (
               <option key={i.id} value={i.id}>
@@ -114,7 +114,7 @@ export default function AnotarContacto({
         rows={compacto ? 2 : 2}
         autoFocus={compacto}
         placeholder="Hablamos, quedó en avisar, pidió precio, no atendió…"
-        className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none focus:border-tinta"
+        className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none focus:border-marino"
       />
       <p className="mb-1.5 mt-2 text-xs text-piedra">¿Cuándo volver a contactar?</p>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -140,14 +140,14 @@ export default function AnotarContacto({
             setSinFecha(false);
           }}
           aria-label="Otra fecha"
-          className="min-h-11 rounded-full border border-borde bg-white px-3 py-1 text-sm outline-none focus:border-tinta"
+          className="min-h-11 rounded-full border border-borde bg-white px-3 py-1 text-sm outline-none focus:border-marino"
         />
       </div>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       <button
         type="submit"
         disabled={pending || !hayAlgo}
-        className="mt-3 min-h-11 w-full rounded-2xl bg-tinta py-3 text-[15px] font-semibold text-white disabled:opacity-50"
+        className="mt-3 min-h-11 w-full rounded-2xl bg-marino py-3 text-[15px] font-semibold text-white disabled:opacity-50"
       >
         {pending ? "Guardando…" : ok ? "✓ Guardado" : "Guardar"}
       </button>

@@ -94,9 +94,9 @@ export default async function AdminDuplicadosPage() {
         grupos.map((g, i) => (
           <div
             key={i}
-            className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm"
+            className="rounded-2xl border border-ambar-soft bg-ambar-soft/50 p-4 shadow-sm"
           >
-            <p className="mb-2 text-sm font-semibold text-amber-900">
+            <p className="mb-2 text-sm font-semibold text-ambar">
               {g.motivo}
             </p>
             <div className="space-y-1.5">

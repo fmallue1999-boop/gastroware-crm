@@ -15,7 +15,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <button
           type="button"
           onClick={() => reset()}
-          className="min-h-11 flex-1 rounded-2xl bg-tinta px-4 text-[15px] font-semibold text-white"
+          className="min-h-11 flex-1 rounded-2xl bg-marino px-4 text-[15px] font-semibold text-white"
         >
           Volver a intentar
         </button>

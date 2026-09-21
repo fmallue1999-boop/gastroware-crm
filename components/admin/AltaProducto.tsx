@@ -5,7 +5,7 @@ import { PackagePlus } from "lucide-react";
 import { crearProducto } from "@/lib/actions";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 const CATEGORIAS = [
   "exprimidora",
@@ -57,7 +57,7 @@ export default function AltaProducto() {
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="inline-flex items-center gap-1.5 rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white"
+        className="inline-flex items-center gap-1.5 rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white"
       >
         <PackagePlus className="h-4 w-4" /> Agregar producto
       </button>
@@ -129,7 +129,7 @@ export default function AltaProducto() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
           {pending ? "Creando…" : "Crear producto"}
         </button>

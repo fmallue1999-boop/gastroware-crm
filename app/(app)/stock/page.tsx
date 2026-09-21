@@ -97,7 +97,7 @@ export default async function StockPage() {
                         {esGestor ? (
                           <StockEditable productoId={p.id} stock={p.stock} />
                         ) : (
-                          <p className={`text-2xl font-bold ${p.stock > 0 ? "text-green-700" : "text-amber-700"}`}>
+                          <p className={`text-2xl font-bold ${p.stock > 0 ? "text-verde" : "text-ambar"}`}>
                             {p.stock}
                           </p>
                         )}
@@ -124,7 +124,7 @@ export default async function StockPage() {
                           <p className="text-[15px] text-piedra">nadie</p>
                         ) : (
                           <details className="group">
-                            <summary className="min-h-9 cursor-pointer list-none text-[15px] font-semibold text-orange-700 underline [&::-webkit-details-marker]:hidden">
+                            <summary className="min-h-9 cursor-pointer list-none text-[15px] font-semibold text-naranja underline [&::-webkit-details-marker]:hidden">
                               {esperando.length}
                             </summary>
                             <div className="mt-1 space-y-1">
@@ -140,7 +140,7 @@ export default async function StockPage() {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       aria-label={`WhatsApp a ${c.nombre}`}
-                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-white"
+                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-verde text-white"
                                     >
                                       <MessageCircle className="h-4 w-4" />
                                     </a>

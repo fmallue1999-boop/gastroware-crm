@@ -55,7 +55,7 @@ export default function LoginPage() {
         </div>
 
         {!configurado ? (
-          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm">
+          <div className="rounded-2xl border border-ambar-soft bg-ambar-soft p-4 text-sm text-ambar shadow-sm">
             <p className="mb-1 font-medium">Falta configurar Supabase</p>
             <p>
               Copiá <code>.env.example</code> a <code>.env.local</code>,
@@ -74,7 +74,7 @@ export default function LoginPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-tinta"
+              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-marino"
             />
             <input
               type="password"
@@ -82,7 +82,7 @@ export default function LoginPage() {
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-tinta"
+              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-marino"
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button

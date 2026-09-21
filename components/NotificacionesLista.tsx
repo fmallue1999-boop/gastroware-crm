@@ -101,7 +101,7 @@ export default function NotificacionesLista({
                       async () => void (await marcarNotificacionLeida(n.id))
                     )
                   }
-                  className="shrink-0 rounded-full border border-borde bg-white p-1.5 text-piedra hover:text-green-700"
+                  className="shrink-0 rounded-full border border-borde bg-white p-1.5 text-piedra hover:text-verde"
                 >
                   <Check className="h-3.5 w-3.5" />
                 </button>

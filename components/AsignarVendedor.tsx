@@ -32,7 +32,7 @@ export default function AsignarVendedor({
             router.refresh();
           })
         }
-        className="min-h-9 rounded-xl border border-borde bg-white px-2 text-sm text-tinta outline-none focus:border-tinta"
+        className="min-h-9 rounded-xl border border-borde bg-white px-2 text-sm text-tinta outline-none focus:border-marino"
       >
         <option value="">nadie todavía</option>
         {vendedores.map((v) => (
@@ -41,7 +41,7 @@ export default function AsignarVendedor({
           </option>
         ))}
       </select>
-      {aviso && <span className="text-xs text-green-700">{aviso}</span>}
+      {aviso && <span className="text-xs text-verde">{aviso}</span>}
     </label>
   );
 }

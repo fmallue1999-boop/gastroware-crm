@@ -1,10 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /**
- * Flujo crítico de la Etapa 1: un comercial carga un interés por un producto
- * sin stock para alguien que no está en la base y lo pone en lista de
- * espera; un gestor carga un ingreso previsto de ese producto y toca "Llegó";
- * el interés aparece en "Llegó stock" en el inicio del comercial.
+ * Flujo crítico: un comercial carga un interés por un producto sin stock para
+ * alguien que no está en la base y lo pone en lista de espera; un gestor
+ * carga un ingreso previsto de ese producto y toca "Llegó"; el interés
+ * aparece en Hoy del comercial con "Llegó stock".
  *
  * Necesita usuarios reales (no se crean solos):
  *   E2E_EMAIL / E2E_PASSWORD               → usuario con rol comercial
@@ -26,35 +26,27 @@ async function entrar(page: Page, email: string, password: string) {
 test.describe("interés sin stock → lista de espera → llegó stock", () => {
   test.skip(!comercial.email || !comercial.password, "Definí E2E_EMAIL y E2E_PASSWORD para correrlo");
 
-  test("tres pantallas, menos de 30 segundos, contacto creado y asignado", async ({ page, browser }) => {
+  test("una pantalla, contacto creado y asignado, y el aviso al llegar el stock", async ({ page, browser }) => {
     test.setTimeout(120_000);
     await entrar(page, comercial.email!, comercial.password!);
 
-    // 1 · ¿Qué le interesa? — el primer producto sin stock
     await page.goto("/alta");
     const producto = page.getByRole("button", { name: /Sin stock/ }).first();
     await expect(producto).toBeVisible();
     const nombreProducto = (await producto.locator("span span").first().textContent())?.trim() ?? "";
     await producto.click();
     await page.getByRole("button", { name: "Muy interesado" }).click();
-    await page.getByRole("button", { name: /Siguiente: ¿quién\?/ }).click();
 
-    // 2 · ¿Quién? — alguien nuevo
     const nombre = `E2E Prueba ${Date.now()}`;
-    await page.getByPlaceholder("Nombre, empresa o teléfono").fill(nombre);
-    await page.getByRole("button", { name: /Cargarlo nuevo/ }).click();
+    await page.getByRole("button", { name: /Es alguien nuevo, cargarlo/ }).click();
     await page.getByPlaceholder("Nombre de la persona").fill(nombre);
     await page.getByPlaceholder(/Teléfono/).fill(`11 4${String(Date.now()).slice(-7)}`);
-    await page.getByRole("button", { name: /Siguiente: ¿algo más\?/ }).click();
-
-    // 3 · ¿Algo más? — lista de espera y guardar
     await page.getByRole("button", { name: /Poner en lista de espera/ }).click();
     await page.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page).toHaveURL(/\/clientes\/[0-9a-f-]+/, { timeout: 20_000 });
     await expect(page.getByText("Interés cargado")).toBeVisible();
     await expect(page.getByText("Lista de espera").first()).toBeVisible();
 
-    // Gestor: ingreso previsto del producto y "Llegó"
     test.skip(!gestor.email || !gestor.password, "Sin E2E_GESTOR_EMAIL / E2E_GESTOR_PASSWORD no se prueba Llegó");
     const contexto = await browser.newContext();
     const admin = await contexto.newPage();
@@ -68,9 +60,8 @@ test.describe("interés sin stock → lista de espera → llegó stock", () => {
     await expect(fila.getByRole("button", { name: "Llegó" })).toHaveCount(0, { timeout: 20_000 });
     await contexto.close();
 
-    // Comercial: el interés aparece en el bloque verde
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: /Llegó stock/ })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(nombre).first()).toBeVisible();
+    await page.goto("/hoy");
+    await expect(page.getByText(nombre).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Llegó stock").first()).toBeVisible();
   });
 });

@@ -43,7 +43,7 @@ export default function EnviarEmails({
 
   if (terminada)
     return (
-      <p className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+      <p className="rounded-2xl border border-verde-soft bg-verde-soft p-4 text-sm text-verde">
         Campaña terminada: no quedan envíos pendientes.
       </p>
     );
@@ -65,7 +65,7 @@ export default function EnviarEmails({
             type="button"
             disabled={pending || pendientes === 0}
             onClick={() => enviar(n)}
-            className="inline-flex items-center gap-1.5 rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
           >
             <Send className="h-4 w-4" />
             {pending ? "Enviando…" : `Enviar tanda de ${Math.min(n, pendientes)}`}
@@ -73,7 +73,7 @@ export default function EnviarEmails({
         ))}
       </div>
       {resultado && (
-        <p className="mt-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
+        <p className="mt-2 rounded-lg bg-verde-soft border border-verde-soft px-3 py-2 text-sm text-verde">
           {resultado}
         </p>
       )}

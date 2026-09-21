@@ -68,7 +68,7 @@ export default function OTAdminControl({
       </p>
 
       {ot.estado === "facturado" && (
-        <p className="rounded-xl bg-green-100 p-3 text-sm font-medium text-green-800">
+        <p className="rounded-xl bg-verde-soft p-3 text-sm font-medium text-verde">
           Facturada — factura {ot.nro_factura}
         </p>
       )}
@@ -118,7 +118,7 @@ export default function OTAdminControl({
               value={observacion}
               onChange={(e) => setObservacion(e.target.value)}
               rows={2}
-              className="w-full rounded-2xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta"
+              className="w-full rounded-2xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-marino"
             />
             <div className="flex gap-2">
               <button
@@ -152,10 +152,10 @@ export default function OTAdminControl({
             disabled={pending}
             className={`w-full rounded-xl py-2.5 text-sm font-medium disabled:opacity-50 ${
               t === "aprobado_facturar"
-                ? "bg-tinta text-white"
+                ? "bg-marino text-white"
                 : t === "cancelado"
                   ? "border border-borde text-piedra"
-                  : "border border-tinta"
+                  : "border border-marino"
             }`}
           >
             {ETIQUETAS[t] ?? ESTADOS_OT.find((e) => e.value === t)?.label ?? t}
@@ -169,12 +169,12 @@ export default function OTAdminControl({
             placeholder="N° de factura en ZEUS"
             value={nroFactura}
             onChange={(e) => setNroFactura(e.target.value)}
-            className="flex-1 rounded-2xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta"
+            className="flex-1 rounded-2xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-marino"
           />
           <button
             onClick={() => mover("facturado", { nroFactura })}
             disabled={pending || !nroFactura.trim()}
-            className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-xl bg-verde px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Facturada
           </button>

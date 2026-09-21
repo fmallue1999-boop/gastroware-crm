@@ -49,7 +49,7 @@ export default function PendienteFila({ item }: { item: Pendiente }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp"
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-green-600 text-white"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-verde text-white"
               >
                 <MessageCircle className="h-5 w-5" />
               </a>
@@ -67,7 +67,7 @@ export default function PendienteFila({ item }: { item: Pendiente }) {
             onClick={() => setAnotando(!anotando)}
             aria-label="Anotar"
             className={`flex h-11 w-11 items-center justify-center rounded-full ${
-              anotando ? "bg-tinta text-white" : "border border-borde text-tinta"
+              anotando ? "bg-marino text-white" : "border border-borde text-tinta"
             }`}
           >
             <PenLine className="h-5 w-5" />

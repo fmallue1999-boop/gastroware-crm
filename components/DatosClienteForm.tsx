@@ -8,7 +8,7 @@ import { CONDICIONES_FISCALES, RUBROS } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
   const [editando, setEditando] = useState(false);
@@ -82,7 +82,7 @@ export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
           ))}
         </div>
         {(!cliente.cuit || !cliente.condicion_fiscal) && (
-          <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
+          <p className="mt-2 rounded-lg bg-ambar-soft border border-ambar-soft px-3 py-1.5 text-xs text-ambar">
             Faltan datos fiscales: los necesitás para facturar en ZEUS.
           </p>
         )}
@@ -181,7 +181,7 @@ export default function DatosClienteForm({ cliente }: { cliente: Cliente }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-2xl bg-tinta px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="rounded-2xl bg-marino px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
           {pending ? "Guardando…" : "Guardar"}
         </button>

@@ -17,7 +17,7 @@ type Registro = {
 };
 
 const inputCls =
-  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 function valor(v: unknown): string {
   if (v == null || v === "") return "—";
@@ -90,7 +90,7 @@ export default async function AdminAuditoriaPage({
           <option value="UPDATE">Modificaciones</option>
           <option value="DELETE">Borrados</option>
         </select>
-        <button className="rounded-2xl bg-tinta px-4 py-2.5 text-sm text-white">
+        <button className="rounded-2xl bg-marino px-4 py-2.5 text-sm text-white">
           Filtrar
         </button>
       </form>
@@ -133,7 +133,7 @@ export default async function AdminAuditoriaPage({
                             {valor(cambio?.antes)}
                           </span>{" "}
                           →{" "}
-                          <span className="text-green-700">
+                          <span className="text-verde">
                             {valor(cambio?.despues)}
                           </span>
                         </p>

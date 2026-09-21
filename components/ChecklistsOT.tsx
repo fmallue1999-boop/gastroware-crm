@@ -50,7 +50,7 @@ function ChecklistSimple({
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
             hechas === items.length
-              ? "bg-green-100 text-green-700"
+              ? "bg-verde-soft text-verde"
               : "bg-crema-deep text-piedra"
           }`}
         >
@@ -148,7 +148,7 @@ function ChecklistInspeccion({
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
             respondidas === respondibles
-              ? "bg-green-100 text-green-700"
+              ? "bg-verde-soft text-verde"
               : "bg-crema-deep text-piedra"
           }`}
         >
@@ -182,7 +182,7 @@ function ChecklistInspeccion({
                     if (e.target.value !== (r.v ?? "")) medir(i, e.target.value);
                   }}
                   placeholder="valor…"
-                  className="w-28 shrink-0 rounded-lg border border-borde px-2 py-1 text-sm outline-none focus:border-tinta"
+                  className="w-28 shrink-0 rounded-lg border border-borde px-2 py-1 text-sm outline-none focus:border-marino"
                 />
               </div>
             );
@@ -198,7 +198,7 @@ function ChecklistInspeccion({
                     onClick={() => responder(i, "si")}
                     className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${
                       r.r === "si"
-                        ? "bg-green-600 text-white"
+                        ? "bg-verde text-white"
                         : "border border-borde text-piedra"
                     }`}
                   >
@@ -225,7 +225,7 @@ function ChecklistInspeccion({
                     title="Comentario"
                     className={`rounded-lg border px-2 py-1 ${
                       r.c
-                        ? "border-amber-400 bg-amber-50 text-amber-700"
+                        ? "border-amber-400 bg-ambar-soft text-ambar"
                         : "border-borde text-piedra"
                     }`}
                   >
@@ -243,11 +243,11 @@ function ChecklistInspeccion({
                       comentar(i, e.target.value);
                   }}
                   placeholder="Comentario…"
-                  className="mt-1 w-full rounded-lg border border-borde px-2 py-1 text-sm outline-none focus:border-tinta"
+                  className="mt-1 w-full rounded-lg border border-borde px-2 py-1 text-sm outline-none focus:border-marino"
                 />
               )}
               {r.c && comentarioAbierto !== i && (
-                <p className="mt-0.5 text-xs text-amber-700">💬 {r.c}</p>
+                <p className="mt-0.5 text-xs text-ambar">💬 {r.c}</p>
               )}
             </div>
           );

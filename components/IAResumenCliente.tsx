@@ -63,7 +63,7 @@ export default function IAResumenCliente({ clienteId }: { clienteId: string }) {
           {resultado.alertas.map((a, i) => (
             <p
               key={i}
-              className="flex items-start gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800"
+              className="flex items-start gap-1.5 rounded-lg bg-ambar-soft border border-ambar-soft px-3 py-1.5 text-xs text-ambar"
             >
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {a}
             </p>

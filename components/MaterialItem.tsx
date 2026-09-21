@@ -66,7 +66,7 @@ export default function MaterialItem({
             }
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 rounded-lg bg-green-600 px-2.5 py-1 text-xs font-medium text-white"
+            className="shrink-0 rounded-lg bg-verde px-2.5 py-1 text-xs font-medium text-white"
           >
             WhatsApp
           </a>

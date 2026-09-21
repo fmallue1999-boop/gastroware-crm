@@ -12,11 +12,11 @@ export default function ActivarCampania({ campaniaId }: { campaniaId: string }) 
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
-      <p className="text-sm font-semibold text-amber-900">
+    <div className="rounded-2xl border border-ambar-soft bg-ambar-soft p-4">
+      <p className="text-sm font-semibold text-ambar">
         Esta campaña es un borrador
       </p>
-      <p className="mt-0.5 text-sm text-amber-800">
+      <p className="mt-0.5 text-sm text-ambar">
         Podés seguir puliéndola sin que salga nada. Cuando la actives, se arma
         la lista de destinatarios con el segmento elegido y ya podés empezar a
         enviar.
@@ -32,7 +32,7 @@ export default function ActivarCampania({ campaniaId }: { campaniaId: string }) 
             else router.refresh();
           })
         }
-        className="mt-3 inline-flex items-center gap-1.5 rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
       >
         <Rocket className="h-4 w-4" />
         {pending ? "Activando…" : "Activar campaña"}

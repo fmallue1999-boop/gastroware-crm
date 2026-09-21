@@ -98,7 +98,7 @@ export default async function InicioTecnico({ userId }: { userId: string }) {
     <div className="space-y-4">
       <Link
         href="/servicio/cargar"
-        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-tinta py-3.5 text-base font-semibold text-white shadow-sm"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-marino py-3.5 text-base font-semibold text-white shadow-sm"
       >
         <Plus className="h-5 w-5" strokeWidth={2.5} /> Cargar service hecho
       </Link>
@@ -116,7 +116,7 @@ export default async function InicioTecnico({ userId }: { userId: string }) {
 
       {pendientes.length > 0 && (
         <section>
-          <h2 className="mb-2 text-[15px] font-semibold text-amber-800">Pendientes de cerrar ({pendientes.length})</h2>
+          <h2 className="mb-2 text-[15px] font-semibold text-ambar">Pendientes de cerrar ({pendientes.length})</h2>
           <div className="space-y-2">
             {pendientes.map((ot) => (
               <Fila key={ot.id} ot={ot} />

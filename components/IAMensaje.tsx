@@ -86,7 +86,7 @@ export default function IAMensaje({
             value={mensaje}
             onChange={(e) => setMensaje(e.target.value)}
             rows={5}
-            className="w-full rounded-xl border border-borde px-3 py-2.5 text-sm outline-none focus:border-tinta"
+            className="w-full rounded-xl border border-borde px-3 py-2.5 text-sm outline-none focus:border-marino"
           />
           {fuentes.length > 0 && (
             <p className="mt-1 text-[11px] text-piedra">
@@ -128,7 +128,7 @@ export default function IAMensaje({
                 href={linkWhatsApp(telefono, mensaje)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-xl bg-green-600 px-3.5 py-2 text-sm font-medium text-white"
+                className="rounded-xl bg-verde px-3.5 py-2 text-sm font-medium text-white"
               >
                 Enviar por WhatsApp
               </a>

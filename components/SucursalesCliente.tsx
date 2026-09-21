@@ -6,7 +6,7 @@ import { crearSucursal } from "@/lib/actions";
 import type { Sucursal } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 export default function SucursalesCliente({
   clienteId,
@@ -58,7 +58,7 @@ export default function SucursalesCliente({
             <MapPin className="mr-1 -mt-0.5 inline h-3.5 w-3.5 text-piedra" />
             <span className="font-medium">{s.nombre}</span>
             {s.es_principal && (
-              <span className="ml-1.5 rounded-full bg-celeste-soft px-2 py-0.5 text-xs text-sky-800">
+              <span className="ml-1.5 rounded-full bg-celeste-soft px-2 py-0.5 text-xs text-azul">
                 principal
               </span>
             )}
@@ -79,7 +79,7 @@ export default function SucursalesCliente({
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="mt-2 inline-flex items-center gap-1 text-sm text-sky-700"
+          className="mt-2 inline-flex items-center gap-1 text-sm text-azul"
         >
           <Plus className="h-3.5 w-3.5" /> Agregar sucursal
         </button>
@@ -128,7 +128,7 @@ export default function SucursalesCliente({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-2xl bg-tinta px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-2xl bg-marino px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {pending ? "Guardando…" : "Guardar"}
             </button>

@@ -13,7 +13,7 @@ import {
 import { RUBROS, ESTADOS_CLIENTE } from "@/lib/constants";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 const MARCAS = ["Zumex", "GastroWare", "Rational", "Jetinno"];
 
@@ -149,7 +149,7 @@ export default function CampaniaForm({
 
   const chip = (activo: boolean) =>
     `rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-      activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+      activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
     }`;
 
   return (
@@ -173,7 +173,7 @@ export default function CampaniaForm({
             onClick={() => setCanal("whatsapp")}
             className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
               canal === "whatsapp"
-                ? "bg-tinta text-white"
+                ? "bg-marino text-white"
                 : "border border-borde bg-white text-piedra"
             }`}
           >
@@ -184,7 +184,7 @@ export default function CampaniaForm({
             onClick={() => setCanal("email")}
             className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
               canal === "email"
-                ? "bg-tinta text-white"
+                ? "bg-marino text-white"
                 : "border border-borde bg-white text-piedra"
             }`}
           >
@@ -416,7 +416,7 @@ export default function CampaniaForm({
         )}
 
         {pruebaOk && (
-          <p className="mt-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
+          <p className="mt-2 rounded-lg bg-verde-soft border border-verde-soft px-3 py-2 text-sm text-verde">
             {pruebaOk}
           </p>
         )}
@@ -507,7 +507,7 @@ export default function CampaniaForm({
             !plantilla.trim() ||
             (canal === "email" && !asunto.trim())
           }
-          className="flex-1 rounded-2xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
+          className="flex-1 rounded-2xl bg-marino py-3 font-medium text-white disabled:opacity-60"
         >
           {pending ? "Creando…" : "Crear campaña y empezar a mandar"}
         </button>

@@ -52,7 +52,7 @@ export default async function PropuestaFinanciacionPage({
   return (
     <div className="mx-auto max-w-3xl bg-white p-8 text-tinta print:p-0">
       {/* Membrete */}
-      <div className="flex items-center justify-between gap-4 border-b-4 border-tinta pb-4">
+      <div className="flex items-center justify-between gap-4 border-b-4 border-marino pb-4">
         <div className="flex items-center gap-3">
           <LogoEmpresa />
           <div>
@@ -94,7 +94,7 @@ export default async function PropuestaFinanciacionPage({
       )}
 
       {/* Monto */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-tinta px-5 py-4 text-white">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-marino px-5 py-4 text-white">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
             Monto a financiar
@@ -163,7 +163,7 @@ export default async function PropuestaFinanciacionPage({
       {/* Desglose cuota por cuota, como el simulador del banco */}
       {conDetalle && (
         <div className="mt-6 space-y-6">
-          <p className="border-b-2 border-tinta pb-1 text-sm font-bold uppercase tracking-wide">
+          <p className="border-b-2 border-marino pb-1 text-sm font-bold uppercase tracking-wide">
             Desglose cuota por cuota
           </p>
           {opciones.map((o) => (
@@ -249,7 +249,7 @@ export default async function PropuestaFinanciacionPage({
       </div>
 
       {/* Pie */}
-      <div className="mt-5 flex items-center justify-between border-t-2 border-tinta pt-3 text-[11px] text-piedra">
+      <div className="mt-5 flex items-center justify-between border-t-2 border-marino pt-3 text-[11px] text-piedra">
         <p className="font-semibold text-tinta">
           GastroWare — Equipamiento gastronómico
         </p>

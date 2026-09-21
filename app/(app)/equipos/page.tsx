@@ -4,11 +4,11 @@ import { fechaCorta, hoyISO } from "@/lib/format";
 import type { Equipo } from "@/lib/types";
 
 const inputCls =
-  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 const ESTADOS_EQUIPO: Record<string, { label: string; cls: string }> = {
-  activo: { label: "Activo", cls: "bg-green-100 text-green-700" },
-  en_reparacion: { label: "En reparación", cls: "bg-amber-100 text-amber-800" },
+  activo: { label: "Activo", cls: "bg-verde-soft text-verde" },
+  en_reparacion: { label: "En reparación", cls: "bg-ambar-soft text-ambar" },
   baja: { label: "De baja", cls: "bg-crema-deep text-piedra" },
 };
 
@@ -85,7 +85,7 @@ export default async function EquiposPage({
           <option value="vendido">Vendidos por GastroWare</option>
           <option value="externo">De otra marca</option>
         </select>
-        <button className="rounded-2xl bg-tinta px-4 py-2.5 text-sm text-white">
+        <button className="rounded-2xl bg-marino px-4 py-2.5 text-sm text-white">
           Filtrar
         </button>
       </form>
@@ -159,7 +159,7 @@ export default async function EquiposPage({
                       </td>
                       <td className="px-3 py-2.5">
                         {e.garantia_hasta ? (
-                          <span className={vigente ? "text-green-700" : "text-red-600"}>
+                          <span className={vigente ? "text-verde" : "text-red-600"}>
                             {vigente ? "Vigente" : "Vencida"} ·{" "}
                             {fechaCorta(e.garantia_hasta)}
                           </span>

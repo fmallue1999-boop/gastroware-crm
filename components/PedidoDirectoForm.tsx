@@ -8,7 +8,7 @@ import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
 import type { Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-marino";
 
 /**
  * Venta nueva sin trabas: primero qué se vendió, después a quién (un solo
@@ -82,7 +82,7 @@ export default function PedidoDirectoForm({
               return (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-tinta px-3 py-1.5 text-sm text-white"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-marino px-3 py-1.5 text-sm text-white"
                 >
                   {p?.nombre ?? "Producto"}
                   <button
@@ -150,7 +150,7 @@ export default function PedidoDirectoForm({
       </div>
 
       <details>
-        <summary className="cursor-pointer text-sm text-sky-700 underline list-none [&::-webkit-details-marker]:hidden">
+        <summary className="cursor-pointer text-sm text-azul underline list-none [&::-webkit-details-marker]:hidden">
           Monto y fecha de entrega (opcional)
         </summary>
         <div className="mt-2 space-y-2">
@@ -179,7 +179,7 @@ export default function PedidoDirectoForm({
       <button
         type="submit"
         disabled={pending || !puedeEnviar}
-        className="w-full rounded-2xl bg-tinta py-4 text-base font-semibold text-white disabled:opacity-60"
+        className="w-full rounded-2xl bg-marino py-4 text-base font-semibold text-white disabled:opacity-60"
       >
         {pending ? "Cargando…" : "Cargar venta"}
       </button>

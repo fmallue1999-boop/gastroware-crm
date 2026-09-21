@@ -7,7 +7,7 @@ import { telefonoProlijo } from "@/lib/format";
 import { RUBROS, LINEAS_FERIA, PROVINCIAS_AR } from "@/lib/constants";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-marino";
 
 /** Reduce la foto a máx 1100px y la devuelve como JPEG base64 (sin prefijo). */
 async function comprimirFoto(archivo: File): Promise<string> {
@@ -121,13 +121,13 @@ export default function FeriaForm({
 
   const chip = (activo: boolean) =>
     `rounded-full px-4 py-2.5 text-sm font-medium ${
-      activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+      activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
     }`;
 
   return (
     <form onSubmit={guardar} className="space-y-3">
       {flash && (
-        <p className="rounded-2xl border border-green-300 bg-green-50 px-4 py-3 text-center text-sm font-semibold text-green-800">
+        <p className="rounded-2xl border border-green-300 bg-verde-soft px-4 py-3 text-center text-sm font-semibold text-verde">
           {flash}
         </p>
       )}
@@ -147,8 +147,8 @@ export default function FeriaForm({
         disabled={leyendo}
         className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold ${
           foto
-            ? "border border-green-300 bg-green-50 text-green-800"
-            : "bg-tinta text-white"
+            ? "border border-green-300 bg-verde-soft text-verde"
+            : "bg-marino text-white"
         }`}
       >
         {leyendo ? (
@@ -282,7 +282,7 @@ export default function FeriaForm({
       <button
         type="submit"
         disabled={pending || leyendo}
-        className="w-full rounded-2xl bg-tinta py-4 text-base font-semibold text-white disabled:opacity-60"
+        className="w-full rounded-2xl bg-marino py-4 text-base font-semibold text-white disabled:opacity-60"
       >
         {pending ? "Guardando…" : "Guardar y siguiente →"}
       </button>

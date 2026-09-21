@@ -10,10 +10,10 @@ import { textoStock, type InfoStock } from "@/lib/stock";
 import type { Producto } from "@/lib/types";
 
 const inputCls =
-  "min-h-11 w-full rounded-2xl border border-borde bg-white px-3 py-2.5 text-[15px] outline-none focus:border-tinta";
+  "min-h-11 w-full rounded-2xl border border-borde bg-white px-3 py-2.5 text-[15px] outline-none focus:border-marino";
 export const chipCls = (activo: boolean) =>
   `min-h-11 rounded-full px-3.5 py-2 text-[15px] font-medium ${
-    activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+    activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
   }`;
 
 /** Selector de productos del catálogo, agrupado por categoría, con chips de lo elegido. */
@@ -36,7 +36,7 @@ export function SelectorProductos({
           {elegidos.map((id) => (
             <span
               key={id}
-              className="inline-flex items-center gap-1.5 rounded-full bg-tinta px-3 py-1.5 text-sm text-white"
+              className="inline-flex items-center gap-1.5 rounded-full bg-marino px-3 py-1.5 text-sm text-white"
             >
               {productos.find((p) => p.id === id)?.nombre ?? "Producto"}
               <button
@@ -134,7 +134,7 @@ export default function InteresAgregar({
         >
           + Otro interés
         </button>
-        {aviso && <p className="mt-2 text-center text-sm font-medium text-green-700">✓ {aviso}</p>}
+        {aviso && <p className="mt-2 text-center text-sm font-medium text-verde">✓ {aviso}</p>}
       </div>
     );
   }
@@ -154,7 +154,7 @@ export default function InteresAgregar({
         const info = stockInfo[id];
         if (!info) return null;
         return (
-          <p key={id} className={`text-sm ${info.stock > 0 ? "text-green-700" : "text-amber-700"}`}>
+          <p key={id} className={`text-sm ${info.stock > 0 ? "text-verde" : "text-ambar"}`}>
             {productos.find((p) => p.id === id)?.nombre}: {textoStock(info, fechaCorta)}
           </p>
         );
@@ -182,7 +182,7 @@ export default function InteresAgregar({
         </div>
       </div>
       {sinStock && (
-        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[15px] text-amber-900">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-2xl border border-ambar-soft bg-ambar-soft px-3.5 py-2.5 text-[15px] text-ambar">
           <input
             type="checkbox"
             checked={enEspera}
@@ -197,7 +197,7 @@ export default function InteresAgregar({
         <button
           type="submit"
           disabled={pending || (ids.length === 0 && !texto.trim()) || !nivel}
-          className="min-h-11 flex-1 rounded-2xl bg-tinta py-2.5 text-[15px] font-semibold text-white disabled:opacity-50"
+          className="min-h-11 flex-1 rounded-2xl bg-marino py-2.5 text-[15px] font-semibold text-white disabled:opacity-50"
         >
           {pending ? "Guardando…" : "Guardar interés"}
         </button>

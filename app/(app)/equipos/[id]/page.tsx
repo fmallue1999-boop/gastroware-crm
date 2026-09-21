@@ -128,7 +128,7 @@ export default async function EquipoPage({
                 de{" "}
                 <Link
                   href={`/clientes/${e.cliente.id}`}
-                  className="text-sky-700 hover:underline"
+                  className="text-azul hover:underline"
                 >
                   {e.cliente.nombre_comercial}
                 </Link>
@@ -140,7 +140,7 @@ export default async function EquipoPage({
         </div>
         <Link
           href={`/servicio/nueva?cliente=${e.cliente_id}&equipo=${e.id}`}
-          className="inline-flex items-center gap-1.5 rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white"
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white"
         >
           <Wrench className="h-4 w-4" /> Nueva orden de servicio
         </Link>
@@ -152,7 +152,7 @@ export default async function EquipoPage({
           {e.garantia_hasta && (
             <span
               className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                vigente ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                vigente ? "bg-verde-soft text-verde" : "bg-red-100 text-red-700"
               }`}
             >
               Garantía {vigente ? "vigente" : "vencida"} ·{" "}

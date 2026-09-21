@@ -62,7 +62,7 @@ export default async function CotizacionPrintPage({
 
   return (
     <div className="mx-auto max-w-xl bg-white p-8 text-tinta print:p-0">
-      <div className="mb-4 flex items-start justify-between border-b-2 border-tinta pb-4">
+      <div className="mb-4 flex items-start justify-between border-b-2 border-marino pb-4">
         <div className="flex items-center gap-3">
           <LogoEmpresa />
           <div>
@@ -98,7 +98,7 @@ export default async function CotizacionPrintPage({
       {items.length > 0 ? (
         <table className="mb-4 w-full text-sm">
           <thead>
-            <tr className="border-b border-tinta text-left">
+            <tr className="border-b border-marino text-left">
               <th className="py-1">Detalle</th>
               <th className="py-1 text-right">Cant.</th>
               <th className="py-1 text-right">Precio unit.</th>

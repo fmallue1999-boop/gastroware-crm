@@ -41,11 +41,11 @@ export default function ConfigForm({
           value={tarifa}
           onChange={(e) => setTarifa(e.target.value)}
           placeholder="$ por hora"
-          className="flex-1 rounded-2xl border border-borde bg-white shadow-sm px-3 py-2 text-sm outline-none focus:border-tinta"
+          className="flex-1 rounded-2xl border border-borde bg-white shadow-sm px-3 py-2 text-sm outline-none focus:border-marino"
         />
         <button
           disabled={pending}
-          className="rounded-2xl bg-tinta px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-2xl bg-marino px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {guardado ? "✓" : "Guardar"}
         </button>

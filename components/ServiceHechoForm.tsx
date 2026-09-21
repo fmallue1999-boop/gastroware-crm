@@ -8,10 +8,10 @@ import { TIPOS_OT } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-marino";
 const chipCls = (activo: boolean) =>
   `rounded-full px-3.5 py-2 text-sm font-medium ${
-    activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+    activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
   }`;
 
 /** Reduce la foto a máx 1100px y la devuelve como JPEG base64 (sin prefijo). */
@@ -126,7 +126,7 @@ export default function ServiceHechoForm({
                   setEquipos([]);
                   setEquipoId("");
                 }}
-                className="text-xs text-sky-800 underline"
+                className="text-xs text-azul underline"
               >
                 Cambiar
               </button>
@@ -264,7 +264,7 @@ export default function ServiceHechoForm({
       </div>
 
       <details>
-        <summary className="cursor-pointer text-sm text-sky-700 underline list-none [&::-webkit-details-marker]:hidden">
+        <summary className="cursor-pointer text-sm text-azul underline list-none [&::-webkit-details-marker]:hidden">
           Repuestos, gastos y foto (opcional)
         </summary>
         <div className="mt-2 space-y-2">
@@ -331,7 +331,7 @@ export default function ServiceHechoForm({
       <button
         type="submit"
         disabled={pending || !trabajo.trim() || (!cliente && q.trim().length < 2)}
-        className="w-full rounded-2xl bg-tinta py-4 text-base font-semibold text-white disabled:opacity-60"
+        className="w-full rounded-2xl bg-marino py-4 text-base font-semibold text-white disabled:opacity-60"
       >
         {pending ? "Guardando…" : "Guardar service"}
       </button>

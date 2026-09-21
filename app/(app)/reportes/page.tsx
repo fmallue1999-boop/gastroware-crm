@@ -126,7 +126,7 @@ export default async function ReportesPage({
               href={`/reportes?dias=${d}`}
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 rango === d
-                  ? "bg-tinta text-white"
+                  ? "bg-marino text-white"
                   : "border border-borde text-piedra"
               }`}
             >
@@ -160,7 +160,7 @@ export default async function ReportesPage({
           )}
         </h2>
         {vencidasPorVendedor.length === 0 ? (
-          <p className="text-sm text-green-700">
+          <p className="text-sm text-verde">
             ✓ Nadie tiene seguimientos vencidos. Disciplina perfecta.
           </p>
         ) : (

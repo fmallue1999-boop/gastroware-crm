@@ -91,7 +91,7 @@ export default function DocumentosEntidad({
                 href={d.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="truncate text-sky-700 hover:underline"
+                className="truncate text-azul hover:underline"
               >
                 {d.nombre}
               </a>
@@ -141,7 +141,7 @@ export default function DocumentosEntidad({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-center gap-1 rounded-xl bg-tinta px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className="inline-flex items-center gap-1 rounded-xl bg-marino px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
             <Upload className="h-3 w-3" /> {pending ? "Subiendo…" : "Subir"}
           </button>

@@ -76,7 +76,7 @@ export default async function PipelinePage({
       </div>
       <p className="mb-3 text-sm text-piedra">
         Las ventas ganadas siguen su entrega en{" "}
-        <Link href="/pedidos" className="text-sky-700 underline">
+        <Link href="/pedidos" className="text-azul underline">
           Pedidos
         </Link>
         .
@@ -140,7 +140,7 @@ export default async function PipelinePage({
                         </p>
                       ) : (
                         proximaAccion.get(o.id)! < hoy && (
-                          <p className="mt-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+                          <p className="mt-1 rounded-md bg-ambar-soft px-1.5 py-0.5 text-[11px] font-medium text-ambar">
                             Seguimiento vencido
                           </p>
                         )
