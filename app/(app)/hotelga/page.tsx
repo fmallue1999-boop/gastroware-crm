@@ -81,7 +81,7 @@ export default async function HotelgaPage({
   };
   const chip = (activo: boolean) =>
     `shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium ${
-      activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+      activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
     }`;
 
   return (
@@ -90,7 +90,7 @@ export default async function HotelgaPage({
         <h1 className="text-2xl font-bold tracking-tight">HOTELGA 2026</h1>
         <Link
           href="/hotelga/capturar"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-tinta px-3.5 py-2 text-sm font-semibold text-white shadow-sm"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-marino px-3.5 py-2 text-sm font-semibold text-white shadow-sm"
         >
           <Camera className="h-4 w-4" /> Capturar en el stand
         </Link>
@@ -110,7 +110,7 @@ export default async function HotelgaPage({
           name="q"
           defaultValue={busqueda}
           placeholder="Buscar por nombre, empresa, email, teléfono o interés (ej: zumex)"
-          className="w-full rounded-2xl border border-borde bg-white py-3 pl-11 pr-4 text-base shadow-sm outline-none focus:border-tinta"
+          className="w-full rounded-2xl border border-borde bg-white py-3 pl-11 pr-4 text-base shadow-sm outline-none focus:border-marino"
         />
       </form>
 

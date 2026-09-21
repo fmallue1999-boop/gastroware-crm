@@ -47,7 +47,7 @@ export default function PlantillaCopiar({
                 href={linkWhatsApp(telefono, texto)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white"
+                className="rounded-lg bg-verde px-3 py-1.5 text-xs font-medium text-white"
               >
                 Enviar por WhatsApp
               </a>

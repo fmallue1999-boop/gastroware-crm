@@ -90,7 +90,7 @@ export default function PushToggle() {
           </p>
         )}
         {estado === "bloqueado" && (
-          <p className="text-sm text-amber-700">
+          <p className="text-sm text-ambar">
             Las notificaciones están bloqueadas para este sitio — habilitalas
             desde la configuración del navegador.
           </p>
@@ -98,14 +98,14 @@ export default function PushToggle() {
         {estado === "inactivo" && (
           <button
             onClick={activar}
-            className="rounded-2xl bg-tinta px-4 py-2 text-sm font-medium text-white"
+            className="rounded-2xl bg-marino px-4 py-2 text-sm font-medium text-white"
           >
             Activar notificaciones
           </button>
         )}
         {estado === "activo" && (
           <div className="flex items-center gap-3">
-            <span className="text-sm text-green-700">✓ Activadas</span>
+            <span className="text-sm text-verde">✓ Activadas</span>
             <button
               onClick={desactivar}
               className="text-xs text-piedra underline"

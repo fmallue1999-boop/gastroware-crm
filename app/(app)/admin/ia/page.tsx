@@ -46,8 +46,8 @@ export default async function AdminIAPage() {
       <div
         className={`rounded-2xl border p-4 shadow-sm ${
           configurada
-            ? "border-green-200 bg-green-50"
-            : "border-amber-200 bg-amber-50"
+            ? "border-verde-soft bg-verde-soft"
+            : "border-ambar-soft bg-ambar-soft"
         }`}
       >
         <p className="flex items-center gap-1.5 text-sm font-semibold">
@@ -55,14 +55,14 @@ export default async function AdminIAPage() {
           {configurada ? "IA activa" : "IA sin configurar"}
         </p>
         {configurada ? (
-          <p className="mt-1 text-sm text-green-800">
+          <p className="mt-1 text-sm text-verde">
             Las funciones de IA están disponibles en oportunidades (mensajes a
             medida), fichas de cliente (resumen para la llamada) y órdenes de
             servicio (informe prolijo). Todo es borrador: nada se envía ni se
             guarda sin aprobación de una persona.
           </p>
         ) : (
-          <div className="mt-1 space-y-1 text-sm text-amber-900">
+          <div className="mt-1 space-y-1 text-sm text-ambar">
             <p>Para activarla (una sola vez, ~5 minutos):</p>
             <p>
               1. Entrá a <span className="font-medium">console.anthropic.com</span>,

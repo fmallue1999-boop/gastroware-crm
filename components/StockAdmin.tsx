@@ -13,7 +13,7 @@ import { fechaCorta, hoyISO } from "@/lib/format";
 import type { IngresoStock } from "@/lib/types";
 
 const inputCls =
-  "rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta";
+  "rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-marino";
 
 /** Stock editable en línea: un número, un tilde. */
 export function StockEditable({
@@ -52,7 +52,7 @@ export function StockEditable({
             })
           }
           aria-label="Guardar stock"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-tinta text-white disabled:opacity-50"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-marino text-white disabled:opacity-50"
         >
           <Check className="h-4 w-4" />
         </button>
@@ -123,9 +123,9 @@ export function IngresosProducto({
               type="button"
               disabled={pending}
               onClick={() => accion(() => recibirIngresoStock(i.id))}
-              className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
+              className="min-h-9 rounded-lg bg-verde px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
             >
-              Ya llegó
+              Llegó
             </button>
             <button
               type="button"
@@ -168,7 +168,7 @@ export function IngresosProducto({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-xl bg-tinta px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded-xl bg-marino px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
           >
             Guardar
           </button>
@@ -184,7 +184,7 @@ export function IngresosProducto({
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="inline-flex items-center gap-1 text-xs text-sky-700 underline"
+          className="inline-flex items-center gap-1 text-xs text-azul underline"
         >
           <Plus className="h-3 w-3" /> Cargar ingreso previsto
         </button>

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { guardarDiagnostico } from "@/lib/actions";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 type Diag = Record<string, string | number | null>;
 
@@ -119,7 +119,7 @@ export default function DiagnosticoForm({
         />
 
         {margenMensual > 0 && (
-          <div className="rounded-2xl bg-green-50 border border-green-200 p-3 text-sm text-green-900">
+          <div className="rounded-2xl bg-verde-soft border border-verde-soft p-3 text-sm text-green-900">
             <p>
               Margen bruto mensual:{" "}
               <strong>
@@ -132,7 +132,7 @@ export default function DiagnosticoForm({
                 <strong>{(Math.round(recuperoMeses * 10) / 10).toLocaleString("es-AR")} meses</strong>
               </p>
             )}
-            <p className="mt-1 text-xs text-green-700">
+            <p className="mt-1 text-xs text-verde">
               Este es el número para mostrar: unidad de negocio, no precio de máquina.
             </p>
           </div>
@@ -159,7 +159,7 @@ function BotonGuardar({
     <button
       onClick={onClick}
       disabled={pending}
-      className="w-full rounded-2xl border border-tinta py-2.5 text-sm font-medium disabled:opacity-50"
+      className="w-full rounded-2xl border border-marino py-2.5 text-sm font-medium disabled:opacity-50"
     >
       {guardado ? "✓ Guardado" : pending ? "Guardando…" : "Guardar diagnóstico"}
     </button>

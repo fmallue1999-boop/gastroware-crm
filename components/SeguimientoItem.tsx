@@ -4,15 +4,15 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, CalendarClock, MessageCircle, Phone } from "lucide-react";
-import { cerrarSeguimiento, posponerTarea } from "@/lib/actions";
+import { completarTarea, posponerTarea } from "@/lib/actions";
 import { fechaCorta, hoyISO, linkWhatsApp } from "@/lib/format";
 import PosponerPanel from "@/components/PosponerPanel";
 
-const RESULTADOS = ["Hablamos", "No atendió", "Quedó en avisar", "Le mandé info"];
+const RESULTADOS = ["Compró", "Hablamos", "No atendió", "Quedó en avisar"];
 
 /**
- * Un "volver a contactar" pendiente: a quién, cuándo, y dos botones:
- * Hecho o Cambiar fecha. Sin rojos: si venció, se avisa en ámbar.
+ * Un aviso de recompra pendiente (tabla tareas, tipo recompra): a quién,
+ * cuándo, y dos botones: Hecho o Cambiar fecha. Si venció, se avisa en ámbar.
  */
 export default function SeguimientoItem({
   tarea,
@@ -38,7 +38,7 @@ export default function SeguimientoItem({
 
   function hecho(resultado?: string) {
     startTransition(async () => {
-      await cerrarSeguimiento(tarea.id, resultado);
+      await completarTarea(tarea.id, resultado);
       setCerrando(false);
       router.refresh();
     });
@@ -57,7 +57,7 @@ export default function SeguimientoItem({
             </Link>
           )}
           <p className="text-sm text-tinta/80">{tarea.titulo}</p>
-          <p className={`text-xs ${vencida ? "font-medium text-amber-700" : "text-piedra"}`}>
+          <p className={`text-xs ${vencida ? "font-medium text-ambar" : "text-piedra"}`}>
             {vencida
               ? `Era para el ${fechaCorta(tarea.vence_el)}`
               : esHoy
@@ -73,7 +73,7 @@ export default function SeguimientoItem({
               target="_blank"
               rel="noopener noreferrer"
               aria-label="WhatsApp"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-verde text-white"
             >
               <MessageCircle className="h-4 w-4" />
             </a>
@@ -105,7 +105,7 @@ export default function SeguimientoItem({
             type="button"
             onClick={() => hecho()}
             disabled={pending}
-            className="rounded-full bg-tinta px-3 py-1.5 text-xs text-white disabled:opacity-50"
+            className="rounded-full bg-marino px-3 py-1.5 text-xs text-white disabled:opacity-50"
           >
             Solo marcar hecho
           </button>
@@ -135,7 +135,7 @@ export default function SeguimientoItem({
             type="button"
             onClick={() => setCerrando(true)}
             disabled={pending}
-            className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-tinta py-2 text-xs font-medium text-white disabled:opacity-50"
+            className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-marino py-2 text-xs font-medium text-white disabled:opacity-50"
           >
             <Check className="h-3.5 w-3.5" /> Hecho
           </button>

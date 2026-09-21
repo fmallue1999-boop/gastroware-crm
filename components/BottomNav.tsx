@@ -2,102 +2,56 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Boxes,
-  HardDrive,
-  Plus,
-  Users,
-  Menu,
-  Wrench,
-  Package,
-  type LucideIcon,
-} from "lucide-react";
+import { Filter, HardDrive, Home, Menu, Users, Wrench, type LucideIcon } from "lucide-react";
 
-type Item = { href: string; label: string; icono: LucideIcon; central?: boolean };
+type Item = { href: string; label: string; icono: LucideIcon; badge?: number };
 
-/** Dirección y administración: también revisan y cobran services. */
-const GESTION: Item[] = [
-  { href: "/clientes", label: "Contactos", icono: Users },
-  { href: "/pedidos", label: "Ventas", icono: Package },
-  { href: "/alta", label: "Interés", icono: Plus, central: true },
-  { href: "/servicio", label: "Services", icono: Wrench },
-  { href: "/mas", label: "Más", icono: Menu },
-];
+function estaActivo(href: string, pathname: string) {
+  if (href === "/") return pathname === "/";
+  if (href === "/clientes") return pathname.startsWith("/clientes");
+  if (href === "/servicio") return pathname === "/servicio" || /^\/servicio\/(?!cargar)/.test(pathname);
+  return pathname.startsWith(href);
+}
 
-/** Vendedores: el stock a mano, para saber qué pueden vender y qué llega. */
-const VENTAS: Item[] = [
-  { href: "/clientes", label: "Contactos", icono: Users },
-  { href: "/pedidos", label: "Ventas", icono: Package },
-  { href: "/alta", label: "Interés", icono: Plus, central: true },
-  { href: "/stock", label: "Stock", icono: Boxes },
-  { href: "/mas", label: "Más", icono: Menu },
-];
-
-const TECNICO: Item[] = [
-  { href: "/clientes", label: "Contactos", icono: Users },
-  { href: "/servicio", label: "Services", icono: Wrench },
-  { href: "/servicio/cargar", label: "Cargar", icono: Plus, central: true },
-  { href: "/equipos", label: "Equipos", icono: HardDrive },
-  { href: "/mas", label: "Más", icono: Menu },
-];
-
-/** Una sola barra para todo el equipo; el técnico tiene su variante. */
-export default function BottomNav({ rol = "comercial" }: { rol?: string }) {
+/** Barra inferior del celular: cuatro cosas, nada más. El botón de cargar flota aparte. */
+export default function BottomNav({ rol = "comercial", paraHoy = 0 }: { rol?: string; paraHoy?: number }) {
   const pathname = usePathname();
-  const items =
+  const items: Item[] =
     rol === "tecnico"
-      ? TECNICO
-      : ["direccion", "admin"].includes(rol)
-        ? GESTION
-        : VENTAS;
+      ? [
+          { href: "/", label: "Inicio", icono: Home },
+          { href: "/servicio", label: "Services", icono: Wrench },
+          { href: "/equipos", label: "Equipos", icono: HardDrive },
+          { href: "/mas", label: "Más", icono: Menu },
+        ]
+      : [
+          { href: "/", label: "Embudo", icono: Filter },
+          { href: "/hoy", label: "Hoy", icono: Home, badge: paraHoy },
+          { href: "/clientes", label: "Contactos", icono: Users },
+          { href: "/mas", label: "Más", icono: Menu },
+        ];
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-borde bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto grid max-w-2xl grid-cols-5">
+      <div className="mx-auto grid max-w-2xl grid-cols-4">
         {items.map((item) => {
           const Icono = item.icono;
-          const activo = item.central
-            ? pathname === item.href
-            : item.href === "/servicio"
-              ? pathname === "/servicio" || /^\/servicio\/(?!cargar)/.test(pathname)
-              : item.href === "/clientes"
-                ? pathname === "/" || pathname.startsWith("/clientes")
-                : pathname.startsWith(item.href);
-
-          if (item.central) {
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-label={item.label}
-                className="flex flex-col items-center pt-1.5 pb-2"
-              >
-                <span className="-mt-6 flex h-13 w-13 items-center justify-center rounded-full bg-tinta text-white shadow-lg shadow-tinta/25 transition-transform active:scale-95">
-                  <Icono className="h-6 w-6" strokeWidth={2.25} />
-                </span>
-                <span className="mt-1 text-[10.5px] leading-none text-piedra">{item.label}</span>
-              </Link>
-            );
-          }
-
+          const activo = estaActivo(item.href, pathname);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="group flex flex-col items-center gap-1 pt-2 pb-2"
-            >
+            <Link key={item.href} href={item.href} className="flex min-h-14 flex-col items-center justify-center gap-1 pt-2 pb-2">
               <span
-                className={`flex h-7 items-center justify-center rounded-full px-4 transition-colors ${
-                  activo ? "bg-celeste-soft text-tinta" : "text-piedra"
+                className={`relative flex h-7 items-center justify-center rounded-full px-4 transition-colors ${
+                  activo ? "bg-celeste-soft text-marino" : "text-piedra"
                 }`}
               >
-                <Icono className="h-[19px] w-[19px]" strokeWidth={activo ? 2.4 : 2} />
+                <Icono className="h-[20px] w-[20px]" strokeWidth={activo ? 2.4 : 2} />
+                {item.badge ? (
+                  <span className="absolute -right-1 -top-1.5 rounded-full bg-verde px-1.5 text-[0.65rem] font-extrabold leading-4 text-white">
+                    {item.badge}
+                  </span>
+                ) : null}
               </span>
-              <span
-                className={`text-[10.5px] leading-none ${
-                  activo ? "font-semibold text-tinta" : "text-piedra"
-                }`}
-              >
+              <span className={`text-[0.6875rem] leading-none ${activo ? "font-extrabold text-marino" : "font-semibold text-piedra"}`}>
                 {item.label}
               </span>
             </Link>

@@ -126,7 +126,7 @@ export default async function ReportesPage({
               href={`/reportes?dias=${d}`}
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 rango === d
-                  ? "bg-tinta text-white"
+                  ? "bg-marino text-white"
                   : "border border-borde text-piedra"
               }`}
             >
@@ -140,7 +140,7 @@ export default async function ReportesPage({
         <Metrica label="Leads" valor={String(opps.length)} />
         <Metrica label="Ganadas" valor={String(ganadas.length)} />
         <Metrica label="Vendido" valor={<Montos por={montoGanado} />} />
-        <Metrica label="Pipeline abierto" valor={<Montos por={pipeline} />} />
+        <Metrica label="Intereses abiertos" valor={<Montos por={pipeline} />} />
       </div>
 
       <Seccion titulo={`Tasa de cotización: ${pct(cotizadas.length, opps.length)} · Tasa de cierre: ${pct(ganadas.length, cotizadas.length)}${promedioCierre != null ? ` · Cierre promedio: ${promedioCierre} días` : ""}`} />
@@ -160,7 +160,7 @@ export default async function ReportesPage({
           )}
         </h2>
         {vencidasPorVendedor.length === 0 ? (
-          <p className="text-sm text-green-700">
+          <p className="text-sm text-verde">
             ✓ Nadie tiene seguimientos vencidos. Disciplina perfecta.
           </p>
         ) : (

@@ -69,14 +69,14 @@ export default async function PipelinePage({
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-1">
-        <h1 className="text-2xl font-bold tracking-tight">Pipeline</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Tablero de intereses</h1>
         <span className="text-sm text-piedra">
           {oportunidades.length} abiertas · <Montos por={totalPipeline} inline />
         </span>
       </div>
       <p className="mb-3 text-sm text-piedra">
         Las ventas ganadas siguen su entrega en{" "}
-        <Link href="/pedidos" className="text-sky-700 underline">
+        <Link href="/pedidos" className="text-azul underline">
           Pedidos
         </Link>
         .
@@ -113,7 +113,7 @@ export default async function PipelinePage({
                   {items.map((o) => (
                     <Link
                       key={o.id}
-                      href={`/oportunidades/${o.id}`}
+                      href={`/clientes/${o.cliente_id}?interes=${o.id}`}
                       className="block rounded-2xl border border-borde bg-white shadow-sm p-3"
                     >
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -140,7 +140,7 @@ export default async function PipelinePage({
                         </p>
                       ) : (
                         proximaAccion.get(o.id)! < hoy && (
-                          <p className="mt-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+                          <p className="mt-1 rounded-md bg-ambar-soft px-1.5 py-0.5 text-[11px] font-medium text-ambar">
                             Seguimiento vencido
                           </p>
                         )

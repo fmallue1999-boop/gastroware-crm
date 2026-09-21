@@ -32,7 +32,7 @@ export default function PlantillaEditor({ plantilla }: { plantilla: Plantilla })
           </span>
         </span>
         {guardado && !cambiado && (
-          <span className="text-xs text-green-700">Guardado</span>
+          <span className="text-xs text-verde">Guardado</span>
         )}
       </summary>
       <div className="border-t border-borde/60 p-4">
@@ -40,7 +40,7 @@ export default function PlantillaEditor({ plantilla }: { plantilla: Plantilla })
           value={contenido}
           onChange={(e) => setContenido(e.target.value)}
           rows={5}
-          className="w-full rounded-2xl border border-borde px-3 py-2.5 text-sm outline-none focus:border-tinta"
+          className="w-full rounded-2xl border border-borde px-3 py-2.5 text-sm outline-none focus:border-marino"
         />
         {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         {cambiado && (
@@ -48,7 +48,7 @@ export default function PlantillaEditor({ plantilla }: { plantilla: Plantilla })
             type="button"
             disabled={pending}
             onClick={guardar}
-            className="mt-2 rounded-2xl bg-tinta px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="mt-2 rounded-2xl bg-marino px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
             {pending ? "Guardando…" : "Guardar cambios"}
           </button>

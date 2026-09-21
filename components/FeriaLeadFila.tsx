@@ -66,7 +66,7 @@ export default function FeriaLeadFila({
             {lead.email ? ` · ${lead.email}` : ""}
           </p>
           {lead.contactado_at && lead.estado !== "inicial" && (
-            <p className="mt-0.5 text-xs text-sky-800">
+            <p className="mt-0.5 text-xs text-azul">
               {estadoDef?.label} por {nombres[lead.contactado_por ?? ""] ?? "alguien"} el{" "}
               {fechaCorta(lead.contactado_at)}
             </p>
@@ -80,7 +80,7 @@ export default function FeriaLeadFila({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-verde text-white"
               >
                 <MessageCircle className="h-4 w-4" />
               </a>
@@ -114,7 +114,7 @@ export default function FeriaLeadFila({
             disabled={pending}
             onClick={() => correr(() => actualizarFeriaLead(lead.id, { estado: e.value }))}
             className={`rounded-full px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-              lead.estado === e.value ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+              lead.estado === e.value ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
             }`}
           >
             {e.label}
@@ -153,7 +153,7 @@ export default function FeriaLeadFila({
             value={lead.asignado_a ?? ""}
             disabled={pending}
             onChange={(e) => correr(() => asignarFeriaLead(lead.id, e.target.value || null))}
-            className="rounded-xl border border-borde bg-white px-3 py-1.5 text-xs outline-none focus:border-tinta"
+            className="rounded-xl border border-borde bg-white px-3 py-1.5 text-xs outline-none focus:border-marino"
           >
             <option value="">Sin asignar (lo ven todos)</option>
             {vendedores.map((v) => (
@@ -197,12 +197,12 @@ export default function FeriaLeadFila({
             value={obs}
             onChange={(e) => setObs(e.target.value)}
             placeholder="Observaciones"
-            className="flex-1 rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta"
+            className="flex-1 rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-marino"
           />
           <button
             type="submit"
             disabled={pending}
-            className="rounded-xl bg-tinta px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded-xl bg-marino px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
           >
             Guardar
           </button>

@@ -10,7 +10,7 @@ import { pasoDe } from "@/lib/ventas";
 import type { PedidoEstado } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta";
+  "w-full rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-marino";
 
 /**
  * El circuito de la venta en 4 pasos (Vendido → Preparar → Facturar →
@@ -39,6 +39,12 @@ export default function VentaPaso({
   const [fecha, setFecha] = useState(entregaEstimada ?? "");
   const [facturando, setFacturando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  function avisar(texto: string) {
+    setAviso(texto);
+    setTimeout(() => setAviso(null), 2000);
+  }
 
   const actual = estado ?? "comprometido";
   const idx = pasoDe(estado);
@@ -62,6 +68,7 @@ export default function VentaPaso({
     startTransition(async () => {
       const res = await avanzarPedido(oportunidadId, nuevo);
       if (res && "error" in res && res.error) setError(res.error);
+      else avisar(`Pasó a ${VENTA_PASOS[pasoDe(nuevo)]?.label ?? "el paso siguiente"}`);
       router.refresh();
     });
   }
@@ -72,7 +79,10 @@ export default function VentaPaso({
     startTransition(async () => {
       const res = await facturarPedido(oportunidadId, factura, serie);
       if (res && "error" in res && res.error) setError(res.error);
-      else setFacturando(false);
+      else {
+        setFacturando(false);
+        avisar("Factura guardada. Falta entregar.");
+      }
       router.refresh();
     });
   }
@@ -86,9 +96,9 @@ export default function VentaPaso({
               key={p.key}
               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
                 i < idx
-                  ? "bg-green-50 text-green-700"
+                  ? "bg-verde-soft text-verde"
                   : i === idx
-                    ? "bg-tinta text-white"
+                    ? "bg-marino text-white"
                     : "border border-borde text-piedra"
               }`}
             >
@@ -110,7 +120,7 @@ export default function VentaPaso({
             type="date"
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
-            className="rounded-xl border border-borde bg-white px-3 py-1.5 text-xs outline-none focus:border-tinta"
+            className="rounded-xl border border-borde bg-white px-3 py-1.5 text-xs outline-none focus:border-marino"
           />
           <button
             type="button"
@@ -128,13 +138,13 @@ export default function VentaPaso({
         </div>
       )}
       {actual === "comprometido" && compacto && entregaEstimada && (
-        <p className="text-xs font-medium text-amber-700">
+        <p className="text-xs font-medium text-ambar">
           Entrega estimada: {fechaCorta(entregaEstimada)}
         </p>
       )}
 
       {entregada ? (
-        <p className="text-xs font-medium text-green-700">✓ Entregado</p>
+        <p className="text-xs font-medium text-verde">✓ Entregado</p>
       ) : enFacturar ? (
         facturando ? (
           <form onSubmit={facturar} className="mt-1 space-y-2">
@@ -161,7 +171,7 @@ export default function VentaPaso({
               <button
                 type="submit"
                 disabled={pending}
-                className="flex-1 rounded-xl bg-tinta py-2 text-xs font-medium text-white disabled:opacity-60"
+                className="flex-1 rounded-xl bg-marino py-2 text-xs font-medium text-white disabled:opacity-60"
               >
                 {pending ? "Guardando…" : "Guardar factura"}
               </button>
@@ -178,7 +188,7 @@ export default function VentaPaso({
           <button
             type="button"
             onClick={() => setFacturando(true)}
-            className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-xl bg-tinta py-2 text-xs font-medium text-white"
+            className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-xl bg-marino py-2 text-xs font-medium text-white"
           >
             Cargar factura <ArrowRight className="h-3 w-3" />
           </button>
@@ -189,13 +199,14 @@ export default function VentaPaso({
             type="button"
             disabled={pending}
             onClick={() => mover(siguiente.estado)}
-            className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-xl bg-tinta py-2 text-xs font-medium text-white disabled:opacity-50"
+            className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-xl bg-marino py-2 text-xs font-medium text-white disabled:opacity-50"
           >
             {pending ? "Guardando…" : `Pasar a ${siguiente.label}`}
             <ArrowRight className="h-3 w-3" />
           </button>
         )
       )}
+      {aviso && <p className="mt-1 text-xs font-medium text-verde">✓ {aviso}</p>}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );

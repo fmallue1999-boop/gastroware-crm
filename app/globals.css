@@ -1,21 +1,36 @@
 @import "tailwindcss";
 
-/* Tema v3 "GastroWare OS" — claro corporativo.
-   Los nombres de tokens se conservan (crema, tinta, piedra, borde, celeste-*)
-   pero ahora mapean a la paleta corporativa: grises limpios + azul de acento. */
+/* Tema "plataforma" (rediseño de septiembre 2026, aprobado por Franco):
+   fondo cálido, barra lateral azul marino, un color por etapa del embudo y
+   verde para todo lo que sea contactar. Los nombres viejos de los tokens se
+   conservan (crema, tinta, piedra, borde, celeste-*) para no tocar cada
+   componente; los nuevos se suman. */
 @theme {
-  --color-crema: #f5f6f8;        /* fondo de página (gris muy claro) */
-  --color-crema-deep: #eceef1;   /* fondos secundarios / hover */
+  --color-crema: #f4f2ec;        /* fondo de página */
+  --color-crema-deep: #e9e6de;   /* fondos secundarios / hover */
   --color-celeste: #bcd7f5;      /* acento suave (bordes activos) */
-  --color-celeste-soft: #e9f1fb; /* fondos de acento (pill activa, banners) */
-  --color-celeste-deep: #2f6fce; /* acento fuerte (focus, bordes destacados) */
-  --color-piedra: #64707d;       /* texto secundario */
-  --color-tinta: #101828;        /* texto principal y acciones */
-  --color-borde: #e2e5e9;        /* bordes hairline */
+  --color-celeste-soft: #e4edfb; /* fondos de acento */
+  --color-celeste-deep: #2f6fce; /* acento fuerte */
+  --color-piedra: #6b6f76;       /* texto secundario */
+  --color-tinta: #17181c;        /* texto principal */
+  --color-borde: #dcd9d1;        /* bordes */
+
+  --color-marino: #17233a;       /* barra lateral y botones principales */
+  --color-marino-2: #2a3d63;     /* ítem activo de la barra */
+  --color-verde: #1f9d5b;        /* contactar, guardar, vendido */
+  --color-verde-soft: #e3f5ea;
+  --color-azul: #2f6fce;         /* etapa Interesado */
+  --color-azul-soft: #e4edfb;
+  --color-violeta: #6b4fbb;      /* etapa Cotizado */
+  --color-violeta-soft: #ece7f8;
+  --color-ambar: #c67c10;        /* etapa En seguimiento / avisos */
+  --color-ambar-soft: #fbeed2;
+  --color-naranja: #d9552b;      /* etapa Lista de espera / muy interesado */
+  --color-naranja-soft: #fbe4da;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-manrope);
 }
 
 :root {
@@ -23,11 +38,31 @@
 }
 
 html {
-  background: #f5f6f8;
+  background: #f4f2ec;
 }
 
 body {
-  background: #f5f6f8;
-  color: #101828;
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background: #f4f2ec;
+  color: #17181c;
+  font-family: var(--font-manrope), "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* En celular todo un poco más grande: la base pasa a 17 px y nada se lee
+   más chico de 15 px. Las reglas van sin capa, así pisan las utilidades de
+   Tailwind (que viven en @layer utilities). */
+@media (max-width: 1023px) {
+  html {
+    font-size: 17px;
+  }
+  .text-xs,
+  .text-\[11px\],
+  .text-\[13\.5px\],
+  .text-\[14px\] {
+    font-size: 15px;
+    line-height: 1.35;
+  }
+  .text-sm {
+    font-size: 15px;
+    line-height: 1.4;
+  }
 }

@@ -18,13 +18,18 @@ export const ESTADOS_CLIENTE = [
   { value: "inactivo", label: "Inactivos" },
 ] as const;
 
-/** Accesos rápidos para agendar "volver a contactar". */
+/**
+ * Chips de "¿cuándo volver a contactar?": un toque y listo. Ninguno
+ * preseleccionado. "Sin fecha" (dias null) es válido: el interés queda
+ * visible en gris, sin próxima fecha.
+ */
 export const SEGUIMIENTO_RAPIDO = [
   { label: "Mañana", dias: 1 },
-  { label: "En 3 días", dias: 3 },
-  { label: "En 1 semana", dias: 7 },
-  { label: "En 2 semanas", dias: 14 },
-  { label: "En 1 mes", dias: 30 },
+  { label: "3 días", dias: 3 },
+  { label: "1 semana", dias: 7 },
+  { label: "2 semanas", dias: 14 },
+  { label: "1 mes", dias: 30 },
+  { label: "Sin fecha", dias: null },
 ] as const;
 
 export const ORIGENES = [
@@ -37,6 +42,16 @@ export const ORIGENES = [
   "Vendedor",
   "Visita",
   "Otro",
+] as const;
+
+/** De dónde viene un interés (chips de la tercera pantalla de + Interés). */
+export const ORIGENES_INTERES = [
+  "WhatsApp",
+  "Llamada",
+  "Web",
+  "Feria",
+  "Recomendado",
+  "Visita",
 ] as const;
 
 /** Qué pidió el cliente al entrar: define el guión y la primera tarea. */
@@ -111,13 +126,14 @@ export const CONDICIONES_FISCALES = [
   { value: "consumidor_final", label: "Consumidor Final" },
 ] as const;
 
+/** Etapas del interés, con el nombre que se dice en la interfaz (Etapa 1, 1.2). */
 export const ETAPAS = [
-  { value: "nueva", label: "Nueva" },
-  { value: "cotizada", label: "Cotizada" },
-  { value: "seguimiento", label: "Seguimiento" },
+  { value: "nueva", label: "Interesado" },
+  { value: "cotizada", label: "Cotizado" },
+  { value: "seguimiento", label: "En seguimiento" },
   { value: "espera", label: "Lista de espera" },
-  { value: "ganada", label: "Ganada" },
-  { value: "perdida", label: "Perdida" },
+  { value: "ganada", label: "Vendido" },
+  { value: "perdida", label: "No se dio" },
 ] as const;
 
 export const ETAPAS_ABIERTAS = ["nueva", "cotizada", "seguimiento", "espera"] as const;
@@ -202,7 +218,7 @@ export const ACCION_POR_OBJECION: Record<string, string> = {
   "Está comparando":
     "Registrar la marca comparada y enviar la matriz comparativa.",
   "Desaparece / no responde":
-    "Seguir la cadencia D+2/D+5/D+10 y cerrar con la reactivación D+20.",
+    "Anotar un próximo contacto a los 2, 5 y 10 días; si sigue sin responder, cerrarlo a los 20.",
 };
 
 export const CADENCIA_COTIZACION = [

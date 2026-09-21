@@ -37,7 +37,7 @@ export default function ColaCampania({
 
   if (terminada || pendientes.length === 0) {
     return (
-      <p className="rounded-2xl border border-green-200 bg-green-50 p-6 text-center text-sm text-green-800">
+      <p className="rounded-2xl border border-verde-soft bg-verde-soft p-6 text-center text-sm text-verde">
         <CheckCircle2 className="mx-auto mb-1 h-6 w-6" />
         Campaña terminada. No quedan pendientes.
       </p>
@@ -47,7 +47,7 @@ export default function ColaCampania({
   return (
     <div className="space-y-2">
       <p className="text-sm text-piedra">
-        Tocá <span className="font-medium text-green-700">WhatsApp</span> (se
+        Tocá <span className="font-medium text-verde">WhatsApp</span> (se
         abre el chat con el mensaje escrito), mandalo, volvé y marcá{" "}
         <span className="font-medium">Enviado</span>. Siguiente.
       </p>
@@ -84,7 +84,7 @@ export default function ColaCampania({
                     onClick={() =>
                       setAbiertos(new Set(abiertos).add(p.destinatarioId))
                     }
-                    className="inline-flex items-center gap-1 rounded-xl bg-green-600 px-3 py-2 text-xs font-medium text-white"
+                    className="inline-flex items-center gap-1 rounded-xl bg-verde px-3 py-2 text-xs font-medium text-white"
                   >
                     <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                   </a>
@@ -95,7 +95,7 @@ export default function ColaCampania({
                   onClick={() => marcar(p.destinatarioId, "enviado")}
                   className={`rounded-xl px-3 py-2 text-xs font-medium disabled:opacity-60 ${
                     abierto
-                      ? "bg-tinta text-white"
+                      ? "bg-marino text-white"
                       : "border border-borde text-piedra"
                   }`}
                 >

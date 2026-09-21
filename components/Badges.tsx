@@ -4,7 +4,7 @@ export function TempBadge({ temperatura }: { temperatura: string | null }) {
   if (!temperatura) return null;
   const estilos: Record<string, string> = {
     caliente: "bg-red-100 text-red-700",
-    tibio: "bg-amber-100 text-amber-700",
+    tibio: "bg-ambar-soft text-ambar",
     frio: "bg-crema-deep text-piedra",
   };
   const labels: Record<string, string> = {
@@ -23,11 +23,11 @@ export function TempBadge({ temperatura }: { temperatura: string | null }) {
 
 export function EtapaBadge({ etapa }: { etapa: string }) {
   const estilos: Record<string, string> = {
-    nueva: "bg-celeste-soft text-sky-800",
-    cotizada: "bg-amber-100 text-amber-700",
+    nueva: "bg-celeste-soft text-azul",
+    cotizada: "bg-ambar-soft text-ambar",
     seguimiento: "bg-cyan-100 text-cyan-700",
-    espera: "bg-orange-100 text-orange-700",
-    ganada: "bg-green-100 text-green-700",
+    espera: "bg-naranja-soft text-naranja",
+    ganada: "bg-verde-soft text-verde",
     perdida: "bg-crema-deep text-piedra",
   };
   const label = ETAPAS.find((e) => e.value === etapa)?.label ?? etapa;
@@ -64,7 +64,7 @@ export function PrioridadBadge({ prioridad }: { prioridad: string }) {
   if (prioridad === "normal") return null;
   const estilos: Record<string, string> = {
     baja: "bg-crema-deep text-piedra",
-    alta: "bg-amber-100 text-amber-700",
+    alta: "bg-ambar-soft text-ambar",
     urgente: "bg-red-100 text-red-700",
   };
   const labels: Record<string, string> = {

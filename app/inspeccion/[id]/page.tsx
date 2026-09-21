@@ -55,7 +55,7 @@ export default async function InspeccionPage({
 
   return (
     <div className="mx-auto max-w-2xl bg-white p-8 text-tinta print:p-0">
-      <div className="mb-4 flex items-start justify-between border-b-2 border-tinta pb-4">
+      <div className="mb-4 flex items-start justify-between border-b-2 border-marino pb-4">
         <div className="flex items-center gap-3">
           <LogoEmpresa />
           <div>
@@ -117,7 +117,7 @@ export default async function InspeccionPage({
                       <tr key={i}>
                         <td
                           colSpan={3}
-                          className="border-b border-tinta pt-3 pb-1 text-xs font-bold uppercase tracking-wide"
+                          className="border-b border-marino pt-3 pb-1 text-xs font-bold uppercase tracking-wide"
                         >
                           {item.texto}
                         </td>
@@ -186,14 +186,14 @@ export default async function InspeccionPage({
               <img src={firmaUrl} alt="Firma del cliente" className="h-16" />
             )}
           </div>
-          <p className="border-t border-tinta pt-1">
+          <p className="border-t border-marino pt-1">
             Cliente — firma y aclaración
             {ot.firmante ? `: ${ot.firmante}` : ""}
           </p>
         </div>
         <div>
           <div className="h-16" />
-          <p className="border-t border-tinta pt-1">
+          <p className="border-t border-marino pt-1">
             Técnico — firma y aclaración
             {ot.tecnico?.nombre ? `: ${ot.tecnico.nombre}` : ""}
           </p>

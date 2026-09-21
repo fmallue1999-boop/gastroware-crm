@@ -7,7 +7,7 @@ import { TIPOS_OT, PRIORIDADES_OT } from "@/lib/constants";
 import type { Cliente, Usuario } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 export default function OTForm({
   usuarios,
@@ -103,7 +103,7 @@ export default function OTForm({
             {q.trim().length >= 2 && resultados.length === 0 && (
               <p className="rounded-2xl border border-dashed border-borde p-3 text-sm text-piedra">
                 No aparece.{" "}
-                <Link href="/alta" className="text-sky-700 underline">
+                <Link href="/alta" className="text-azul underline">
                   Crear cliente nuevo
                 </Link>{" "}
                 y después volvé a abrir la orden.
@@ -122,7 +122,7 @@ export default function OTForm({
                 setEquipos([]);
                 setEquipoId("");
               }}
-              className="text-xs text-sky-800 underline"
+              className="text-xs text-azul underline"
             >
               Cambiar
             </button>
@@ -190,7 +190,7 @@ export default function OTForm({
           />
 
           {tipo === "garantia" && (
-            <p className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+            <p className="rounded-lg bg-ambar-soft border border-ambar-soft px-3 py-2 text-sm text-ambar">
               Orden por garantía: la mano de obra no se factura.
             </p>
           )}
@@ -199,7 +199,7 @@ export default function OTForm({
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-2xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
+            className="w-full rounded-2xl bg-marino py-3 font-medium text-white disabled:opacity-60"
           >
             {pending ? "Creando…" : "Crear orden de trabajo"}
           </button>

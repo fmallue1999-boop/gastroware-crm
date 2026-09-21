@@ -7,7 +7,7 @@ import { dinero } from "@/lib/format";
 import type { Repuesto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 function Formulario({
   inicial,
@@ -113,7 +113,7 @@ function Formulario({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
           {pending ? "Guardando…" : "Guardar"}
         </button>
@@ -160,7 +160,7 @@ export default function RepuestosAdmin({
             setCreando(true);
             setEditando(null);
           }}
-          className="inline-flex items-center gap-1.5 rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white"
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white"
         >
           <Plus className="h-4 w-4" /> Nuevo repuesto
         </button>

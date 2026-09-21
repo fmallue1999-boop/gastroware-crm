@@ -4,7 +4,8 @@ import InteresNuevoForm from "@/components/InteresNuevoForm";
 import type { Producto } from "@/lib/types";
 
 /**
- * Nuevo interés: la acción principal. Primero qué quiere, después quién.
+ * + Interés: la acción principal, en tres pantallas. Primero qué quiere,
+ * después quién, y al final (opcional) una nota y cuándo volver a contactar.
  * Recibe también texto compartido desde WhatsApp (PWA share target).
  */
 export default async function NuevoInteresPage({
@@ -33,8 +34,8 @@ export default async function NuevoInteresPage({
   return (
     <div className="mx-auto max-w-lg">
       <h1 className="mb-1 text-2xl font-bold tracking-tight">Nuevo interés</h1>
-      <p className="mb-5 text-sm text-piedra">
-        Qué le interesa y a quién. Si no está en la base, lo cargás ahí mismo.
+      <p className="mb-4 text-[15px] text-piedra">
+        Qué le interesa, a quién, y listo.
       </p>
       <InteresNuevoForm
         productos={(data ?? []) as Producto[]}

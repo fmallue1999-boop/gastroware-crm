@@ -37,7 +37,7 @@ export default function LoginPage() {
       );
       return;
     }
-    router.push("/hoy");
+    router.push("/");
     router.refresh();
   }
 
@@ -47,7 +47,7 @@ export default function LoginPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo tamano="lg" />
           <h1 className="mt-4 text-2xl font-bold tracking-tight">
-            GastroWare <span className="font-medium text-piedra">CRM</span>
+            GastroWare
           </h1>
           <p className="mt-1 text-sm text-piedra">
             Ventas, servicio técnico y clientes en un solo lugar
@@ -55,7 +55,7 @@ export default function LoginPage() {
         </div>
 
         {!configurado ? (
-          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm">
+          <div className="rounded-2xl border border-ambar-soft bg-ambar-soft p-4 text-sm text-ambar shadow-sm">
             <p className="mb-1 font-medium">Falta configurar Supabase</p>
             <p>
               Copiá <code>.env.example</code> a <code>.env.local</code>,
@@ -74,7 +74,7 @@ export default function LoginPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-tinta"
+              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-marino"
             />
             <input
               type="password"
@@ -82,13 +82,13 @@ export default function LoginPage() {
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-tinta"
+              className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none transition-colors focus:border-marino"
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button
               type="submit"
               disabled={cargando}
-              className="w-full rounded-2xl bg-tinta py-3.5 font-semibold text-white transition-transform active:scale-[0.99] disabled:opacity-60"
+              className="w-full rounded-2xl bg-verde py-3.5 text-base font-extrabold text-white transition-transform active:scale-[0.99] disabled:opacity-60"
             >
               {cargando ? "Entrando…" : "Entrar"}
             </button>

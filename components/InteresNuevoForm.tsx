@@ -1,38 +1,26 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { X } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { Check, Search } from "lucide-react";
 import { buscarClientes, registrarInteres } from "@/lib/actions";
-import {
-  fechaCorta,
-  hoyISO,
-  normalizarTelefono,
-  sumarDias,
-  telefonoProlijo,
-} from "@/lib/format";
-import {
-  CATEGORIAS_PRODUCTO,
-  NIVELES_INTERES,
-  ORIGENES,
-  RUBROS,
-  SEGUIMIENTO_RAPIDO,
-} from "@/lib/constants";
+import { fechaCorta, hoyISO, normalizarTelefono, sumarDias, telefonoProlijo } from "@/lib/format";
+import { CATEGORIAS_PRODUCTO, NIVELES_INTERES, ORIGENES_INTERES, RUBROS, SEGUIMIENTO_RAPIDO } from "@/lib/constants";
 import { textoStock, type InfoStock } from "@/lib/stock";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-tinta";
+  "min-h-12 w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base shadow-sm outline-none focus:border-marino";
 const chipCls = (activo: boolean) =>
-  `rounded-full px-3.5 py-2 text-sm font-medium ${
-    activo ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
+  `min-h-11 rounded-full px-3.5 py-2 text-[15px] font-semibold ${
+    activo ? "bg-marino text-white" : "border border-borde bg-white text-piedra"
   }`;
+const seccion = "text-xs font-bold uppercase tracking-wide text-piedra";
 const pareceTelefono = (s: string) => /^[\d\s+\-().]{6,}$/.test(s.trim());
 
 /**
- * Nuevo interés: primero qué quiere (el producto), después quién. El
- * "quién" se busca en la base mientras se escribe; si no está, se carga
- * con nombre y teléfono ahí mismo. Todo lo demás es opcional.
+ * Nuevo interés en una sola pantalla (rediseño aprobado por Franco): qué le
+ * interesa con el stock al lado, cuánto, quién (de la base o nuevo), cuándo
+ * volver a contactar, lista de espera si no hay stock, y Guardar.
  */
 export default function InteresNuevoForm({
   productos,
@@ -46,12 +34,11 @@ export default function InteresNuevoForm({
   notaInicial?: string;
 }) {
   const [pending, startTransition] = useTransition();
-  // 1. Qué
+  const [filtro, setFiltro] = useState("");
   const [productoIds, setProductoIds] = useState<string[]>([]);
+  const [otro, setOtro] = useState(false);
   const [interesTexto, setInteresTexto] = useState("");
-  const [nivel, setNivel] = useState("tibio");
-  const [enEspera, setEnEspera] = useState(false);
-  // 2. Quién
+  const [nivel, setNivel] = useState("");
   const [q, setQ] = useState(telefonoInicial);
   const [resultados, setResultados] = useState<Cliente[]>([]);
   const [buscando, setBuscando] = useState(false);
@@ -61,33 +48,45 @@ export default function InteresNuevoForm({
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [empresa, setEmpresa] = useState("");
-  const [esCliente, setEsCliente] = useState(false);
   const [rubro, setRubro] = useState("");
   const [ciudad, setCiudad] = useState("");
   const [origen, setOrigen] = useState("");
-  // 3. Extras
   const [nota, setNota] = useState(notaInicial);
   const [volverEl, setVolverEl] = useState("");
+  const [enEspera, setEnEspera] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const sinStock = productoIds.some((id) => (stockInfo[id]?.stock ?? 1) <= 0);
-  const hayInteres = productoIds.length > 0 || interesTexto.trim().length > 0;
-  const hayQuien =
-    !!cliente ||
-    (esNuevo && nombre.trim().length > 0 && (normalizarTelefono(telefono).length >= 6 || email.trim().length > 0));
+  // Compartido desde WhatsApp: el teléfono ya viene buscado
+  useEffect(() => {
+    if (telefonoInicial.trim().length < 2) return;
+    let vivo = true;
+    buscarClientes(telefonoInicial).then((r) => {
+      if (vivo) setResultados(r);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [telefonoInicial]);
 
+  const sinStock = productoIds.some((id) => (stockInfo[id]?.stock ?? 1) <= 0);
+  const hayInteres = productoIds.length > 0 || (otro && interesTexto.trim().length > 0);
+  const hayQuien =
+    !!cliente || (esNuevo && nombre.trim().length > 0 && (normalizarTelefono(telefono).length >= 6 || email.trim().length > 0));
+  const listo = hayInteres && !!nivel && hayQuien;
+
+  const f = filtro.trim().toLowerCase();
   const grupos = Object.entries(CATEGORIAS_PRODUCTO)
     .map(([cat, label]) => ({
       label,
-      items: productos.filter((p) => p.categoria === cat),
+      items: productos.filter((p) => p.categoria === cat && (!f || p.nombre.toLowerCase().includes(f))),
     }))
     .filter((g) => g.items.length > 0);
 
-  function agregarProducto(id: string) {
-    if (!id || productoIds.includes(id)) return;
-    setProductoIds([...productoIds, id]);
-    if ((stockInfo[id]?.stock ?? 1) <= 0) setEnEspera(true);
+  function alternarProducto(id: string) {
+    const quitar = productoIds.includes(id);
+    setProductoIds(quitar ? productoIds.filter((x) => x !== id) : [...productoIds, id]);
+    if (!quitar && (stockInfo[id]?.stock ?? 1) <= 0) setEnEspera(true);
   }
 
   function buscar(valor: string) {
@@ -113,13 +112,12 @@ export default function InteresNuevoForm({
     else setNombre(t);
   }
 
-  function enviar(e: React.FormEvent) {
-    e.preventDefault();
+  function guardar() {
     setError(null);
     startTransition(async () => {
       const res = await registrarInteres({
         productoIds,
-        interesTexto,
+        interesTexto: otro ? interesTexto : "",
         nivel,
         enEspera: enEspera && sinStock,
         clienteId: cliente?.id,
@@ -127,7 +125,6 @@ export default function InteresNuevoForm({
         telefono: esNuevo ? telefono : undefined,
         email: esNuevo ? email : undefined,
         empresa: esNuevo ? empresa : undefined,
-        esCliente: esNuevo ? esCliente : undefined,
         origen: origen || undefined,
         rubro: rubro || undefined,
         ciudad,
@@ -138,120 +135,91 @@ export default function InteresNuevoForm({
     });
   }
 
+  const tile = (activo: boolean) =>
+    `flex min-h-14 w-full items-center justify-between gap-2 rounded-2xl border px-4 py-2.5 text-left ${
+      activo ? "border-marino bg-marino text-white" : "border-borde bg-white"
+    }`;
+
   return (
-    <form onSubmit={enviar} className="space-y-4">
-      {/* 1. Qué le interesa */}
-      <section className="rounded-2xl border border-borde bg-white p-3.5 shadow-sm">
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
-          1 · ¿Qué le interesa?
-        </p>
-        {productoIds.length > 0 && (
-          <div className="mb-1.5 flex flex-wrap gap-1.5">
-            {productoIds.map((id) => {
-              const p = productos.find((x) => x.id === id);
-              return (
-                <span
-                  key={id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-tinta px-3 py-1.5 text-sm text-white"
-                >
-                  {p?.nombre ?? "Producto"}
-                  <button
-                    type="button"
-                    onClick={() => setProductoIds(productoIds.filter((x) => x !== id))}
-                    aria-label="Quitar"
-                  >
-                    <X className="h-3.5 w-3.5" />
+    <div className="space-y-5">
+      {/* Qué */}
+      <section className="space-y-2">
+        <p className={seccion}>¿Qué le interesa?</p>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-piedra" />
+          <input
+            type="search"
+            placeholder="Buscar producto…"
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+            className={`${inputCls} pl-11`}
+          />
+        </div>
+        {grupos.map((g) => (
+          <div key={g.label}>
+            <p className="mb-1 px-1 text-xs font-semibold text-piedra">{g.label}</p>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              {g.items.map((p) => {
+                const elegido = productoIds.includes(p.id);
+                const info = stockInfo[p.id];
+                return (
+                  <button key={p.id} type="button" onClick={() => alternarProducto(p.id)} className={tile(elegido)}>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[15px] font-bold">{p.nombre}</span>
+                      {info && (
+                        <span className={`block text-xs ${elegido ? "text-white/80" : info.stock > 0 ? "text-verde" : "text-ambar"}`}>
+                          {textoStock(info, fechaCorta)}
+                        </span>
+                      )}
+                    </span>
+                    {elegido && <Check className="h-5 w-5 shrink-0" />}
                   </button>
-                </span>
-              );
-            })}
-          </div>
-        )}
-        <select
-          autoFocus
-          value=""
-          onChange={(e) => agregarProducto(e.target.value)}
-          className={inputCls}
-        >
-          <option value="">
-            {productoIds.length === 0 ? "Elegir del catálogo…" : "Agregar otro…"}
-          </option>
-          {grupos.map((g) => (
-            <optgroup key={g.label} label={g.label}>
-              {g.items.map((p) => (
-                <option key={p.id} value={p.id} disabled={productoIds.includes(p.id)}>
-                  {p.nombre}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="…o escribilo con tus palabras (ej: una licuadora para jugos)"
-          value={interesTexto}
-          onChange={(e) => setInteresTexto(e.target.value)}
-          className={`${inputCls} mt-1.5`}
-        />
-        {productoIds.length > 0 && (
-          <div className="mt-1.5 space-y-0.5">
-            {productoIds.map((id) => {
-              const info = stockInfo[id];
-              if (!info) return null;
-              return (
-                <p
-                  key={id}
-                  className={`text-xs ${info.stock > 0 ? "text-green-700" : "text-amber-700"}`}
-                >
-                  {productos.find((p) => p.id === id)?.nombre}: {textoStock(info, fechaCorta)}
-                </p>
-              );
-            })}
-          </div>
-        )}
-        {hayInteres && (
-          <div className="mt-3">
-            <p className="mb-1.5 text-xs text-piedra">¿Cuánto le interesa?</p>
-            <div className="flex flex-wrap gap-1.5">
-              {NIVELES_INTERES.map((n) => (
-                <button
-                  key={n.value}
-                  type="button"
-                  onClick={() => setNivel(n.value)}
-                  className={chipCls(nivel === n.value)}
-                >
-                  {n.label}
-                </button>
-              ))}
+                );
+              })}
             </div>
-            {sinStock && (
-              <label className="mt-2 flex cursor-pointer items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
-                <input
-                  type="checkbox"
-                  checked={enEspera}
-                  onChange={(e) => setEnEspera(e.target.checked)}
-                  className="h-4 w-4 accent-tinta"
-                />
-                Ponerlo en lista de espera: lo quiere y no hay stock
-              </label>
-            )}
           </div>
+        ))}
+        {grupos.length === 0 && <p className="text-[15px] text-piedra">Ningún producto con “{filtro}”. Escribilo en Otro.</p>}
+        <button type="button" onClick={() => setOtro(!otro)} className={`${tile(otro)} ${otro ? "" : "border-dashed"}`}>
+          <span className="text-[15px] font-bold">Otro (escribir)</span>
+          {otro && <Check className="h-5 w-5 shrink-0" />}
+        </button>
+        {otro && (
+          <input
+            type="text"
+            autoFocus
+            placeholder="Qué le interesa, con tus palabras"
+            value={interesTexto}
+            onChange={(e) => setInteresTexto(e.target.value)}
+            className={inputCls}
+          />
         )}
       </section>
 
-      {/* 2. Quién */}
-      <section className="rounded-2xl border border-borde bg-white p-3.5 shadow-sm">
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
-          2 · ¿Quién consulta?
-        </p>
+      {/* Cuánto */}
+      <section className="space-y-2">
+        <p className={seccion}>¿Cuánto le interesa?</p>
+        <div className="flex flex-wrap gap-1.5">
+          {NIVELES_INTERES.map((n) => (
+            <button key={n.value} type="button" onClick={() => setNivel(n.value)} className={chipCls(nivel === n.value)}>
+              {n.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Quién */}
+      <section className="space-y-2">
+        <p className={seccion}>¿Quién?</p>
         {cliente ? (
-          <div className="flex items-center justify-between rounded-2xl bg-celeste-soft px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{cliente.nombre_comercial}</p>
+          <div className="flex items-center gap-3 rounded-2xl bg-verde-soft px-4 py-3">
+            <Check className="h-5 w-5 shrink-0 text-verde" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-bold">{cliente.nombre_comercial}</p>
               <p className="text-xs text-piedra">
                 {cliente.estado === "cliente_activo" ? "Cliente" : "Interesado"}
-                {cliente.telefono ? ` · ${telefonoProlijo(cliente.telefono)}` : ""}
                 {cliente.ciudad ? ` · ${cliente.ciudad}` : ""}
+                {cliente.telefono ? ` · ${telefonoProlijo(cliente.telefono)}` : ""}
               </p>
             </div>
             <button
@@ -260,31 +228,20 @@ export default function InteresNuevoForm({
                 setCliente(null);
                 setQ("");
               }}
-              className="shrink-0 text-xs text-sky-800 underline"
+              className="text-sm text-azul underline"
             >
               Cambiar
             </button>
           </div>
         ) : esNuevo ? (
-          <div className="space-y-2.5">
+          <div className="space-y-2 rounded-2xl bg-white p-3.5 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Es alguien nuevo</p>
-              <button
-                type="button"
-                onClick={() => setEsNuevo(false)}
-                className="text-xs text-sky-800 underline"
-              >
+              <p className="text-[15px] font-bold">Es alguien nuevo</p>
+              <button type="button" onClick={() => setEsNuevo(false)} className="text-sm text-azul underline">
                 Buscar en la base
               </button>
             </div>
-            <input
-              type="text"
-              required
-              placeholder="Nombre de la persona o del negocio"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className={inputCls}
-            />
+            <input type="text" autoFocus={!nombre} placeholder="Nombre de la persona" value={nombre} onChange={(e) => setNombre(e.target.value)} className={inputCls} />
             <input
               type="tel"
               placeholder="Teléfono / WhatsApp (pegalo como venga)"
@@ -297,45 +254,13 @@ export default function InteresNuevoForm({
               }}
               className={inputCls}
             />
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => setEsCliente(false)}
-                className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
-                  !esCliente ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
-                }`}
-              >
-                Interesado
-              </button>
-              <button
-                type="button"
-                onClick={() => setEsCliente(true)}
-                className={`flex-1 rounded-2xl px-3 py-2.5 text-sm font-medium ${
-                  esCliente ? "bg-tinta text-white" : "border border-borde bg-white text-piedra"
-                }`}
-              >
-                Ya es cliente
-              </button>
-            </div>
+            <input type="email" placeholder="Email (si no tenés teléfono)" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
             <details>
-              <summary className="cursor-pointer text-sm text-sky-700 underline list-none [&::-webkit-details-marker]:hidden">
-                Más datos (opcional): email, empresa, rubro, ciudad, de dónde viene
+              <summary className="cursor-pointer list-none text-[15px] text-azul underline [&::-webkit-details-marker]:hidden">
+                Más datos (opcional): empresa, rubro, ciudad
               </summary>
-              <div className="mt-2 space-y-2.5">
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputCls}
-                />
-                <input
-                  type="text"
-                  placeholder="Empresa o negocio (si el nombre es de una persona)"
-                  value={empresa}
-                  onChange={(e) => setEmpresa(e.target.value)}
-                  className={inputCls}
-                />
+              <div className="mt-2 space-y-2">
+                <input type="text" placeholder="Empresa o negocio" value={empresa} onChange={(e) => setEmpresa(e.target.value)} className={inputCls} />
                 <select value={rubro} onChange={(e) => setRubro(e.target.value)} className={inputCls}>
                   <option value="">Rubro…</option>
                   {RUBROS.map((r) => (
@@ -344,39 +269,18 @@ export default function InteresNuevoForm({
                     </option>
                   ))}
                 </select>
-                <input
-                  type="text"
-                  placeholder="Ciudad"
-                  value={ciudad}
-                  onChange={(e) => setCiudad(e.target.value)}
-                  className={inputCls}
-                />
-                <div className="flex flex-wrap gap-1.5">
-                  {ORIGENES.map((o) => (
-                    <button
-                      key={o}
-                      type="button"
-                      onClick={() => setOrigen(origen === o ? "" : o)}
-                      className={chipCls(origen === o)}
-                    >
-                      {o}
-                    </button>
-                  ))}
-                </div>
+                <input type="text" placeholder="Ciudad" value={ciudad} onChange={(e) => setCiudad(e.target.value)} className={inputCls} />
               </div>
             </details>
           </div>
         ) : (
           <>
-            <input
-              type="search"
-              placeholder="Nombre o teléfono: buscamos en la base"
-              value={q}
-              onChange={(e) => buscar(e.target.value)}
-              className={inputCls}
-            />
-            <div className="mt-1.5 space-y-1.5">
-              {buscando && <p className="text-xs text-piedra">Buscando…</p>}
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-piedra" />
+              <input type="search" placeholder="Nombre, empresa o teléfono" value={q} onChange={(e) => buscar(e.target.value)} className={`${inputCls} pl-11`} />
+            </div>
+            <div className="space-y-1.5">
+              {buscando && <p className="px-1 text-sm text-piedra">Buscando…</p>}
               {resultados.map((c) => (
                 <button
                   key={c.id}
@@ -385,98 +289,99 @@ export default function InteresNuevoForm({
                     setCliente(c);
                     setResultados([]);
                   }}
-                  className="block w-full rounded-2xl border border-borde bg-white p-3 text-left text-sm shadow-sm"
+                  className="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl bg-white px-4 py-2.5 text-left shadow-sm"
                 >
-                  <span className="font-medium">{c.nombre_comercial}</span>
-                  <span className="text-piedra">
-                    {c.estado === "cliente_activo" ? " · Cliente" : ""}
-                    {c.ciudad ? ` · ${c.ciudad}` : ""}
-                    {c.telefono ? ` · ${telefonoProlijo(c.telefono)}` : ""}
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-bold">{c.nombre_comercial}</span>
+                    <span className="block text-xs text-piedra">
+                      {[c.ciudad, c.telefono ? telefonoProlijo(c.telefono) : null].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                      c.estado === "cliente_activo" ? "bg-verde-soft text-verde" : "bg-azul-soft text-azul"
+                    }`}
+                  >
+                    {c.estado === "cliente_activo" ? "Cliente" : "Interesado"}
                   </span>
                 </button>
               ))}
-              {q.trim().length >= 2 && !buscando && (
-                <button
-                  type="button"
-                  onClick={cargarloNuevo}
-                  className="block w-full rounded-2xl border border-dashed border-borde bg-white p-3 text-left text-sm text-tinta"
-                >
-                  {resultados.length === 0 ? "No está en la base. " : "No es ninguno. "}
-                  <span className="font-medium underline">Cargarlo como nuevo</span>
-                </button>
-              )}
-              {q.trim().length < 2 && (
-                <button
-                  type="button"
-                  onClick={cargarloNuevo}
-                  className="text-xs text-sky-700 underline"
-                >
-                  Es alguien nuevo, cargarlo
-                </button>
-              )}
+              <button type="button" onClick={cargarloNuevo} className="flex min-h-12 w-full items-center rounded-2xl border border-dashed border-borde bg-white px-4 text-left text-[15px]">
+                {q.trim().length >= 2 && !buscando && resultados.length === 0 ? "No está en la base. " : ""}
+                <span className="ml-1 font-bold underline">Es alguien nuevo, cargarlo</span>
+              </button>
             </div>
           </>
         )}
       </section>
 
-      {/* 3. Opcional */}
-      <section className="space-y-3">
-        <textarea
-          placeholder="Nota (opcional): qué hablaron, qué tiene, qué necesita…"
-          value={nota}
-          onChange={(e) => setNota(e.target.value)}
-          rows={2}
-          className={inputCls}
-        />
-        <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
-            ¿Volver a contactar? (opcional)
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {SEGUIMIENTO_RAPIDO.map((o) => {
-              const fecha = sumarDias(o.dias);
-              return (
-                <button
-                  key={o.label}
-                  type="button"
-                  onClick={() => setVolverEl(volverEl === fecha ? "" : fecha)}
-                  className={chipCls(volverEl === fecha)}
-                >
-                  {o.label}
-                </button>
-              );
-            })}
-            <input
-              type="date"
-              value={volverEl}
-              min={hoyISO()}
-              onChange={(e) => setVolverEl(e.target.value)}
-              className="rounded-full border border-borde bg-white px-3 py-1.5 text-sm outline-none focus:border-tinta"
-            />
-          </div>
+      {/* Cuándo */}
+      <section className="space-y-2">
+        <p className={seccion}>¿Volver a contactar?</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {SEGUIMIENTO_RAPIDO.filter((o) => o.dias != null).map((o) => {
+            const fecha = sumarDias(o.dias as number);
+            return (
+              <button key={o.label} type="button" onClick={() => setVolverEl(volverEl === fecha ? "" : fecha)} className={chipCls(volverEl === fecha)}>
+                {o.label}
+              </button>
+            );
+          })}
+          <input
+            type="date"
+            value={volverEl}
+            min={hoyISO()}
+            onChange={(e) => setVolverEl(e.target.value)}
+            aria-label="Otra fecha"
+            className="min-h-11 rounded-full border border-borde bg-white px-3 text-sm outline-none focus:border-marino"
+          />
         </div>
       </section>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {sinStock && (
+        <button
+          type="button"
+          onClick={() => setEnEspera(!enEspera)}
+          className={`flex min-h-14 w-full items-center justify-between rounded-2xl border px-4 py-2.5 text-left text-[15px] font-bold ${
+            enEspera ? "border-naranja bg-naranja-soft text-naranja" : "border-ambar-soft bg-ambar-soft text-ambar"
+          }`}
+        >
+          <span>
+            Poner en lista de espera
+            <span className="block text-xs font-normal">Lo quiere y no hay stock: aparece en Hoy cuando llegue.</span>
+          </span>
+          {enEspera && <Check className="h-5 w-5 shrink-0" />}
+        </button>
+      )}
 
+      <details>
+        <summary className="cursor-pointer list-none text-[15px] text-azul underline [&::-webkit-details-marker]:hidden">
+          Nota y de dónde viene (opcional)
+        </summary>
+        <div className="mt-2 space-y-2">
+          <textarea placeholder="Consultó por WhatsApp, quiere para diciembre…" value={nota} onChange={(e) => setNota(e.target.value)} rows={2} className={inputCls} />
+          <div className="flex flex-wrap gap-1.5">
+            {ORIGENES_INTERES.map((o) => (
+              <button key={o} type="button" onClick={() => setOrigen(origen === o ? "" : o)} className={chipCls(origen === o)}>
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+      </details>
+
+      {error && <p className="text-sm text-red-700">{error}</p>}
       <button
-        type="submit"
-        disabled={pending || !hayInteres || !hayQuien}
-        className="w-full rounded-2xl bg-tinta py-4 text-base font-semibold text-white disabled:opacity-60"
+        type="button"
+        disabled={pending || !listo}
+        onClick={guardar}
+        className="min-h-13 w-full rounded-2xl bg-verde py-3.5 text-base font-extrabold text-white disabled:opacity-50"
       >
-        {pending ? "Guardando…" : "Guardar interés"}
+        {pending ? "Guardando…" : "Guardar"}
       </button>
       <p className="text-center text-xs text-piedra">
-        {!hayInteres
-          ? "Primero elegí qué le interesa."
-          : !hayQuien
-            ? "Falta a quién asignarlo: buscalo en la base o cargalo nuevo."
-            : "Se guarda en la ficha del contacto y queda en Movimientos."}
-        {" "}
-        <Link href="/clientes/nuevo" className="underline">
-          ¿Solo un contacto, sin interés?
-        </Link>
+        {!hayInteres ? "Tocá un producto (o Otro)." : !nivel ? "Falta cuánto le interesa." : !hayQuien ? "Falta quién: buscalo o cargalo nuevo." : "Entra al embudo y a la ficha del contacto."}
       </p>
-    </form>
+    </div>
   );
 }

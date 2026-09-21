@@ -36,7 +36,7 @@ export default function LimiteIA({ actual }: { actual: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-xl bg-tinta px-3.5 py-2 text-sm font-medium text-white disabled:opacity-60"
+        className="rounded-xl bg-marino px-3.5 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
         {guardado ? "Guardado ✓" : pending ? "…" : "Guardar"}
       </button>

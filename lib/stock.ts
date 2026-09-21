@@ -46,11 +46,11 @@ export async function infoStockPorProducto(
   return info;
 }
 
-/** Texto corto para mostrar al lado de un producto: "Hay 3" / "Sin stock, llegan 5 el 20 sep". */
+/** Texto corto para mostrar al lado de un producto: "Hay 3" / "Sin stock, llegan 5 el 20 sep" / "Sin stock, sin ingreso previsto". */
 export function textoStock(i: InfoStock | undefined, fechaCorta: (iso: string | null) => string): string {
   if (!i) return "";
-  if (i.stock > 0) return `Hay ${i.stock} en stock`;
+  if (i.stock > 0) return `Hay ${i.stock}`;
   if (i.proximo)
     return `Sin stock, llegan ${i.proximo.cantidad}${i.proximo.fecha ? ` el ${fechaCorta(i.proximo.fecha)}` : " (fecha a confirmar)"}`;
-  return "Sin stock y sin ingreso previsto";
+  return "Sin stock, sin ingreso previsto";
 }

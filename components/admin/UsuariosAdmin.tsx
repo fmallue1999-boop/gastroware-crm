@@ -7,7 +7,7 @@ import { ROLES } from "@/lib/constants";
 import type { Usuario } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 function etiquetaRol(rol: string) {
   return ROLES.find((r) => r.value === rol)?.label ?? rol;
@@ -54,7 +54,7 @@ function FilaUsuario({
             ))}
           </select>
         ) : (
-          <span className="rounded-full bg-celeste-soft px-2.5 py-1 text-xs font-medium text-sky-800">
+          <span className="rounded-full bg-celeste-soft px-2.5 py-1 text-xs font-medium text-azul">
             {etiquetaRol(u.rol)}
           </span>
         )}
@@ -65,7 +65,7 @@ function FilaUsuario({
           className={`rounded-xl px-3 py-1.5 text-xs font-medium ${
             u.activo
               ? "border border-borde text-piedra hover:bg-crema"
-              : "bg-green-600 text-white"
+              : "bg-verde text-white"
           }`}
         >
           {u.activo ? "Desactivar" : "Reactivar"}
@@ -132,7 +132,7 @@ export default function UsuariosAdmin({
       </div>
 
       {ok && (
-        <p className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <p className="rounded-2xl border border-verde-soft bg-verde-soft px-4 py-3 text-sm text-verde">
           {ok}
         </p>
       )}
@@ -141,7 +141,7 @@ export default function UsuariosAdmin({
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="inline-flex items-center gap-1.5 rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white"
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white"
         >
           <UserPlus className="h-4 w-4" /> Crear usuario
         </button>
@@ -194,7 +194,7 @@ export default function UsuariosAdmin({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
             >
               {pending ? "Creando…" : "Crear"}
             </button>

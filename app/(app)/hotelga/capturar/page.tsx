@@ -27,7 +27,7 @@ export default async function CapturarFeriaPage() {
     <div className="mx-auto max-w-lg">
       <div className="mb-1 flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Capturar en el stand</h1>
-        <span className="rounded-full bg-celeste-soft px-3 py-1 text-sm font-semibold text-sky-800">
+        <span className="rounded-full bg-celeste-soft px-3 py-1 text-sm font-semibold text-azul">
           Hoy: {deHoy ?? 0} · Feria: {total ?? 0}
         </span>
       </div>

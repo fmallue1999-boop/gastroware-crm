@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 const TIPOS = [
   "ficha",
@@ -104,7 +104,7 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
           onClick={() => setModo("archivo")}
           className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium ${
             modo === "archivo"
-              ? "bg-tinta text-white"
+              ? "bg-marino text-white"
               : "border border-borde text-piedra"
           }`}
         >
@@ -115,7 +115,7 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
           onClick={() => setModo("link")}
           className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium ${
             modo === "link"
-              ? "bg-tinta text-white"
+              ? "bg-marino text-white"
               : "border border-borde text-piedra"
           }`}
         >
@@ -189,7 +189,7 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 rounded-2xl bg-tinta py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="flex-1 rounded-2xl bg-marino py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
           {pending
             ? modo === "archivo"
@@ -207,7 +207,7 @@ export default function MaterialForm({ productos }: { productos: Producto[] }) {
       </div>
       <p className="text-[11px] text-piedra">
         Los archivos subidos quedan con un link compartible que no vence: se
-        mandan por WhatsApp desde acá o desde cualquier oportunidad.
+        mandan por WhatsApp desde acá o desde cualquier interés.
       </p>
     </form>
   );

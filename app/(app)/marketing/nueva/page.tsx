@@ -13,7 +13,7 @@ export default async function NuevaCampaniaPage() {
     supabase.from("config").select("valor").eq("clave", "meses_cliente_dormido").maybeSingle(),
   ]);
   if (!["direccion", "admin", "marketing"].includes(rol ?? ""))
-    redirect("/hoy");
+    redirect("/");
 
   return (
     <div className="mx-auto max-w-2xl">

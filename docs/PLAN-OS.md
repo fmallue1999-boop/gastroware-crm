@@ -39,7 +39,7 @@ estados del contacto, no nombres de entidad.
 | Etapa | Objetivo | Especificación |
 |---|---|---|
 | 0 — Sanear y asegurar | Sistema seguro y con cifras confiables: RLS de storage por entidad, facturación y aprobación solo para gestores, transacciones en los flujos críticos, totales por moneda, entorno documentado, CI | [`docs/etapas/ETAPA-0-sanear-y-asegurar.md`](etapas/ETAPA-0-sanear-y-asegurar.md) |
-| 1 — Núcleo comercial que empuja | Que un vendedor no necesite pensar a quién llamar: seguimiento asistido con una tarea viva por contacto, cotizaciones con vencimiento, herramientas de venta a un toque | [`docs/etapas/ETAPA-1-nucleo-comercial.md`](etapas/ETAPA-1-nucleo-comercial.md) |
+| 1 — Núcleo comercial simple | Un interés, una próxima fecha: pendientes calculados desde los intereses (sin motor de tareas para ventas), ficha con toda la información en una pantalla, + Interés en tres pantallas, stock con Llegó, movimientos y navegación simple | [`docs/etapas/ETAPA-1-nucleo-comercial.md`](etapas/ETAPA-1-nucleo-comercial.md) |
 
 Reglas de trabajo por etapa: rama propia (`etapa-N`), un commit por punto,
 sin funcionalidad nueva fuera de lo especificado, leer `AGENTS.md` antes de
@@ -52,3 +52,9 @@ una consulta.
 - `docs/DATA_MODEL.md` — modelo de datos.
 - `docs/PERMISSIONS_MATRIX.md` — qué puede hacer cada rol.
 - `docs/TARGET_ARCHITECTURE.md`, `docs/AI_AND_INTEGRATIONS.md`, `docs/FORMULARIO_WEB.md`, `docs/PRODUCT_REQUIREMENTS.md`, `docs/CURRENT_STATE_AUDIT.md`.
+
+## Decisiones registradas para etapas siguientes
+
+- **Stock (Etapa 4):** el stock pasa a leerse del Excel de ZEUS y la pantalla `/stock` deja de editarse a mano. Hasta entonces la mantiene administración: cantidades, ingresos previstos y el botón "Llegó", que es la única automatización del módulo comercial (los intereses en lista de espera de ese producto pasan a "Hoy" con la nota "Llegó stock").
+- **Descuento de stock:** al pasar una venta a Entregado se descuenta 1 del producto (RPC `fn_ajustar_stock`, migración 026); si se vuelve atrás, se suma. Los ajustes manuales siguen siendo de gestores.
+- **Rediseño de pantallas (20 sept 2026):** Franco rechazó la interfaz de la Etapa 1 tal como estaba escrita en la especificación ("pestañas y demás") y aprobó una propuesta nueva: el embudo como pantalla principal con información desplegable, PC completa (barra lateral, resumen, embudo y ficha al costado), color por etapa, ficha como un chat y alta en una sola pantalla. El modelo de datos y las reglas de la Etapa 1 (un interés, una próxima fecha; migración 026; stock con Llegó) se mantienen; cambian las pantallas descritas en 1.3, 1.4, 1.5 y 1.8. La propuesta visual aprobada está en https://claude.ai/artifact/3M2iiB5wxC1dgf8rRxwfDh.

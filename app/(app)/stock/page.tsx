@@ -1,13 +1,18 @@
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
-import { fechaCorta } from "@/lib/format";
+import { fechaCorta, linkWhatsApp } from "@/lib/format";
 import { IngresosProducto, StockEditable } from "@/components/StockAdmin";
+import { PuntoNivel } from "@/components/PuntoNivel";
 import type { IngresoStock, Producto } from "@/lib/types";
 
+type Esperando = { id: string; nombre: string; telefono: string | null; nivel: string | null };
+
 /**
- * Stock para todo el equipo: qué hay, qué va a entrar y cuándo, y quiénes
- * están esperando cada producto. Administración lo edita acá mismo.
+ * Stock para todo el equipo (Etapa 1, 1.6): por producto, Hay / Llega /
+ * Esperan. Administración carga cantidades e ingresos previstos y toca
+ * "Llegó" cuando entra la mercadería: los que esperan pasan a Hoy.
  */
 export default async function StockPage() {
   const supabase = await createClient();
@@ -27,7 +32,7 @@ export default async function StockPage() {
         .order("fecha_estimada", { ascending: true, nullsFirst: false }),
       supabase
         .from("oportunidades")
-        .select("producto_id, cliente:clientes(id, nombre_comercial, telefono)")
+        .select("producto_id, temperatura, cliente:clientes(id, nombre_comercial, telefono)")
         .eq("etapa", "espera"),
       supabase.rpc("fn_rol"),
     ]);
@@ -35,134 +40,118 @@ export default async function StockPage() {
   const ingresos = (ingresosData ?? []) as IngresoStock[];
   const esGestor = ["direccion", "admin"].includes((rol as string) ?? "");
 
-  const esperaPor = new Map<string, { id: string; nombre: string }[]>();
+  const esperaPor = new Map<string, Esperando[]>();
   for (const o of (esperas ?? []) as unknown as {
     producto_id: string | null;
-    cliente: { id: string; nombre_comercial: string } | null;
+    temperatura: string | null;
+    cliente: { id: string; nombre_comercial: string; telefono: string | null } | null;
   }[]) {
     if (!o.producto_id || !o.cliente) continue;
     if (!esperaPor.has(o.producto_id)) esperaPor.set(o.producto_id, []);
-    esperaPor.get(o.producto_id)!.push({ id: o.cliente.id, nombre: o.cliente.nombre_comercial });
+    esperaPor.get(o.producto_id)!.push({
+      id: o.cliente.id,
+      nombre: o.cliente.nombre_comercial,
+      telefono: o.cliente.telefono,
+      nivel: o.temperatura,
+    });
   }
 
   const grupos = Object.entries(CATEGORIAS_PRODUCTO)
-    .map(([cat, label]) => ({
-      label,
-      items: productos.filter((p) => p.categoria === cat),
-    }))
+    .map(([cat, label]) => ({ label, items: productos.filter((p) => p.categoria === cat) }))
     .filter((g) => g.items.length > 0);
-
   const totalEspera = Array.from(esperaPor.values()).reduce((s, l) => s + l.length, 0);
+  const etiqueta = "text-[11px] font-semibold uppercase tracking-wide text-piedra";
 
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight">Stock</h1>
-      <p className="mb-4 text-sm text-piedra">
-        Qué hay, qué llega y cuándo.
+      <p className="mb-4 text-[15px] text-piedra">
+        Qué hay, qué llega y quién espera.
         {totalEspera > 0 && (
           <>
             {" "}
-            <Link href="/clientes?vista=espera" className="underline">
+            <Link href="/clientes?vista=espera#contactos" className="underline">
               {totalEspera} en lista de espera
             </Link>
             .
           </>
         )}
-        {esGestor && " Administración carga el stock y los ingresos acá mismo."}
+        {esGestor &&
+          " Cuando entra la mercadería, tocá Llegó: los que esperan pasan a Hoy en el inicio de su vendedor."}
       </p>
 
       <div className="space-y-5">
         {grupos.map((g) => (
           <section key={g.label}>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-piedra">
-              {g.label}
-            </h2>
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-piedra">{g.label}</h2>
             <div className="overflow-hidden rounded-2xl border border-borde bg-white shadow-sm">
               {g.items.map((p) => {
                 const ing = ingresos.filter((i) => i.producto_id === p.id);
                 const esperando = esperaPor.get(p.id) ?? [];
-                const proximo = ing[0];
                 return (
-                  <div
-                    key={p.id}
-                    className="border-b border-borde/60 px-3.5 py-3 last:border-0"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium">{p.nombre}</p>
-                        <p className="text-xs text-piedra">
-                          {p.stock > 0 ? (
-                            <span className="font-medium text-green-700">Hay {p.stock}</span>
-                          ) : (
-                            <span className="font-medium text-amber-700">Sin stock</span>
-                          )}
-                          {proximo
-                            ? ` · llegan ${proximo.cantidad}${
-                                proximo.fecha_estimada
-                                  ? ` el ${fechaCorta(proximo.fecha_estimada)}`
-                                  : " (fecha a confirmar)"
-                              }`
-                            : p.stock > 0
-                              ? ""
-                              : " · sin ingreso previsto"}
-                          {esperando.length > 0 && (
-                            <>
-                              {" · "}
-                              <Link
-                                href={`/clientes?vista=espera&producto=${p.id}`}
-                                className="font-medium text-orange-700 underline"
-                              >
-                                {esperando.length} esperando
-                              </Link>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      {esGestor ? (
-                        <StockEditable productoId={p.id} stock={p.stock} />
-                      ) : (
-                        <span
-                          className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                            p.stock > 0
-                              ? "bg-green-100 text-green-700"
-                              : "bg-amber-100 text-amber-700"
-                          }`}
-                        >
-                          {p.stock}
-                        </span>
-                      )}
-                    </div>
-                    {(esGestor || ing.length > 0) && (
-                      <div className="mt-2">
+                  <div key={p.id} className="border-b border-borde/60 px-3.5 py-3 last:border-0">
+                    <p className="text-[15px] font-semibold">{p.nombre}</p>
+                    <div className="mt-1.5 grid grid-cols-3 gap-2">
+                      <div>
+                        <p className={etiqueta}>Hay</p>
                         {esGestor ? (
-                          <IngresosProducto productoId={p.id} ingresos={ing} />
+                          <StockEditable productoId={p.id} stock={p.stock} />
                         ) : (
-                          ing.map((i) => (
-                            <p key={i.id} className="text-xs text-piedra">
-                              Llegan {i.cantidad}
-                              {i.fecha_estimada
-                                ? ` el ${fechaCorta(i.fecha_estimada)}`
-                                : " (fecha a confirmar)"}
-                              {i.nota ? ` · ${i.nota}` : ""}
-                            </p>
-                          ))
+                          <p className={`text-2xl font-bold ${p.stock > 0 ? "text-verde" : "text-ambar"}`}>
+                            {p.stock}
+                          </p>
                         )}
                       </div>
-                    )}
-                    {esperando.length > 0 && (
-                      <p className="mt-1.5 truncate text-xs text-piedra">
-                        Esperan:{" "}
-                        {esperando.slice(0, 4).map((c, i) => (
-                          <span key={c.id}>
-                            {i > 0 ? ", " : ""}
-                            <Link href={`/clientes/${c.id}`} className="underline">
-                              {c.nombre}
-                            </Link>
-                          </span>
-                        ))}
-                        {esperando.length > 4 ? ` y ${esperando.length - 4} más` : ""}
-                      </p>
-                    )}
+                      <div className="min-w-0">
+                        <p className={etiqueta}>Llega</p>
+                        {esGestor ? (
+                          <IngresosProducto productoId={p.id} ingresos={ing} />
+                        ) : ing.length > 0 ? (
+                          ing.map((i) => (
+                            <p key={i.id} className="text-[15px]">
+                              {i.cantidad}
+                              {i.fecha_estimada ? ` el ${fechaCorta(i.fecha_estimada)}` : " (fecha a confirmar)"}
+                              {i.nota ? <span className="text-piedra"> · {i.nota}</span> : null}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-[15px] text-piedra">sin ingreso previsto</p>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={etiqueta}>Esperan</p>
+                        {esperando.length === 0 ? (
+                          <p className="text-[15px] text-piedra">nadie</p>
+                        ) : (
+                          <details className="group">
+                            <summary className="min-h-9 cursor-pointer list-none text-[15px] font-semibold text-naranja underline [&::-webkit-details-marker]:hidden">
+                              {esperando.length}
+                            </summary>
+                            <div className="mt-1 space-y-1">
+                              {esperando.map((c) => (
+                                <div key={c.id} className="flex items-center gap-1.5 text-sm">
+                                  <PuntoNivel nivel={c.nivel} />
+                                  <Link href={`/clientes/${c.id}`} className="min-w-0 flex-1 truncate underline">
+                                    {c.nombre}
+                                  </Link>
+                                  {c.telefono && (
+                                    <a
+                                      href={linkWhatsApp(c.telefono)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      aria-label={`WhatsApp a ${c.nombre}`}
+                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-verde text-white"
+                                    >
+                                      <MessageCircle className="h-4 w-4" />
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 );
               })}

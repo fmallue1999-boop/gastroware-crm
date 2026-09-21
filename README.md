@@ -55,7 +55,7 @@ No hay recordatorios automáticos: solo aparece lo que alguien agenda a mano.
 - `app/(app)/` — pantallas (una carpeta por ruta); `app/api/` — crons,
   webhooks, exportación, baja de email; `app/{comprobante,cotizacion,inspeccion,propuesta-financiacion}` — hojas imprimibles.
 - `components/` — formularios y controles (client components).
-- `lib/actions.ts` — todas las server actions; `lib/auth.ts` — rol y
+- `lib/actions/` — las server actions por módulo (contactos, intereses, ventas, equipos, servicio, marketing, feria, admin, stock) con `index.ts` que re-exporta; `lib/auth.ts` — rol y
   chequeos de gestor; `lib/dinero.ts` — totales por moneda;
   `lib/stock.ts`, `lib/ventas.ts`, `lib/financiacion.ts`, `lib/format.ts`.
 - `lib/core/` — email (Resend), IA (Anthropic), storage (URLs firmadas).
@@ -68,3 +68,20 @@ No hay recordatorios automáticos: solo aparece lo que alguien agenda a mano.
 `docs/PLAN-OS.md` (plan maestro), `docs/etapas/` (especificaciones),
 `docs/DATA_MODEL.md`, `docs/PERMISSIONS_MATRIX.md`, `docs/archive/` (planes
 anteriores, solo historia).
+
+## Pantallas (rediseño de septiembre 2026, aprobado por Franco)
+
+Una plataforma con el embudo al frente y la ficha como un chat:
+
+| Pantalla | Ruta | Qué hace |
+|---|---|---|
+| Embudo | `/` | Cinco columnas con color (Interesados, Cotizados, En seguimiento, Lista de espera, Vendidos), cantidad y plata por etapa; cada tarjeta se despliega para ver lo último y actuar; arrastre entre columnas en PC; resumen del mes arriba; filtro por vendedor y por mes. En celular, las etapas apiladas. |
+| Hoy | `/hoy` | A quién contactar hoy en una sola lista (llegó stock, atrasados, hoy), recompras, próximos 7 días plegados. |
+| Contactos | `/clientes` | Buscador grande y los últimos con movimiento, como una lista de chats. |
+| Ficha | `/clientes/[id]` | Un chat: cabecera con WhatsApp / Llamar / Email y desplegables (Equipos, Services, Cotizaciones, Datos), intereses fijos arriba con Me compró / No se dio / Más, ventas en curso, todo lo que pasó como burbujas, y la caja para anotar con el botón Cuándo. En PC se abre al costado de cualquier lista (`?c=`). |
+| Nuevo interés | `/alta` | Una pantalla: producto con stock, cuánto, quién, cuándo volver, lista de espera si no hay stock. |
+| Ventas | `/pedidos` | Lista con estado y un botón por venta (el paso que sigue). |
+| Stock | `/stock` | Hay / Llega / Esperan por producto; "Llegó" avisa a los que esperan. |
+| Services | `/servicio` | Próximos, para revisar y cobrar, hechos plegados. El técnico arranca en sus services del día. |
+
+Navegación: barra lateral azul marino en PC (Embudo, Hoy, Contactos, Ventas, Stock, Services, Movimientos, Más, Avisos y el botón verde de cargar); en celular, barra de cuatro (Embudo, Hoy, Contactos, Más) y botón flotante de Nuevo interés. Tema en `app/globals.css` (tokens `marino`, `verde`, `azul`, `violeta`, `ambar`, `naranja`).

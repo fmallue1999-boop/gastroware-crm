@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }) {
   const supabase = await createClient();
   const { data: rol } = await supabase.rpc("fn_rol");
-  if (!["direccion", "admin"].includes(rol ?? "")) redirect("/hoy");
+  if (!["direccion", "admin"].includes(rol ?? "")) redirect("/");
 
   return (
     <div>

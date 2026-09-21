@@ -205,7 +205,7 @@ export default function ImportadorClientes() {
   if (estado.paso === "listo") {
     return (
       <div className="space-y-3">
-        <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+        <div className="rounded-2xl border border-verde-soft bg-verde-soft p-4 text-sm text-verde">
           <p className="font-semibold">Importación terminada</p>
           <p className="mt-1">
             {estado.creados} clientes nuevos creados
@@ -224,7 +224,7 @@ export default function ImportadorClientes() {
         <div className="flex gap-2">
           <Link
             href="/clientes"
-            className="rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white"
+            className="rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white"
           >
             Ver clientes
           </Link>
@@ -310,7 +310,7 @@ export default function ImportadorClientes() {
         <button
           type="button"
           onClick={() => void importar()}
-          className="inline-flex items-center gap-1.5 rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white"
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white"
         >
           <Upload className="h-4 w-4" /> Importar {filas.length} filas
         </button>

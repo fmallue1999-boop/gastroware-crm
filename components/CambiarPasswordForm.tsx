@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 export default function CambiarPasswordForm() {
   const [pending, startTransition] = useTransition();
@@ -45,7 +45,7 @@ export default function CambiarPasswordForm() {
 
   if (listo) {
     return (
-      <p className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+      <p className="rounded-2xl border border-verde-soft bg-verde-soft px-4 py-3 text-sm text-verde">
         Contraseña cambiada. Desde ahora entrás con la nueva.
       </p>
     );
@@ -76,7 +76,7 @@ export default function CambiarPasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-2xl bg-tinta py-3 font-medium text-white disabled:opacity-60"
+        className="w-full rounded-2xl bg-marino py-3 font-medium text-white disabled:opacity-60"
       >
         {pending ? "Cambiando…" : "Cambiar contraseña"}
       </button>

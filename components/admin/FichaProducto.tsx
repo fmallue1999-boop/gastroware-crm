@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-xl border border-borde px-3 py-2 text-sm outline-none focus:border-tinta";
+  "w-full rounded-xl border border-borde px-3 py-2 text-sm outline-none focus:border-marino";
 
 /** Ficha de venta del producto: descripción, argumentos e imagen.
  *  La usan el cotizador, la IA y la API pública del catálogo. */
@@ -67,7 +67,7 @@ export default function FichaProducto({ producto }: { producto: Producto }) {
 
   return (
     <details className="border-t border-borde/60">
-      <summary className="cursor-pointer px-4 py-2 text-xs font-medium text-sky-700 list-none [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer px-4 py-2 text-xs font-medium text-azul list-none [&::-webkit-details-marker]:hidden">
         Ficha de venta {producto.descripcion ? "✓" : "(sin completar)"}
       </summary>
       <div className="space-y-2 px-4 pb-3">
@@ -107,7 +107,7 @@ export default function FichaProducto({ producto }: { producto: Producto }) {
             type="button"
             disabled={pending}
             onClick={guardar}
-            className="ml-auto rounded-xl bg-tinta px-3.5 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className="ml-auto rounded-xl bg-marino px-3.5 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
             {pending ? "Guardando…" : guardado ? "Guardado ✓" : "Guardar ficha"}
           </button>

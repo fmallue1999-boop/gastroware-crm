@@ -8,7 +8,7 @@ import { dinero } from "@/lib/format";
 import type { Producto } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 type Linea = ItemCotizacion & { clave: number };
 
@@ -117,7 +117,7 @@ export default function CotizacionForm({
     return (
       <div>
         {advertencia && (
-          <p className="mb-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+          <p className="mb-2 rounded-lg bg-ambar-soft border border-ambar-soft px-3 py-2 text-sm text-ambar">
             {advertencia}
           </p>
         )}
@@ -261,7 +261,7 @@ export default function CotizacionForm({
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 rounded-2xl bg-tinta py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="flex-1 rounded-2xl bg-marino py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
           {pending ? "Guardando…" : "Guardar cotización"}
         </button>

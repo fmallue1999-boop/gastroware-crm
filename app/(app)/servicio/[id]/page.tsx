@@ -143,7 +143,7 @@ export default async function OTPage({
         </div>
         <Link
           href={`/clientes/${ot.cliente_id}`}
-          className="mt-1 block text-sm font-medium text-sky-700"
+          className="mt-1 block text-sm font-medium text-azul"
         >
           {ot.cliente?.nombre_comercial} →
         </Link>
@@ -152,7 +152,7 @@ export default async function OTPage({
             ? `${ot.equipo.producto?.nombre ?? ot.equipo.marca_modelo_libre}${ot.equipo.numero_serie ? ` · serie ${ot.equipo.numero_serie}` : ""}`
             : "Sin equipo asignado"}
           {ot.equipo?.garantia_hasta && (
-            <span className={garantiaVigente ? "text-green-700" : "text-red-600"}>
+            <span className={garantiaVigente ? "text-verde" : "text-red-600"}>
               {" "}· garantía {garantiaVigente ? "vigente" : "vencida"} (
               {fechaCorta(ot.equipo.garantia_hasta)})
             </span>
@@ -207,7 +207,7 @@ export default async function OTPage({
             <span>{dinero(ot.total ?? manoObra + itemsAprobados)}</span>
           </p>
           {tarifa === 0 && ot.cobertura !== "garantia" && (
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-ambar">
               La tarifa por hora está en $0 — configurala en Administración.
             </p>
           )}

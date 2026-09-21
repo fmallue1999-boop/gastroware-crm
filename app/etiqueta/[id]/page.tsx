@@ -36,7 +36,7 @@ export default async function EtiquetaPage({
 
   return (
     <div className="mx-auto max-w-xs bg-white p-6 text-center text-tinta print:p-2">
-      <div className="rounded-2xl border-2 border-tinta p-5 print:rounded-lg">
+      <div className="rounded-2xl border-2 border-marino p-5 print:rounded-lg">
         <p className="text-lg font-bold tracking-tight">GastroWare</p>
         <p className="text-xs text-piedra">Servicio técnico oficial</p>
         {/* eslint-disable-next-line @next/next/no-img-element */}

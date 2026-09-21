@@ -72,7 +72,7 @@ export default function ProductoFila({ producto }: { producto: Producto }) {
           type="button"
           disabled={pending}
           onClick={() => guardar()}
-          className="rounded-xl bg-tinta px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="rounded-xl bg-marino px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
           Guardar
         </button>
@@ -86,7 +86,7 @@ export default function ProductoFila({ producto }: { producto: Producto }) {
         {producto.activo ? "Ocultar" : "Activar"}
       </button>
       {guardado && !cambiado && (
-        <span className="text-xs text-green-700">Guardado</span>
+        <span className="text-xs text-verde">Guardado</span>
       )}
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>

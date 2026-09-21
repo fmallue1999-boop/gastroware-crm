@@ -29,7 +29,7 @@ import { ESTADOS_ITEM_OT } from "@/lib/constants";
 import type { OrdenTrabajo, OTItem, OTTiempo, Repuesto } from "@/lib/types";
 
 const inputCls =
-  "rounded-2xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "rounded-2xl border border-borde bg-white px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 async function subirArchivo(otId: string, archivo: File, carpeta: string) {
   if (archivo.size > 10 * 1024 * 1024) throw new Error("Máximo 10 MB");
@@ -219,7 +219,7 @@ export default function OTTrabajo({
             <button
               onClick={() => accion(() => iniciarTiempo(ot.id))}
               disabled={pending}
-              className="flex items-center gap-1.5 rounded-xl bg-green-600 px-3.5 py-2 text-sm font-medium text-white"
+              className="flex items-center gap-1.5 rounded-xl bg-verde px-3.5 py-2 text-sm font-medium text-white"
             >
               <Play className="h-4 w-4" /> Iniciar trabajo
             </button>
@@ -244,7 +244,7 @@ export default function OTTrabajo({
             <button
               onClick={() => accion(async () => { const r = await cargarTiempoManual(ot.id, Number(minManual), justif); if (!(r && "error" in r && r.error)) { setMinManual(""); setJustif(""); } return r; })}
               disabled={pending}
-              className="rounded-xl border border-tinta px-3 py-2 text-sm font-medium"
+              className="rounded-xl border border-marino px-3 py-2 text-sm font-medium"
             >
               Cargar
             </button>
@@ -271,7 +271,7 @@ export default function OTTrabajo({
         <button
           onClick={guardarTextos}
           disabled={pending}
-          className="mt-2 w-full rounded-xl border border-tinta py-2 text-sm font-medium disabled:opacity-50"
+          className="mt-2 w-full rounded-xl border border-marino py-2 text-sm font-medium disabled:opacity-50"
         >
           {guardado ? "✓ Guardado" : "Guardar diagnóstico y trabajo"}
         </button>
@@ -329,7 +329,7 @@ export default function OTTrabajo({
               <input type="file" accept="image/*" capture="environment" onChange={(e) => setItemTicket(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-xs" />
             </label>
           )}
-          <button type="submit" disabled={subiendo} className="w-full rounded-xl border border-tinta py-2 text-sm font-medium disabled:opacity-50">
+          <button type="submit" disabled={subiendo} className="w-full rounded-xl border border-marino py-2 text-sm font-medium disabled:opacity-50">
             {subiendo ? "Subiendo…" : "+ Agregar"}
           </button>
         </form>
@@ -374,7 +374,7 @@ export default function OTTrabajo({
           <button
             onClick={() => accion(() => finalizarOTTecnico(ot.id))}
             disabled={pending}
-            className="w-full rounded-2xl bg-tinta py-3 font-semibold text-white disabled:opacity-60"
+            className="w-full rounded-2xl bg-marino py-3 font-semibold text-white disabled:opacity-60"
           >
             Finalizar trabajo (pasa a administración)
           </button>
@@ -443,7 +443,7 @@ function GrillaFotos({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={f.url} alt={`Foto ${f.momento}`} className="h-20 w-full rounded-lg border border-borde object-cover" />
             {f.momento !== "otro" && (
-              <span className="absolute bottom-1 left-1 rounded bg-tinta/70 px-1 text-[10px] text-white">
+              <span className="absolute bottom-1 left-1 rounded bg-marino/70 px-1 text-[10px] text-white">
                 {f.momento}
               </span>
             )}
@@ -536,7 +536,7 @@ function Firma({ ot, firmaUrl }: { ot: OrdenTrabajo; firmaUrl: string | null }) 
         placeholder="Nombre de quien firma"
         value={firmante}
         onChange={(e) => setFirmante(e.target.value)}
-        className="mb-2 w-full rounded-2xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-tinta"
+        className="mb-2 w-full rounded-2xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-marino"
       />
       <canvas
         ref={canvasRef}
@@ -555,7 +555,7 @@ function Firma({ ot, firmaUrl }: { ot: OrdenTrabajo; firmaUrl: string | null }) 
           type="button"
           onClick={guardar}
           disabled={!hayTrazo || guardando}
-          className="rounded-lg bg-tinta px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-marino px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
         >
           {guardando ? "Guardando…" : "Guardar firma"}
         </button>

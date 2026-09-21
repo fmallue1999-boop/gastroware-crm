@@ -56,7 +56,7 @@ export default function SubirLogo({ logoActual }: { logoActual: string | null })
             className="h-14 w-auto rounded-lg border border-borde bg-white object-contain p-1"
           />
         ) : (
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-tinta text-2xl font-bold text-white">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-marino text-2xl font-bold text-white">
             G
           </span>
         )}

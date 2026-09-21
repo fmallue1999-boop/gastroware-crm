@@ -15,7 +15,7 @@ export default async function MarketingPage() {
   const supabase = await createClient();
   const { data: rol } = await supabase.rpc("fn_rol");
   if (!["direccion", "admin", "marketing"].includes(rol ?? ""))
-    redirect("/hoy");
+    redirect("/");
 
   const { data } = await supabase
     .from("campanias")
@@ -51,7 +51,7 @@ export default async function MarketingPage() {
         <h1 className="text-2xl font-bold tracking-tight">Marketing</h1>
         <Link
           href="/marketing/nueva"
-          className="inline-flex items-center gap-1.5 rounded-2xl bg-tinta px-4 py-2.5 text-sm font-medium text-white"
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-marino px-4 py-2.5 text-sm font-medium text-white"
         >
           <Plus className="h-4 w-4" /> Nueva campaña
         </Link>
@@ -87,10 +87,10 @@ export default async function MarketingPage() {
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       c.estado === "terminada"
-                        ? "bg-green-100 text-green-700"
+                        ? "bg-verde-soft text-verde"
                         : c.estado === "borrador"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-celeste-soft text-sky-800"
+                          ? "bg-ambar-soft text-ambar"
+                          : "bg-celeste-soft text-azul"
                     }`}
                   >
                     {c.estado === "terminada"

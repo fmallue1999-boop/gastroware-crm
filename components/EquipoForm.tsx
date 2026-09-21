@@ -5,7 +5,7 @@ import { agregarEquipo } from "@/lib/actions";
 import type { Producto } from "@/lib/types";
 
 const inputCls =
-  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-tinta";
+  "rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 export default function EquipoForm({
   clienteId,
@@ -131,7 +131,7 @@ export default function EquipoForm({
         <button
           type="submit"
           disabled={pending || (!esAjeno && !productoId)}
-          className="flex-1 rounded-2xl bg-tinta py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="flex-1 rounded-2xl bg-marino py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {pending ? "Guardando…" : "Cargar"}
         </button>
