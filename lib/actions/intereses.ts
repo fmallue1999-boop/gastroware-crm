@@ -267,6 +267,20 @@ export async function setTemperatura(oportunidadId: string, temperatura: string)
   return { ok: true };
 }
 
+/** Los últimos movimientos de un interés (para desplegar una tarjeta del embudo). */
+export async function ultimosMovimientos(oportunidadId: string, cantidad = 3) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("actividades")
+    .select("id, contenido, created_at, usuario:usuarios(nombre)")
+    .eq("oportunidad_id", oportunidadId)
+    .order("created_at", { ascending: false })
+    .limit(cantidad);
+  return ((data ?? []) as unknown as { id: string; contenido: string | null; created_at: string; usuario: { nombre: string } | null }[]).map(
+    (a) => ({ id: a.id, contenido: a.contenido ?? "", created_at: a.created_at, quien: a.usuario?.nombre ?? null })
+  );
+}
+
 /** Cambia el producto (o el texto) de un interés abierto. Queda en Movimientos. */
 export async function cambiarProductoInteres(
   oportunidadId: string,
