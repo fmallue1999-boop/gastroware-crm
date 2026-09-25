@@ -99,3 +99,17 @@ end $$;
 revoke all on function fn_lead_web(text,text,text,text,text,text,text) from public;
 grant execute on function fn_lead_web(text,text,text,text,text,text,text) to anon;
 grant execute on function fn_lead_web(text,text,text,text,text,text,text) to authenticated;
+
+-- Último movimiento real de cada interés. La 026 agregó la columna con
+-- default now(), así que todos los intereses viejos quedaron "movidos" el día
+-- que se aplicó y el tablero los vería quietos de golpe una semana después.
+-- Se recalcula desde los movimientos (o la fecha de alta si no tiene).
+update oportunidades o
+   set ultimo_movimiento_at = coalesce(
+         (select max(a.created_at) from actividades a where a.oportunidad_id = o.id),
+         o.created_at)
+ where o.ultimo_movimiento_at >= '2026-09-21'
+   and not exists (
+     select 1 from actividades a
+      where a.oportunidad_id = o.id
+        and a.created_at >= o.ultimo_movimiento_at - interval '1 minute');
