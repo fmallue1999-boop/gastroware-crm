@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { enviarEmail } from "@/lib/core/email";
+import { calcularTablero, cargarDatosTablero, rangoPeriodo, type Db as DbTablero } from "@/lib/tablero";
+import { htmlResumenSemanal } from "@/lib/tablero-email";
 
 const ABIERTAS = ["nueva", "cotizada", "seguimiento", "espera"];
 
 /**
- * Cron matutino (Vercel Cron, 8:30 AR): manda a cada vendedor suscripto un
+ * Cron matutino (Vercel Cron, 8:30 AR). Los lunes también manda el resumen
+ * semanal por email a dirección (?semanal=vista lo muestra sin enviar).
+ * Manda a cada vendedor suscripto un
  * push con lo que tiene para contactar hoy. Desde la migración 026 el próximo
  * contacto vive en el interés (oportunidades.proximo_contacto): se cuentan sus
  * intereses atrasados y de hoy, más sus avisos de recompra.
@@ -40,6 +45,13 @@ export async function GET(request: Request) {
   const hoy = new Date().toLocaleDateString("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   });
+
+  // Vista previa del resumen semanal: devuelve el email sin mandar nada
+  const modoSemanal = new URL(request.url).searchParams.get("semanal");
+  if (modoSemanal === "vista") {
+    const { html } = await armarResumenSemanal(supabase, hoy);
+    return new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  }
 
   const [{ data: subs }, { data: intereses }, { data: recompras }] = await Promise.all([
     supabase.from("push_subs").select("*"),
@@ -102,5 +114,47 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, enviadas });
+  // Los lunes, además, el resumen semanal por email a dirección
+  const esLunes = new Date(hoy + "T12:00:00Z").getUTCDay() === 1;
+  const semanal = esLunes ? await enviarResumenSemanal(supabase, hoy) : { omitido: "no es lunes" };
+
+  return NextResponse.json({ ok: true, enviadas, semanal });
+}
+
+type Db = DbTablero;
+
+async function armarResumenSemanal(db: Db, hoy: string) {
+  const per = rangoPeriodo("semana_pasada", hoy);
+  const ahora = Date.now();
+  const datos = await cargarDatosTablero(db, per, ahora);
+  const t = calcularTablero(datos, per, {}, hoy, ahora);
+  const urlBase = (process.env.NEXT_PUBLIC_APP_URL || "https://gastroware-crm.vercel.app").replace(/\/$/, "");
+  return { per, ...htmlResumenSemanal(t, per, urlBase) };
+}
+
+/**
+ * Manda el resumen a cada usuario activo con rol dirección. Una sola vez por
+ * semana: guarda en config la semana enviada, así una segunda corrida del
+ * cron el mismo lunes no duplica.
+ */
+async function enviarResumenSemanal(db: Db, hoy: string) {
+  const { per, asunto, html } = await armarResumenSemanal(db, hoy);
+  const { data: ya } = await db.from("config").select("valor").eq("clave", "resumen_semanal_enviado").maybeSingle();
+  if (ya?.valor === per.desde) return { omitido: `ya se mandó la semana del ${per.desde}` };
+
+  const { data: direccion } = await db.from("usuarios").select("id, nombre").eq("rol", "direccion").eq("activo", true);
+  const resultados: { nombre: string; ok: boolean; error?: string }[] = [];
+  for (const u of (direccion ?? []) as { id: string; nombre: string }[]) {
+    const { data } = await db.auth.admin.getUserById(u.id);
+    const email = data.user?.email;
+    if (!email) {
+      resultados.push({ nombre: u.nombre, ok: false, error: "sin email" });
+      continue;
+    }
+    const r = await enviarEmail({ para: email, asunto, html });
+    resultados.push({ nombre: u.nombre, ok: "ok" in r, error: "error" in r ? r.error : undefined });
+  }
+  if (resultados.some((r) => r.ok))
+    await db.from("config").upsert({ clave: "resumen_semanal_enviado", valor: per.desde }, { onConflict: "clave" });
+  return { semana: per.desde, resultados };
 }

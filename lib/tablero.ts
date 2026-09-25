@@ -1,4 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+/** Cualquier cliente de Supabase: el de la sesión (server) o el del cron (service key). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Db = SupabaseClient<any, any, any, any, any>;
 import { sumarPorMoneda } from "@/lib/dinero";
 
 /**
@@ -716,7 +720,7 @@ async function todas<T>(arma: (desde: number, hasta: number) => PromiseLike<{ da
  * Con la sesión del usuario respeta los permisos de la base; el cron usa la
  * service key.
  */
-export async function cargarDatosTablero(db: SupabaseClient, per: Periodo, ahora: number): Promise<DatosTablero> {
+export async function cargarDatosTablero(db: Db, per: Periodo, ahora: number): Promise<DatosTablero> {
   const desdeTs = `${per.antDesde}T00:00:00-03:00`;
   const [abiertasCrudas, recientesCrudas, cotsCrudas, actividades, productos, usuarios] = await Promise.all([
     todas<FilaCruda>((a, b) =>
