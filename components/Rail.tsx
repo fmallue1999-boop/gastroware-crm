@@ -7,6 +7,7 @@ import {
   Bell,
   Boxes,
   Filter,
+  Gauge,
   HardDrive,
   Home,
   Menu,
@@ -59,6 +60,7 @@ export default function Rail({
       ]
     : [
         { href: "/", label: "Embudo", icono: Filter },
+        { href: "/tablero", label: "Tablero", icono: Gauge, roles: ["direccion", "admin"] },
         { href: "/hoy", label: "Hoy", icono: Home, badge: paraHoy },
         { href: "/clientes", label: "Contactos", icono: Users },
         { href: "/pedidos", label: "Ventas", icono: Package, roles: VENDEN },

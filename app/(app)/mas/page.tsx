@@ -155,10 +155,10 @@ export default async function MasPage() {
             Dirección
           </h2>
           <MenuLink
-            href="/reportes"
+            href="/tablero"
             icono={TrendingUp}
-            titulo="Reportes"
-            detalle="Embudo, canales, rubros y motivos de pérdida"
+            titulo="Tablero"
+            detalle="Cómo está el negocio: vendido, intereses, atrasados por vendedor y alertas"
           />
           <MenuLink
             href="/marketing"
