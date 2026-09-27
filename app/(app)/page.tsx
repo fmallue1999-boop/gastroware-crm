@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -9,7 +10,7 @@ import { filtroQuien } from "@/lib/quien";
 import EmbudoBoard from "@/components/embudo/EmbudoBoard";
 import SelectorQuienDesplegable from "@/components/embudo/SelectorQuienDesplegable";
 import ConPanel from "@/components/ficha/ConPanel";
-import InicioTecnico from "@/components/inicio/InicioTecnico";
+import { ETAPAS_ABIERTAS } from "@/lib/constants";
 import AvisoFlash from "@/components/AvisoFlash";
 
 function mesVecino(mes: string, delta: number): string {
@@ -37,14 +38,27 @@ export default async function EmbudoPage({
   const rol = yo?.rol ?? "comercial";
   const esGestor = ["direccion", "admin"].includes(rol);
 
-  if (rol === "tecnico") {
-    return (
-      <div>
-        <h1 className="mb-3 text-2xl font-extrabold tracking-tight">Services</h1>
-        <InicioTecnico userId={userId} />
-      </div>
-    );
-  }
+  // Cada puesto abre en lo suyo: quien vende, en el embudo; el resto, en Mi día
+  if (!["comercial", "direccion", "distribuidor"].includes(rol)) redirect("/hoy");
+
+  const [sinContacto, casosAbiertos, aprobaciones] = await Promise.all([
+    supabase
+      .from("oportunidades")
+      .select("id", { count: "exact", head: true })
+      .eq("comercial_id", userId)
+      .in("etapa", [...ETAPAS_ABIERTAS])
+      .not("asignado_at", "is", null)
+      .is("primer_contacto_at", null),
+    supabase.from("casos").select("id", { count: "exact", head: true }).eq("responsable_id", userId).neq("estado", "cerrado"),
+    rol === "direccion"
+      ? supabase.from("cotizacion_versiones").select("id", { count: "exact", head: true }).eq("aprobacion", "pendiente")
+      : Promise.resolve({ count: 0 }),
+  ]);
+  const avisos = [
+    { n: sinContacto.count ?? 0, texto: "sin primer contacto", href: "/hoy", cls: "bg-red-100 text-red-700" },
+    { n: casosAbiertos.count ?? 0, texto: "casos abiertos", href: "/casos", cls: "bg-ambar-soft text-ambar" },
+    { n: aprobaciones.count ?? 0, texto: "propuestas para aprobar", href: "/aprobaciones", cls: "bg-violeta-soft text-violeta" },
+  ].filter((a) => a.n > 0);
 
   const { quien, comercialId } = await filtroQuien(userId, esGestor);
   const [datos, usuariosRes] = await Promise.all([
@@ -93,6 +107,16 @@ export default async function EmbudoPage({
             </Link>
           </div>
         </div>
+
+        {avisos.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {avisos.map((a) => (
+              <Link key={a.href} href={a.href} className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-extrabold ${a.cls}`}>
+                {a.n} {a.texto}
+              </Link>
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           <Link href="/hoy" className={kpi}>

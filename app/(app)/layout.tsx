@@ -30,9 +30,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const esGestor = ["direccion", "admin"].includes(rol);
   const noLeidas = notifRes.count ?? 0;
 
-  // Cuántos hay para contactar hoy (atrasados, de hoy y "llegó stock"): el número de Hoy
+  // Quien vende: cuántos hay para contactar hoy (atrasados, de hoy y "llegó stock")
   let paraHoy = 0;
-  if (rol !== "tecnico") {
+  if (["comercial", "direccion", "distribuidor"].includes(rol)) {
     const { comercialId } = await filtroQuien(user.id, esGestor);
     let q = supabase
       .from("oportunidades")
