@@ -152,3 +152,24 @@ Los contactos y el historial se conservan. Lo que se pone en cero es el
 trabajo abierto que no refleja la realidad (intereses viejos sin movimiento,
 usuarios de prueba) y la asignación: cada usuario recibe su puesto y cada
 territorio su responsable. Eso se hace con confirmación de dirección, no solo.
+
+## 7. Cómo quedó en el CRM (rama `octubre`)
+
+| Regla o cadena | Dónde está |
+|---|---|
+| Puestos, territorios, reglas | Administración → Equipo (puesto, territorio, teléfono), Territorios, Reglas. `lib/puestos.ts`, `lib/territorios.ts` |
+| Consulta por lugar de entrega y primer contacto | Nueva consulta ("¿Dónde se entrega?"), ficha (asignar / no es de mi territorio / sin primer contacto), trigger `fn_toca_interes` (028) |
+| Cadencia 1-3-7-14-30-60 y "no respondió" | Tarjeta del interés en la ficha. `lib/cadencia.ts` |
+| Fuera de lista pasa por dirección | Cotizador marca "esperando aprobación"; no se imprime; `/aprobaciones`. `lib/propuestas.ts` |
+| Informar la venta, facturar, cobrar, preparar, despachar, entregar | Ficha y `/pedidos` (un botón por paso según el puesto). `lib/ventas.ts`, `lib/actions/ventas.ts`, `lib/servidor/ventas.ts` |
+| Nada se despacha sin cobro o condición; el atraso frena | `liberarVenta` + regla "días de atraso"; condición en Cobranzas o en la venta |
+| Postventa 2-10-30 | Al confirmar la entrega (tareas de postventa en Mi día del vendedor) |
+| Cobranzas | `/cobranzas`. `lib/cobranzas.ts` |
+| Casos de postventa | `/casos`, ficha. `lib/casos.ts` |
+| Remito obligatorio, control, facturar remito, aliados, cobro previo, garantía, acta | Service (`/servicio/[id]`): panel de servicio técnico y remito; "Cargar service hecho" |
+| Informe comercial de los lunes | `/informe` (vendedor), `/informes` (dirección) |
+| Pedidos a marketing, videos por modelo | `/marketing/pedidos`, `/marketing/videos` |
+| Mi día por puesto | `/hoy`. `lib/servidor/midia.ts` |
+| Tablero con la operación | `/tablero` (primer contacto, remitos, casos, cobranza, ventas por territorio) |
+
+Uso por puesto: `docs/GUIA-POR-PUESTO.md`. Arranque: `docs/ARRANQUE-OCTUBRE.md`.
