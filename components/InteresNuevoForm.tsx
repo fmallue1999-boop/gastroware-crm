@@ -6,6 +6,7 @@ import { buscarClientes, registrarInteres } from "@/lib/actions";
 import { fechaCorta, hoyISO, normalizarTelefono, sumarDias, telefonoProlijo } from "@/lib/format";
 import { CATEGORIAS_PRODUCTO, NIVELES_INTERES, ORIGENES_INTERES, RUBROS, SEGUIMIENTO_RAPIDO } from "@/lib/constants";
 import { textoStock, type InfoStock } from "@/lib/stock";
+import { ZONAS_ENTREGA } from "@/lib/territorios";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
@@ -54,6 +55,8 @@ export default function InteresNuevoForm({
   const [nota, setNota] = useState(notaInicial);
   const [volverEl, setVolverEl] = useState("");
   const [enEspera, setEnEspera] = useState(false);
+  /** Lugar de entrega (decide el vendedor); "?" = todavía no se sabe. */
+  const [zona, setZona] = useState("");
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -73,7 +76,7 @@ export default function InteresNuevoForm({
   const hayInteres = productoIds.length > 0 || (otro && interesTexto.trim().length > 0);
   const hayQuien =
     !!cliente || (esNuevo && nombre.trim().length > 0 && (normalizarTelefono(telefono).length >= 6 || email.trim().length > 0));
-  const listo = hayInteres && !!nivel && hayQuien;
+  const listo = hayInteres && !!nivel && hayQuien && !!zona;
 
   const f = filtro.trim().toLowerCase();
   const grupos = Object.entries(CATEGORIAS_PRODUCTO)
@@ -130,6 +133,7 @@ export default function InteresNuevoForm({
         ciudad,
         nota,
         volverEl: volverEl || undefined,
+        zonaEntrega: zona && zona !== "?" ? zona : null,
       });
       if (res && "error" in res) setError(res.error ?? "No se pudo guardar");
     });
@@ -315,6 +319,34 @@ export default function InteresNuevoForm({
         )}
       </section>
 
+      {/* Dónde */}
+      <section className="space-y-2">
+        <p className={seccion}>¿Dónde se entrega?</p>
+        <div className="flex flex-wrap gap-1.5">
+          {ZONAS_ENTREGA.map((z) => (
+            <button key={z} type="button" onClick={() => setZona(zona === z ? "" : z)} className={chipCls(zona === z)}>
+              {z}
+            </button>
+          ))}
+          <button type="button" onClick={() => setZona(zona === "?" ? "" : "?")} className={chipCls(zona === "?")}>
+            Todavía no sé
+          </button>
+        </div>
+        <p className="px-1 text-xs text-piedra">Decide qué vendedor la atiende: CABA y AMBA, o Mar del Plata, costa e interior.</p>
+      </section>
+
+      {/* Por dónde */}
+      <section className="space-y-2">
+        <p className={seccion}>¿Por dónde llegó?</p>
+        <div className="flex flex-wrap gap-1.5">
+          {ORIGENES_INTERES.map((o) => (
+            <button key={o} type="button" onClick={() => setOrigen(origen === o ? "" : o)} className={chipCls(origen === o)}>
+              {o}
+            </button>
+          ))}
+        </div>
+      </section>
+
       {/* Cuándo */}
       <section className="space-y-2">
         <p className={seccion}>¿Volver a contactar?</p>
@@ -356,17 +388,10 @@ export default function InteresNuevoForm({
 
       <details>
         <summary className="cursor-pointer list-none text-[15px] text-azul underline [&::-webkit-details-marker]:hidden">
-          Nota y de dónde viene (opcional)
+          Nota (opcional)
         </summary>
         <div className="mt-2 space-y-2">
           <textarea placeholder="Consultó por WhatsApp, quiere para diciembre…" value={nota} onChange={(e) => setNota(e.target.value)} rows={2} className={inputCls} />
-          <div className="flex flex-wrap gap-1.5">
-            {ORIGENES_INTERES.map((o) => (
-              <button key={o} type="button" onClick={() => setOrigen(origen === o ? "" : o)} className={chipCls(origen === o)}>
-                {o}
-              </button>
-            ))}
-          </div>
         </div>
       </details>
 
@@ -380,7 +405,15 @@ export default function InteresNuevoForm({
         {pending ? "Guardando…" : "Guardar"}
       </button>
       <p className="text-center text-xs text-piedra">
-        {!hayInteres ? "Tocá un producto (o Otro)." : !nivel ? "Falta cuánto le interesa." : !hayQuien ? "Falta quién: buscalo o cargalo nuevo." : "Entra al embudo y a la ficha del contacto."}
+        {!hayInteres
+          ? "Tocá un producto (o Otro)."
+          : !nivel
+            ? "Falta cuánto le interesa."
+            : !hayQuien
+              ? "Falta quién: buscalo o cargalo nuevo."
+              : !zona
+                ? "Falta dónde se entrega (o “Todavía no sé”)."
+                : "Entra al embudo del vendedor del territorio."}
       </p>
     </div>
   );

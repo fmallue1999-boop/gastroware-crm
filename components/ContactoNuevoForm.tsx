@@ -13,6 +13,7 @@ import {
   SEGUIMIENTO_RAPIDO,
 } from "@/lib/constants";
 import { textoStock, type InfoStock } from "@/lib/stock";
+import { ZONAS_ENTREGA } from "@/lib/territorios";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
@@ -53,6 +54,7 @@ export default function ContactoNuevoForm({
   const [rubro, setRubro] = useState("");
   const [ciudad, setCiudad] = useState("");
   const [origen, setOrigen] = useState("");
+  const [zona, setZona] = useState("");
   const [duplicado, setDuplicado] = useState<Cliente | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,6 +100,7 @@ export default function ContactoNuevoForm({
         volverEl: volverEl || undefined,
         nivel,
         enEspera: enEspera && sinStock,
+        zonaEntrega: zona || null,
       });
       if (res && "error" in res) setError(res.error ?? "No se pudo guardar");
     });
@@ -152,6 +155,15 @@ export default function ContactoNuevoForm({
           </Link>
         </div>
       )}
+
+      <select value={zona} onChange={(e) => setZona(e.target.value)} aria-label="Dónde se entrega" className={inputCls}>
+        <option value="">¿Dónde se entrega? (decide el vendedor)</option>
+        {ZONAS_ENTREGA.map((z) => (
+          <option key={z} value={z}>
+            {z}
+          </option>
+        ))}
+      </select>
 
       <div className="flex gap-1.5">
         <button

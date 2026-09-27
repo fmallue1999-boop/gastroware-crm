@@ -60,6 +60,9 @@ type OT = {
   cerrada_tecnico_at: string | null;
 };
 
+/** Momento actual (fuera del render: la regla de pureza de React no deja llamar a Date.now() adentro). */
+const ahora = () => Date.now();
+
 /** Qué movimientos se muestran como "del sistema" (centrados, en ámbar) y cuáles como burbuja de persona. */
 const DE_PERSONA = new Set(["nota", "feria"]);
 
@@ -85,10 +88,13 @@ export default async function FichaChat({
   const hoy = hoyISO();
   const supabase = await createClient();
 
-  const [{ data: cliente }, { data: rol }] = await Promise.all([
+  const [{ data: cliente }, { data: rol }, { data: auth }] = await Promise.all([
     supabase.from("clientes").select("*, sucursales(*)").eq("id", id).maybeSingle(),
     supabase.rpc("fn_rol"),
+    supabase.auth.getUser(),
   ]);
+  const miId = auth?.user?.id ?? "";
+  const ahoraMs = ahora();
   if (!cliente) {
     if (modo === "panel")
       return <p className="p-4 text-[15px] text-piedra">Ese contacto no está o no lo podés ver.</p>;
@@ -411,6 +417,10 @@ export default async function FichaChat({
               iaOn={iaConfigurada()}
               abierta={o.id === interesAbierto}
               hoy={hoy}
+              rol={(rol as string) ?? "comercial"}
+              miId={miId}
+              responsableNombre={o.comercial_id ? nombres.get(o.comercial_id) ?? null : null}
+              ahoraMs={ahoraMs}
             />
           ))}
           {ventasEnCurso.map((o) => (

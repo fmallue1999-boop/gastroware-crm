@@ -15,6 +15,8 @@ import MaterialItem from "@/components/MaterialItem";
 import IAMensaje from "@/components/IAMensaje";
 import { SelectorProductos, chipCls } from "@/components/InteresAgregar";
 import { COLOR_ETAPA, PuntoNivel, textoProximo } from "@/components/PuntoNivel";
+import AsignacionInteres from "@/components/ficha/AsignacionInteres";
+import { CadenciaInteres, CalificacionInteres } from "@/components/ficha/TrabajarInteres";
 import type { Oportunidad, Producto } from "@/lib/types";
 
 export type VersionCot = {
@@ -49,6 +51,10 @@ export default function InteresFijado({
   iaOn,
   abierta = false,
   hoy,
+  rol = "comercial",
+  miId = "",
+  responsableNombre = null,
+  ahoraMs = 0,
 }: {
   interes: Oportunidad;
   nombre: string;
@@ -61,6 +67,10 @@ export default function InteresFijado({
   iaOn: boolean;
   abierta?: boolean;
   hoy: string;
+  rol?: string;
+  miId?: string;
+  responsableNombre?: string | null;
+  ahoraMs?: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -117,6 +127,16 @@ export default function InteresFijado({
         {stockTexto ? ` · ${stockTexto}` : ""}
         {sinMovimiento > 7 ? ` · ${sinMovimiento} días sin movimiento` : ""}
       </p>
+      <AsignacionInteres interes={interes} rol={rol} miId={miId} responsableNombre={responsableNombre} ahoraMs={ahoraMs} />
+      {!enEspera && (
+        <CadenciaInteres
+          interes={interes}
+          hoy={hoy}
+          fechaPropuesta={
+            vigente ? new Date(vigente.created_at).toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }) : null
+          }
+        />
+      )}
 
       {aviso && <p className="mt-2 text-sm font-semibold text-verde">✓ {aviso}</p>}
       {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
@@ -244,6 +264,16 @@ export default function InteresFijado({
               Financiación
             </Link>
           </div>
+
+          <details className="group">
+            <summary className={resumen}>
+              Calificación{interes.cantidad || interes.plazo_compra || interes.decisor ? " ✓" : " (cantidad, plazo, quién decide)"}
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-2">
+              <CalificacionInteres interes={interes} />
+            </div>
+          </details>
 
           <div>
             <p className={sub}>Cuánto le interesa</p>

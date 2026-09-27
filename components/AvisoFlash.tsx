@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const TEXTOS: Record<string, string> = {
   interes: "Interés cargado",
+  asignada: "Consulta cargada y asignada al vendedor del territorio",
   venta: "Venta registrada",
   contacto: "Contacto guardado",
   service: "Service cargado",

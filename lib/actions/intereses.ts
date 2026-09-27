@@ -6,10 +6,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
-import { dinero, normalizarTelefono, diasDesde } from "@/lib/format";
+import { dinero, normalizarTelefono, diasDesde, hoyISO, sumarDias } from "@/lib/format";
+import { sugerenciaSinRespuesta } from "@/lib/cadencia";
 import { NIVELES_INTERES, RUBROS } from "@/lib/constants";
 import type { Etapa } from "@/lib/types";
-import { usuarioActual } from "./comun";
+import { avisar, usuarioActual } from "./comun";
+import { camposDeRuta, rutearConsulta } from "@/lib/servidor/ruteo";
 import { anotarContacto, buscarClientePorTelefono } from "./contactos";
 
 // =====================================================================
@@ -384,6 +386,8 @@ export async function crearInteres(input: {
   origen?: string;
   nivel?: string;
   enEspera?: boolean;
+  /** Lugar de entrega: decide el territorio y el vendedor (manual 1.1 paso 2). */
+  zonaEntrega?: string | null;
 }) {
   const productoIds = (input.productoIds ?? []).filter(Boolean);
   const texto = input.texto?.trim() || null;
@@ -398,13 +402,14 @@ export async function crearInteres(input: {
     ? await supabase.from("productos").select("id, nombre").in("id", productoIds)
     : { data: [] };
   const nombres = (prods ?? []).map((p) => p.nombre).join(", ");
+  const ruta = await rutearConsulta(supabase, { zona: input.zonaEntrega, creadorId: user?.id ?? null });
   const { data: nuevo, error } = await supabase
     .from("oportunidades")
     .insert({
       cliente_id: input.clienteId,
       producto_id: productoIds[0] ?? null,
       productos_extra: productoIds.slice(1),
-      comercial_id: user?.id ?? null,
+      ...camposDeRuta(ruta, hoyISO(), !!input.enEspera),
       origen: input.origen || "Otro",
       pedido: "general",
       etapa: input.enEspera ? "espera" : "nueva",
@@ -420,11 +425,28 @@ export async function crearInteres(input: {
     tipo: "interes",
     contenido: `Nuevo interés: ${[nombres, texto].filter(Boolean).join(" — ") || "un producto"}${
       nivel === "caliente" ? " (muy interesado)" : ""
-    }${input.enEspera ? " — en lista de espera (sin stock)" : ""}`,
+    }${input.enEspera ? " — en lista de espera (sin stock)" : ""}${
+      ruta.zona ? ` · se entrega en ${ruta.zona}` : ""
+    }${ruta.derivada && ruta.responsableNombre ? ` · asignada a ${ruta.responsableNombre}` : ""}${
+      !ruta.comercialId ? " · sin asignar: falta dónde se entrega" : ""
+    }`,
     created_by: user?.id ?? null,
   });
+  if (ruta.comercialId)
+    await supabase.from("clientes").update({ comercial_id: ruta.comercialId }).eq("id", input.clienteId).is("comercial_id", null);
+  if (ruta.derivada)
+    await avisar(
+      supabase,
+      [ruta.comercialId],
+      {
+        tipo: "consulta_asignada",
+        titulo: `Consulta nueva de tu territorio: ${[nombres, texto].filter(Boolean).join(" — ") || "un producto"}. Primer contacto dentro de la hora.`,
+        url: `/clientes/${input.clienteId}?interes=${nuevo.id}`,
+      },
+      user?.id
+    );
   revalidatePath("/", "layout");
-  return { ok: true as const, id: nuevo.id as string };
+  return { ok: true as const, id: nuevo.id as string, responsable: ruta.responsableNombre, derivada: ruta.derivada };
 }
 // =====================================================================
 // Nuevo interés: primero qué quiere, después quién (de la base o nuevo)
@@ -454,6 +476,7 @@ export async function registrarInteres(input: {
   ciudad?: string;
   nota?: string;
   volverEl?: string;
+  zonaEntrega?: string | null;
 }) {
   const productoIds = (input.productoIds ?? []).filter(Boolean);
   const interes = input.interesTexto?.trim() || null;
@@ -487,7 +510,8 @@ export async function registrarInteres(input: {
         telefono: telefono.length >= 6 ? telefono : null,
         email,
         estado: input.esCliente ? "cliente_activo" : "prospecto",
-        comercial_id: user?.id ?? null,
+        // Con lugar de entrega, el dueño lo pone el ruteo (vendedor del territorio)
+        comercial_id: input.zonaEntrega ? null : user?.id ?? null,
         notas: empresa ? `Contacto: ${nombre}` : null,
       })
       .select("id")
@@ -520,6 +544,7 @@ export async function registrarInteres(input: {
     origen: input.origen,
     nivel: input.nivel,
     enEspera: input.enEspera,
+    zonaEntrega: input.zonaEntrega,
   });
   if ("error" in r) return { error: r.error };
 
@@ -531,5 +556,178 @@ export async function registrarInteres(input: {
   }
 
   revalidatePath("/", "layout");
-  redirect(`/clientes/${clienteId}?aviso=interes`);
+  redirect(`/clientes/${clienteId}?aviso=${r.derivada ? "asignada" : "interes"}`);
+}
+
+// =====================================================================
+// Asignación por territorio y calificación (manual 1.1 pasos 2 y 3)
+// =====================================================================
+
+type ConsultaFila = {
+  id: string;
+  cliente_id: string;
+  comercial_id: string | null;
+  territorio: string | null;
+  zona_entrega: string | null;
+  etapa: string;
+  cliente: { nombre_comercial: string } | null;
+};
+
+async function cargarConsulta(supabase: Awaited<ReturnType<typeof createClient>>, id: string) {
+  const { data } = await supabase
+    .from("oportunidades")
+    .select("id, cliente_id, comercial_id, territorio, zona_entrega, etapa, cliente:clientes(nombre_comercial)")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as unknown as ConsultaFila | null) ?? null;
+}
+
+async function aplicarAsignacion(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  c: ConsultaFila,
+  zona: string,
+  motivo: string,
+  userId: string | null
+) {
+  const ruta = await rutearConsulta(supabase, { zona, creadorId: null });
+  if (!ruta.territorio) return { error: "Elegí un lugar de entrega de la lista" };
+  const campos = camposDeRuta({ ...ruta, derivada: true }, hoyISO(), c.etapa === "espera");
+  const { error } = await supabase.from("oportunidades").update(campos).eq("id", c.id);
+  if (error) return { error: error.message };
+  // El contacto sigue a la consulta si no tenía dueño o era del vendedor anterior
+  if (ruta.comercialId)
+    await supabase
+      .from("clientes")
+      .update({ comercial_id: ruta.comercialId })
+      .eq("id", c.cliente_id)
+      .or(c.comercial_id ? `comercial_id.is.null,comercial_id.eq.${c.comercial_id}` : "comercial_id.is.null");
+  await supabase.from("actividades").insert({
+    cliente_id: c.cliente_id,
+    oportunidad_id: c.id,
+    tipo: "interes",
+    contenido: `${motivo}: se entrega en ${zona} · asignada a ${ruta.responsableNombre ?? "dirección"}`,
+    created_by: userId,
+  });
+  await avisar(
+    supabase,
+    [ruta.comercialId],
+    {
+      tipo: "consulta_asignada",
+      titulo: `Consulta de tu territorio: ${c.cliente?.nombre_comercial ?? "contacto"}. Primer contacto dentro de la hora.`,
+      url: `/clientes/${c.cliente_id}?interes=${c.id}`,
+    },
+    userId
+  );
+  revalidatePath("/", "layout");
+  return { ok: true as const, responsable: ruta.responsableNombre };
+}
+
+/** La administrativa (o quien ve todo) carga dónde se entrega y el CRM asigna. */
+export async function asignarConsulta(oportunidadId: string, zona: string) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const c = await cargarConsulta(supabase, oportunidadId);
+  if (!c) return { error: "No se encontró la consulta" };
+  return aplicarAsignacion(supabase, c, zona, c.comercial_id ? "Reasignada por lugar de entrega" : "Consulta asignada", user?.id ?? null);
+}
+
+/** "No es de mi territorio": la consulta pasa al otro territorio (con la zona correcta). */
+export async function noEsDeMiTerritorio(oportunidadId: string, zonaCorrecta: string) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const c = await cargarConsulta(supabase, oportunidadId);
+  if (!c) return { error: "No se encontró la consulta" };
+  const ruta = await rutearConsulta(supabase, { zona: zonaCorrecta, creadorId: null });
+  if (ruta.comercialId && ruta.comercialId === c.comercial_id)
+    return { error: "Esa zona es de tu territorio: la consulta es tuya" };
+  return aplicarAsignacion(supabase, c, zonaCorrecta, "No era de su territorio", user?.id ?? null);
+}
+
+/** Calificación: rubro va en el contacto; acá lugar de entrega, cantidad, plazo y quién decide. */
+export async function guardarCalificacion(
+  oportunidadId: string,
+  datos: { cantidad?: number | null; plazo?: string | null; decisor?: string | null }
+) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const c = await cargarConsulta(supabase, oportunidadId);
+  if (!c) return { error: "No se encontró la consulta" };
+  const update = {
+    cantidad: datos.cantidad && datos.cantidad > 0 ? Math.round(datos.cantidad) : null,
+    plazo_compra: datos.plazo?.trim() || null,
+    decisor: datos.decisor?.trim() || null,
+  };
+  const { error } = await supabase.from("oportunidades").update(update).eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  const partes = [
+    update.cantidad ? `cantidad ${update.cantidad}` : null,
+    update.plazo_compra ? `compra ${update.plazo_compra}` : null,
+    update.decisor ? `decide ${update.decisor}` : null,
+  ].filter(Boolean);
+  if (partes.length)
+    await supabase.from("actividades").insert({
+      cliente_id: c.cliente_id,
+      oportunidad_id: oportunidadId,
+      tipo: "interes",
+      contenido: `Calificación: ${partes.join(" · ")}`,
+      created_by: user?.id ?? null,
+    });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Deja el próximo contacto sugerido por la cadencia (sin contar como contacto). */
+export async function agendarProximo(oportunidadId: string, fecha: string, nota: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: "Fecha inválida" };
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const c = await cargarConsulta(supabase, oportunidadId);
+  if (!c) return { error: "No se encontró el interés" };
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({ proximo_contacto: fecha, proximo_nota: nota.slice(0, 80) })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  await supabase.from("actividades").insert({
+    cliente_id: c.cliente_id,
+    oportunidad_id: oportunidadId,
+    tipo: "interes",
+    contenido: `Próximo contacto: ${fecha.split("-").reverse().join("/")} · ${nota}`,
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * "No respondió": queda el intento y el CRM propone el siguiente según el
+ * manual (dos reintentos en 48 h; al tercero, en espera 14 días).
+ */
+export async function noRespondio(oportunidadId: string) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const c = await cargarConsulta(supabase, oportunidadId);
+  if (!c) return { error: "No se encontró el interés" };
+  const { count } = await supabase
+    .from("actividades")
+    .select("id", { count: "exact", head: true })
+    .eq("oportunidad_id", oportunidadId)
+    .like("contenido", "Intento sin respuesta%");
+  const previos = count ?? 0;
+  const s = sugerenciaSinRespuesta(previos);
+  const fecha = sumarDias(s.dias, hoyISO());
+  await supabase.from("actividades").insert({
+    cliente_id: c.cliente_id,
+    oportunidad_id: oportunidadId,
+    tipo: "nota",
+    contenido: `Intento sin respuesta (${previos + 1}°). ${s.nota} el ${fecha.split("-").reverse().join("/")}`,
+    created_by: user?.id ?? null,
+  });
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({ proximo_contacto: fecha, proximo_nota: s.nota.slice(0, 80) })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const, fecha, nota: s.nota };
 }
