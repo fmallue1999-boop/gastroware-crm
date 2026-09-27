@@ -21,6 +21,7 @@ import ConPanel from "@/components/ficha/ConPanel";
 import LinkContacto from "@/components/LinkContacto";
 import { PuntoNivel } from "@/components/PuntoNivel";
 import FiltrosTablero from "@/components/tablero/FiltrosTablero";
+import Operacion from "@/components/tablero/Operacion";
 import Barras from "@/components/tablero/Barras";
 
 type Params = { p?: string; v?: string; prod?: string; ver?: string; vv?: string; c?: string; interes?: string };
@@ -330,6 +331,8 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
             </>
           )}
         </section>
+
+        <Operacion desde={per.desde} hasta={per.hasta} hoy={hoy} />
 
         {/* Reportes del período */}
         <section className="space-y-3">
