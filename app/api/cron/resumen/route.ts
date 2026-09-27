@@ -4,6 +4,9 @@ import webpush from "web-push";
 import { enviarEmail } from "@/lib/core/email";
 import { calcularTablero, cargarDatosTablero, rangoPeriodo, type Db as DbTablero } from "@/lib/tablero";
 import { htmlResumenSemanal } from "@/lib/tablero-email";
+import { cargarMiDia, type Bandeja } from "@/lib/servidor/midia";
+import { lunesDe } from "@/lib/semana";
+import type { SupabaseServidor } from "@/lib/actions/comun";
 
 const ABIERTAS = ["nueva", "cotizada", "seguimiento", "espera"];
 
@@ -53,7 +56,7 @@ export async function GET(request: Request) {
     return new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 
-  const [{ data: subs }, { data: intereses }, { data: recompras }] = await Promise.all([
+  const [{ data: subs }, { data: intereses }, { data: recompras }, { data: usuariosData }, { data: informes }] = await Promise.all([
     supabase.from("push_subs").select("*"),
     supabase
       .from("oportunidades")
@@ -71,7 +74,14 @@ export async function GET(request: Request) {
       .eq("cancelada", false)
       .lte("vence_el", hoy)
       .limit(1000),
+    supabase.from("usuarios").select("id, rol, activo"),
+    supabase.from("informes_semanales").select("usuario_id").eq("semana", lunesDe(hoy)).not("enviado_at", "is", null),
   ]);
+  const usuarios = new Map(((usuariosData ?? []) as { id: string; rol: string; activo: boolean }[]).map((u) => [u.id, u]));
+  const conInforme = new Set(((informes ?? []) as { usuario_id: string }[]).map((i) => i.usuario_id));
+  const esLunesHoy = new Date(hoy + "T12:00:00Z").getUTCDay() === 1;
+  const bandejasDe = new Map<string, Bandeja[]>();
+  const ahoraMs = Date.now();
 
   type Interes = {
     comercial_id: string | null;
@@ -83,12 +93,36 @@ export async function GET(request: Request) {
 
   let enviadas = 0;
   for (const sub of subs ?? []) {
+    const u = usuarios.get(sub.usuario_id);
+    if (!u?.activo) continue;
+
+    // Puestos que no venden: el resumen de su Mi día (bandejas con trabajo)
+    if (!["comercial", "direccion", "distribuidor"].includes(u.rol)) {
+      if (!bandejasDe.has(u.id))
+        bandejasDe.set(u.id, await cargarMiDia(supabase as unknown as SupabaseServidor, { rol: u.rol, userId: u.id, hoy, ahora: ahoraMs }));
+      const con = (bandejasDe.get(u.id) ?? []).filter((b) => b.cantidad > 0);
+      if (!con.length) continue;
+      const body = con
+        .slice(0, 4)
+        .map((b) => `${b.cantidad} ${b.titulo.toLowerCase()}`)
+        .join(" · ");
+      try {
+        await webpush.sendNotification(sub.subscription, JSON.stringify({ title: "Mi día", body, url: "/hoy" }));
+        enviadas++;
+      } catch (e: unknown) {
+        const status = (e as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410) await supabase.from("push_subs").delete().eq("id", sub.id);
+      }
+      continue;
+    }
+
     const mios = lista.filter((i) => i.comercial_id === sub.usuario_id);
     const atrasados = mios.filter((i) => i.proximo_contacto < hoy).length;
     const deHoy = mios.filter((i) => i.proximo_contacto === hoy).length;
     const llegoStock = mios.filter((i) => i.proximo_nota === "Llegó stock").length;
     const recompra = (recompras ?? []).filter((t) => t.usuario_id === sub.usuario_id).length;
-    if (atrasados + deHoy + recompra === 0) continue;
+    const faltaInforme = esLunesHoy && u.rol === "comercial" && !conInforme.has(u.id);
+    if (atrasados + deHoy + recompra === 0 && !faltaInforme) continue;
 
     const partes: string[] = [];
     if (deHoy > 0) partes.push(`${deHoy} para hoy`);
@@ -98,7 +132,8 @@ export async function GET(request: Request) {
     const body =
       `Tenés ${partes.join(", ")}` +
       (llegoStock > 0 ? `. Llegó stock para ${llegoStock}` : "") +
-      (primero ? `. Primero: ${primero}.` : ".");
+      (primero ? `. Primero: ${primero}.` : ".") +
+      (faltaInforme ? " Hoy es lunes: mandá el informe antes de las 10." : "");
 
     try {
       await webpush.sendNotification(

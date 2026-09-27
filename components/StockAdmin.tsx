@@ -193,3 +193,30 @@ export function IngresosProducto({
     </div>
   );
 }
+
+/** "Llegó" para el depósito y administración (sin editar el calendario de ingresos). */
+export function BotonLlego({ ingresoId }: { ingresoId: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <span className="inline-flex items-center gap-1">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          startTransition(async () => {
+            setError(null);
+            const res = await recibirIngresoStock(ingresoId);
+            if (res && "error" in res && res.error) setError(res.error);
+            router.refresh();
+          })
+        }
+        className="min-h-9 rounded-lg bg-verde px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
+      >
+        Llegó
+      </button>
+      {error && <span className="text-xs text-red-600">{error}</span>}
+    </span>
+  );
+}

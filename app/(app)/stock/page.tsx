@@ -3,7 +3,7 @@ import { MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
 import { fechaCorta, linkWhatsApp } from "@/lib/format";
-import { IngresosProducto, StockEditable } from "@/components/StockAdmin";
+import { BotonLlego, IngresosProducto, StockEditable } from "@/components/StockAdmin";
 import { PuntoNivel } from "@/components/PuntoNivel";
 import type { IngresoStock, Producto } from "@/lib/types";
 
@@ -39,6 +39,7 @@ export default async function StockPage() {
   const productos = (prods ?? []) as Producto[];
   const ingresos = (ingresosData ?? []) as IngresoStock[];
   const esGestor = ["direccion", "admin"].includes((rol as string) ?? "");
+  const recibe = ["administrativa", "servicio", "tecnico"].includes((rol as string) ?? "");
 
   const esperaPor = new Map<string, Esperando[]>();
   for (const o of (esperas ?? []) as unknown as {
@@ -112,6 +113,11 @@ export default async function StockPage() {
                               {i.cantidad}
                               {i.fecha_estimada ? ` el ${fechaCorta(i.fecha_estimada)}` : " (fecha a confirmar)"}
                               {i.nota ? <span className="text-piedra"> · {i.nota}</span> : null}
+                              {recibe && (
+                                <span className="ml-2">
+                                  <BotonLlego ingresoId={i.id} />
+                                </span>
+                              )}
                             </p>
                           ))
                         ) : (

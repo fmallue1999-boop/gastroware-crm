@@ -32,6 +32,16 @@ export async function GET(request: Request) {
     .eq("activa", true)
     .lte("proxima_alerta", hoy);
 
+  // Manual 4.2: el recontacto de consumibles lo hace la administrativa (cuenta
+  // para el vendedor dueño de la cuenta). Si no hay, queda con el vendedor.
+  const { data: administrativas } = await supabase
+    .from("usuarios")
+    .select("id")
+    .eq("rol", "administrativa")
+    .eq("activo", true)
+    .limit(1);
+  const administrativaId = (administrativas?.[0]?.id as string | undefined) ?? null;
+
   let creadas = 0;
   const errores: string[] = [];
   for (const rec of recurrencias ?? []) {
@@ -47,7 +57,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.from("tareas").insert({
       cliente_id: rec.cliente_id,
       recurrencia_id: rec.id,
-      usuario_id: rec.cliente?.comercial_id ?? null,
+      usuario_id: administrativaId ?? rec.cliente?.comercial_id ?? null,
       tipo: "recompra",
       titulo: `Ofrecer recompra: ${rec.producto?.nombre ?? "consumible"}`,
       vence_el: hoy,
