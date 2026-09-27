@@ -53,6 +53,10 @@ export default function ServiceHechoForm({
   const [items, setItems] = useState<Item[]>([]);
   const [cobertura, setCobertura] = useState<"facturable" | "garantia" | "contrato">("facturable");
   const [foto, setFoto] = useState<string | null>(null);
+  const [fotoRemito, setFotoRemito] = useState<string | null>(null);
+  const [remito, setRemito] = useState("");
+  const [capacitado, setCapacitado] = useState("");
+  const remitoInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const fotoInput = useRef<HTMLInputElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,10 +77,12 @@ export default function ServiceHechoForm({
     setEquipos(await listarEquiposCliente(c.id));
   }
 
-  async function elegirFoto(archivo: File | null) {
+  async function elegirFoto(archivo: File | null, cual: "equipo" | "remito" = "equipo") {
     if (!archivo) return;
     try {
-      setFoto(await comprimirFoto(archivo));
+      const b64 = await comprimirFoto(archivo);
+      if (cual === "remito") setFotoRemito(b64);
+      else setFoto(b64);
     } catch {
       setError("No se pudo leer la foto");
     }
@@ -103,6 +109,9 @@ export default function ServiceHechoForm({
           })),
         cobertura,
         fotoBase64: foto ?? undefined,
+        remitoNro: remito,
+        remitoFotoBase64: fotoRemito ?? undefined,
+        capacitado,
       });
       if (res && "error" in res && res.error) setError(res.error);
     });
@@ -230,7 +239,7 @@ export default function ServiceHechoForm({
             />
           </label>
           <label className="block text-xs text-piedra">
-            Horas (opcional)
+            Tiempo (horas)
             <input
               type="text"
               inputMode="decimal"
@@ -265,7 +274,7 @@ export default function ServiceHechoForm({
 
       <details>
         <summary className="cursor-pointer text-sm text-azul underline list-none [&::-webkit-details-marker]:hidden">
-          Repuestos, gastos y foto (opcional)
+          Repuestos y gastos (opcional)
         </summary>
         <div className="mt-2 space-y-2">
           {items.map((it, i) => (
@@ -307,36 +316,86 @@ export default function ServiceHechoForm({
             + Agregar repuesto o gasto
           </button>
 
+        </div>
+      </details>
+
+      {/* 5. Remito (obligatorio) */}
+      <div className="space-y-2 rounded-2xl border-2 border-marino/20 bg-white p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-piedra">5 · Remito (sin remito no se cierra)</p>
+        <input
+          type="text"
+          placeholder="N° de remito en papel"
+          value={remito}
+          onChange={(e) => setRemito(e.target.value)}
+          className={`${inputCls} w-full`}
+        />
+        {tipo === "instalacion" && (
           <input
-            ref={fotoInput}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => elegirFoto(e.target.files?.[0] ?? null)}
+            type="text"
+            placeholder="Acta: ¿a quién capacitaste? (nombre y puesto)"
+            value={capacitado}
+            onChange={(e) => setCapacitado(e.target.value)}
+            className={`${inputCls} w-full`}
           />
+        )}
+        <input
+          ref={remitoInput}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => elegirFoto(e.target.files?.[0] ?? null, "remito")}
+        />
+        <input
+          ref={fotoInput}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => elegirFoto(e.target.files?.[0] ?? null, "equipo")}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => remitoInput.current?.click()}
+            className={`flex min-h-12 items-center justify-center gap-2 rounded-2xl border px-2 text-sm font-medium ${fotoRemito ? "border-verde bg-verde-soft text-verde" : "border-borde bg-white"}`}
+          >
+            <Camera className="h-4 w-4" />
+            {fotoRemito ? "✓ Remito firmado" : "Foto del remito firmado"}
+          </button>
           <button
             type="button"
             onClick={() => fotoInput.current?.click()}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-borde bg-white py-3 text-sm font-medium"
+            className={`flex min-h-12 items-center justify-center gap-2 rounded-2xl border px-2 text-sm font-medium ${foto ? "border-verde bg-verde-soft text-verde" : "border-borde bg-white"}`}
           >
             <Camera className="h-4 w-4" />
-            {foto ? "✓ Foto lista (tocá para cambiar)" : "Sacar foto del trabajo"}
+            {foto ? "✓ Equipo funcionando" : "Foto del equipo funcionando"}
           </button>
         </div>
-      </details>
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <button
         type="submit"
-        disabled={pending || !trabajo.trim() || (!cliente && q.trim().length < 2)}
+        disabled={
+          pending ||
+          !trabajo.trim() ||
+          (!cliente && q.trim().length < 2) ||
+          !remito.trim() ||
+          !foto ||
+          !fotoRemito ||
+          !(parseFloat(horas.replace(",", ".")) > 0) ||
+          (tipo === "instalacion" && !capacitado.trim())
+        }
         className="w-full rounded-2xl bg-marino py-4 text-base font-semibold text-white disabled:opacity-60"
       >
         {pending ? "Guardando…" : "Guardar service"}
       </button>
       <p className="text-center text-xs text-piedra">
-        Queda en la ficha del cliente y en Services para que administración lo apruebe y cobre.
+        {!remito.trim() || !foto || !fotoRemito || !(parseFloat(horas.replace(",", ".")) > 0)
+          ? "Falta: tiempo, N° de remito y las dos fotos (remito firmado y equipo funcionando)."
+          : "Queda en la ficha del cliente y en Services para que servicio técnico lo controle y administración lo facture."}
       </p>
     </form>
   );

@@ -7,8 +7,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { exigirGestor } from "@/lib/auth";
-import { hoyISO, normalizarTelefono } from "@/lib/format";
-import { usuarioActual } from "./comun";
+import { hoyISO, normalizarTelefono, sumarMeses } from "@/lib/format";
+import { controlaServicio } from "@/lib/puestos";
+import { avisar, puestoActual, usuarioActual, usuariosDePuesto } from "./comun";
 import { buscarClientePorTelefono } from "./contactos";
 
 // =====================================================================
@@ -112,6 +113,10 @@ const CAMPOS_OT_EDITABLES = [
   "sucursal_id",
   "equipo_id",
   "tipo",
+  "remito_nro",
+  "tiempo_min",
+  "acta_capacitado",
+  "acta_garantia_desde",
 ] as const;
 
 export async function actualizarOT(
@@ -138,7 +143,7 @@ export async function actualizarOT(
 export async function transicionarOT(
   otId: string,
   hacia: string,
-  extra?: { observacion?: string; nroFactura?: string }
+  extra?: { observacion?: string; nroFactura?: string; vencimiento?: string | null }
 ) {
   const supabase = await createClient();
   const { data: ot } = await supabase
@@ -147,6 +152,17 @@ export async function transicionarOT(
     .eq("id", otId)
     .single();
   if (!ot) return { error: "Orden no encontrada" };
+  const rol = await puestoActual(supabase);
+
+  // Fuera de garantía: el técnico no sale hasta que el presupuesto esté cobrado
+  // (o dirección apruebe la condición). Servicio técnico y dirección pueden forzarlo.
+  if (
+    rol === "tecnico" &&
+    ["en_camino", "en_proceso"].includes(hacia) &&
+    ot.presupuesto_monto != null &&
+    !ot.cobro_ok_at
+  )
+    return { error: "Este trabajo espera el cobro del presupuesto: todavía no se sale" };
 
   const update: Record<string, unknown> = { estado: hacia };
 
@@ -183,6 +199,21 @@ export async function transicionarOT(
       return { error: "Cargá el número de factura de ZEUS" };
     update.nro_factura = extra.nroFactura.trim();
     update.facturada_at = new Date().toISOString();
+    // La factura del remito queda en Cobranzas (a la razón social del local)
+    const user = await usuarioActual();
+    const { error: errF } = await supabase.from("facturas").insert({
+      cliente_id: ot.cliente_id,
+      sucursal_id: ot.sucursal_id,
+      ot_id: otId,
+      tipo: "servicio",
+      numero: extra.nroFactura.trim(),
+      fecha: hoyISO(),
+      vencimiento: extra.vencimiento || hoyISO(),
+      monto: ot.total,
+      moneda: "ARS",
+      created_by: user?.id ?? null,
+    });
+    if (errF) return { error: `guardar la factura: ${errF.message}` };
   }
 
   const { error } = await supabase
@@ -191,17 +222,37 @@ export async function transicionarOT(
     .eq("id", otId);
   if (error) return { error: error.message };
 
-  // Instalación terminada: estampar la fecha de instalación en el equipo
-  if (
-    hacia === "finalizado_tecnico" &&
-    ot.tipo === "instalacion" &&
-    ot.equipo_id
-  ) {
-    await supabase
+  // Instalación terminada: la garantía del equipo empieza el día del acta
+  if (hacia === "finalizado_tecnico" && ot.tipo === "instalacion" && ot.equipo_id) {
+    const desde = ot.acta_garantia_desde ?? hoyISO();
+    const { data: eq } = await supabase
       .from("equipos")
-      .update({ fecha_instalacion: hoyISO() })
+      .select("fecha_instalacion, producto:productos(garantia_meses)")
       .eq("id", ot.equipo_id)
-      .is("fecha_instalacion", null);
+      .maybeSingle();
+    const meses = (eq?.producto as unknown as { garantia_meses: number | null } | null)?.garantia_meses;
+    if (eq && !eq.fecha_instalacion)
+      await supabase
+        .from("equipos")
+        .update({ fecha_instalacion: desde, ...(meses ? { garantia_hasta: sumarMeses(meses, desde) } : {}) })
+        .eq("id", ot.equipo_id);
+  }
+
+  // Trabajo terminado: avisar a quien controla el remito y al responsable del caso
+  if (hacia === "finalizado_tecnico") {
+    const user = await usuarioActual();
+    const control = await usuariosDePuesto(supabase, ["servicio", "admin"]);
+    await avisar(supabase, control, { tipo: "remito_para_controlar", titulo: `Remito para controlar: service ${ot.numero}`, url: `/servicio/${otId}` }, user?.id);
+    if (ot.caso_id) {
+      const { data: caso } = await supabase.from("casos").select("numero, responsable_id").eq("id", ot.caso_id).maybeSingle();
+      if (caso)
+        await avisar(
+          supabase,
+          [caso.responsable_id as string | null],
+          { tipo: "caso_trabajo_hecho", titulo: `El técnico terminó el caso ${caso.numero}: confirmá con el cliente y cerralo`, url: "/casos" },
+          user?.id
+        );
+    }
   }
 
   // Registrar observación en el historial de estado si la hubo
@@ -236,8 +287,28 @@ export async function transicionarOT(
   return { ok: true };
 }
 
-/** Cierre técnico: pasa a finalizado_tecnico y de inmediato a revisión admin. */
+/**
+ * Cierre técnico: todo trabajo termina con remito (número, foto del remito
+ * firmado o firma digital, foto del equipo funcionando); una instalación,
+ * además, con el acta (persona capacitada). Pasa a revisión de servicio.
+ */
 export async function finalizarOTTecnico(otId: string) {
+  const supabase = await createClient();
+  const { data: ot } = await supabase
+    .from("ordenes_trabajo")
+    .select("tipo, remito_nro, trabajo_realizado, acta_capacitado, firma_path")
+    .eq("id", otId)
+    .maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  const { data: fotos } = await supabase.from("ot_fotos").select("momento").eq("ot_id", otId);
+  const momentos = new Set(((fotos ?? []) as { momento: string }[]).map((f) => f.momento));
+  const falta: string[] = [];
+  if (!ot.trabajo_realizado?.trim()) falta.push("qué se hizo");
+  if (!ot.remito_nro?.trim()) falta.push("número de remito");
+  if (!momentos.has("remito") && !ot.firma_path) falta.push("foto del remito firmado");
+  if (!momentos.has("despues")) falta.push("foto del equipo funcionando");
+  if (ot.tipo === "instalacion" && !ot.acta_capacitado?.trim()) falta.push("acta: a quién se capacitó");
+  if (falta.length) return { error: `Para cerrar el trabajo falta: ${falta.join(", ")}` };
   const r1 = await transicionarOT(otId, "finalizado_tecnico");
   if (r1 && "error" in r1 && r1.error) return r1;
   return transicionarOT(otId, "revision_admin");
@@ -374,7 +445,7 @@ export async function borrarItemOT(itemId: string) {
 export async function agregarFotoOT(
   otId: string,
   path: string,
-  momento: "antes" | "despues" | "otro" = "otro"
+  momento: "antes" | "despues" | "otro" | "remito" | "acta" = "otro"
 ) {
   const supabase = await createClient();
   const { error } = await supabase
@@ -484,10 +555,23 @@ export async function cargarServiceHecho(input: {
   horas?: number | null;
   items?: { descripcion: string; monto: number; tipo?: "refaccion" | "gasto" }[];
   cobertura?: "facturable" | "garantia" | "contrato";
+  /** Foto del equipo funcionando (obligatoria). */
   fotoBase64?: string;
+  /** Remito en papel: número y foto firmada (obligatorios, manual 4.3). */
+  remitoNro?: string;
+  remitoFotoBase64?: string;
+  /** Instalación: a quién se capacitó (acta). */
+  capacitado?: string;
 }) {
   const trabajo = input.trabajo.trim();
   if (!trabajo) return { error: "Contá qué se hizo, aunque sea en una línea" };
+  const falta: string[] = [];
+  if (!input.remitoNro?.trim()) falta.push("el número de remito");
+  if (!input.remitoFotoBase64) falta.push("la foto del remito firmado");
+  if (!input.fotoBase64) falta.push("la foto del equipo funcionando");
+  if (!(input.horas && input.horas > 0)) falta.push("el tiempo");
+  if (input.tipo === "instalacion" && !input.capacitado?.trim()) falta.push("a quién capacitaste");
+  if (falta.length) return { error: `Todo trabajo termina con remito. Falta ${falta.join(", ")}.` };
   const tipo = ["correctivo", "preventivo", "instalacion", "garantia"].includes(input.tipo)
     ? input.tipo
     : "correctivo";
@@ -560,6 +644,10 @@ export async function cargarServiceHecho(input: {
       fecha_programada: fecha,
       trabajo_realizado: trabajo,
       cerrada_tecnico_at: cerrada,
+      remito_nro: input.remitoNro!.trim(),
+      tiempo_min: Math.round((input.horas ?? 0) * 60),
+      acta_capacitado: tipo === "instalacion" ? input.capacitado?.trim() || null : null,
+      acta_garantia_desde: tipo === "instalacion" ? fecha : null,
     })
     .select("id, numero")
     .single();
@@ -592,32 +680,41 @@ export async function cargarServiceHecho(input: {
     );
   }
 
-  if (input.fotoBase64) {
+  // Fotos: equipo funcionando y remito firmado
+  const fotos = [
+    { b64: input.fotoBase64, momento: "despues", nombre: "equipo" },
+    { b64: input.remitoFotoBase64, momento: "remito", nombre: "remito" },
+  ].filter((f) => f.b64);
+  if (fotos.length) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
     if (serviceKey) {
       const { createClient: createAdmin } = await import("@supabase/supabase-js");
       const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
         auth: { autoRefreshToken: false, persistSession: false },
       });
-      const path = `fotos/${ot.id}/${Date.now()}-service.jpg`;
-      const { error: errFoto } = await admin.storage
-        .from("servicio")
-        .upload(path, Buffer.from(input.fotoBase64, "base64"), {
-          contentType: "image/jpeg",
-        });
-      if (!errFoto)
-        await supabase
-          .from("ot_fotos")
-          .insert({ ot_id: ot.id, momento: "despues", path });
+      for (const f of fotos) {
+        const path = `fotos/${ot.id}/${Date.now()}-${f.nombre}.jpg`;
+        const { error: errFoto } = await admin.storage
+          .from("servicio")
+          .upload(path, Buffer.from(f.b64!, "base64"), { contentType: "image/jpeg" });
+        if (!errFoto) await supabase.from("ot_fotos").insert({ ot_id: ot.id, momento: f.momento, path });
+      }
     }
   }
 
+  // Instalación: la garantía del equipo empieza el día del acta
   if (tipo === "instalacion" && equipoId) {
-    await supabase
+    const { data: eq } = await supabase
       .from("equipos")
-      .update({ fecha_instalacion: fecha })
+      .select("fecha_instalacion, producto:productos(garantia_meses)")
       .eq("id", equipoId)
-      .is("fecha_instalacion", null);
+      .maybeSingle();
+    const meses = (eq?.producto as unknown as { garantia_meses: number | null } | null)?.garantia_meses;
+    if (eq && !eq.fecha_instalacion)
+      await supabase
+        .from("equipos")
+        .update({ fecha_instalacion: fecha, ...(meses ? { garantia_hasta: sumarMeses(meses, fecha) } : {}) })
+        .eq("id", equipoId);
   }
 
   // Queda en revisión para que administración apruebe y cobre
@@ -646,4 +743,131 @@ export async function cargarServiceHecho(input: {
 
   revalidatePath("/", "layout");
   redirect(`/clientes/${clienteId}`);
+}
+
+// =====================================================================
+// Servicio técnico por puestos (manual 4.3)
+// =====================================================================
+
+/**
+ * Asigna el trabajo: técnico propio (Mar del Plata y zona) o técnico aliado
+ * (fuera de zona), con fecha. Lo hace dirección de administración o el
+ * responsable de servicio técnico.
+ */
+export async function asignarOT(otId: string, input: { tecnicoId?: string | null; aliadoId?: string | null; fecha?: string | null }) {
+  const supabase = await createClient();
+  if (!controlaServicio(await puestoActual(supabase))) return { error: "Asigna servicio técnico o dirección de administración" };
+  if (!input.tecnicoId && !input.aliadoId) return { error: "Elegí el técnico o el aliado" };
+  const user = await usuarioActual();
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("id, numero, estado, cliente_id").eq("id", otId).maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  const destino = input.tecnicoId ? "asignado" : "programado";
+  const campos = {
+    tecnico_id: input.tecnicoId || null,
+    aliado_id: input.tecnicoId ? null : input.aliadoId || null,
+    fecha_programada: input.fecha || null,
+  };
+  // Camino de estados permitido hasta asignado/programado
+  if (ot.estado === "pendiente_revision") {
+    const { error } = await supabase.from("ordenes_trabajo").update({ estado: "pendiente_asignacion" }).eq("id", otId);
+    if (error) return { error: error.message };
+  }
+  const puedeMover = ["solicitud_recibida", "pendiente_revision", "pendiente_asignacion", "asignado", "programado"].includes(ot.estado);
+  const { error } = await supabase
+    .from("ordenes_trabajo")
+    .update(puedeMover && ot.estado !== destino ? { ...campos, estado: destino } : campos)
+    .eq("id", otId);
+  if (error) return { error: error.message };
+
+  let quien = "";
+  if (input.aliadoId) {
+    const { data: a } = await supabase.from("tecnicos_aliados").select("nombre").eq("id", input.aliadoId).maybeSingle();
+    quien = `aliado ${a?.nombre ?? ""}`.trim();
+  } else {
+    const { data: t } = await supabase.from("usuarios").select("nombre").eq("id", input.tecnicoId!).maybeSingle();
+    quien = t?.nombre ?? "técnico";
+    await avisar(
+      supabase,
+      [input.tecnicoId],
+      { tipo: "ot_asignada", titulo: `Te asignaron el service ${ot.numero}${input.fecha ? ` para el ${input.fecha.split("-").reverse().join("/")}` : ""}`, url: `/servicio/${otId}` },
+      user?.id
+    );
+  }
+  await supabase.from("actividades").insert({
+    cliente_id: ot.cliente_id,
+    tipo: "service",
+    contenido: `Service ${ot.numero} asignado a ${quien}${input.fecha ? ` para el ${input.fecha.split("-").reverse().join("/")}` : ""}`,
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Fuera de garantía: presupuesto → aprobación del cliente → factura y
+ * cobro ANTES de ir o despachar el repuesto (el cobro lo registra
+ * Cobranzas y marca el trabajo como cobrado).
+ */
+export async function guardarPresupuestoOT(otId: string, input: { monto: number | null; moneda?: string; aprobado?: boolean }) {
+  const supabase = await createClient();
+  const rol = await puestoActual(supabase);
+  if (!controlaServicio(rol) && !["administrativa", "tecnico"].includes(rol)) return { error: "Sin permiso" };
+  const user = await usuarioActual();
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("numero, cliente_id, presupuesto_aprobado_at").eq("id", otId).maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  if (input.monto == null || !(input.monto > 0)) return { error: "Poné el monto del presupuesto" };
+  const aprobadoAt = input.aprobado ? ot.presupuesto_aprobado_at ?? new Date().toISOString() : null;
+  const { error } = await supabase
+    .from("ordenes_trabajo")
+    .update({ presupuesto_monto: input.monto, presupuesto_moneda: input.moneda || "ARS", presupuesto_aprobado_at: aprobadoAt })
+    .eq("id", otId);
+  if (error) return { error: error.message };
+  await supabase.from("actividades").insert({
+    cliente_id: ot.cliente_id,
+    tipo: "service",
+    contenido: `Service ${ot.numero}: presupuesto ${input.moneda === "USD" ? "USD " : "$"}${input.monto}${input.aprobado ? " aprobado por el cliente: falta facturar y cobrar antes de ir" : ""}`,
+    created_by: user?.id ?? null,
+  });
+  if (input.aprobado) {
+    const administracion = await usuariosDePuesto(supabase, ["administrativa", "admin"]);
+    await avisar(
+      supabase,
+      administracion,
+      { tipo: "presupuesto_a_cobrar", titulo: `Presupuesto aprobado del service ${ot.numero}: facturar y cobrar antes de ir`, url: `/servicio/${otId}` },
+      user?.id
+    );
+  }
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Reclamo a fábrica de un trabajo en garantía: se sigue hasta el cierre. */
+export async function guardarReclamoGarantia(otId: string, estado: string, nota?: string) {
+  const ESTADOS = ["a_presentar", "presentado", "repuesto_recibido", "cerrado", "rechazado"];
+  if (!ESTADOS.includes(estado)) return { error: "Estado inválido" };
+  const supabase = await createClient();
+  if (!controlaServicio(await puestoActual(supabase))) return { error: "Las garantías las sigue servicio técnico" };
+  const user = await usuarioActual();
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("numero, cliente_id").eq("id", otId).maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  const { error } = await supabase
+    .from("ordenes_trabajo")
+    .update({ garantia_reclamo: estado, garantia_reclamo_nota: nota?.trim() || null })
+    .eq("id", otId);
+  if (error) return { error: error.message };
+  const TXT: Record<string, string> = {
+    a_presentar: "a presentar a fábrica",
+    presentado: "presentado a fábrica",
+    repuesto_recibido: "repuesto recibido de fábrica",
+    cerrado: "cerrado",
+    rechazado: "rechazado por fábrica",
+  };
+  await supabase.from("actividades").insert({
+    cliente_id: ot.cliente_id,
+    tipo: "service",
+    contenido: `Service ${ot.numero}: reclamo de garantía ${TXT[estado]}${nota?.trim() ? ` · ${nota.trim()}` : ""}`,
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
 }

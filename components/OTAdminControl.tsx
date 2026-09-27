@@ -28,10 +28,11 @@ export default function OTAdminControl({
   const [pending, startTransition] = useTransition();
   const [observacion, setObservacion] = useState("");
   const [nroFactura, setNroFactura] = useState("");
+  const [vence, setVence] = useState("");
   const [devolviendo, setDevolviendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function mover(hacia: string, extra?: { observacion?: string; nroFactura?: string }) {
+  function mover(hacia: string, extra?: { observacion?: string; nroFactura?: string; vencimiento?: string | null }) {
     setError(null);
     startTransition(async () => {
       const res = await transicionarOT(ot.id, hacia, extra);
@@ -52,7 +53,7 @@ export default function OTAdminControl({
     if (["finalizado_tecnico", "revision_admin"].includes(ot.estado)) {
       return (
         <p className="rounded-2xl border border-borde bg-white p-3 text-sm text-piedra shadow-sm">
-          Esperando revisión de administración.
+          Esperando el control del remito (servicio técnico).
         </p>
       );
     }
@@ -64,8 +65,13 @@ export default function OTAdminControl({
   return (
     <div className="space-y-3 rounded-2xl border border-borde bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-piedra">
-        Administración
+        Control del remito y facturación
       </p>
+      {ot.estado === "aprobado_facturar" && (
+        <p className="rounded-xl bg-ambar-soft p-3 text-sm font-medium text-ambar">
+          Remito aprobado: {ot.cobertura === "garantia" ? "en garantía, no se factura al cliente (cerrar)." : "facturar a la razón social del local."}
+        </p>
+      )}
 
       {ot.estado === "facturado" && (
         <p className="rounded-xl bg-verde-soft p-3 text-sm font-medium text-verde">
@@ -162,17 +168,26 @@ export default function OTAdminControl({
           </button>
         ))}
 
-      {transicionesGestor.includes("facturado") && (
-        <div className="flex gap-2">
+      {transicionesGestor.includes("facturado") && ot.cobertura !== "garantia" && (
+        <div className="flex flex-wrap gap-2">
           <input
             type="text"
             placeholder="N° de factura en ZEUS"
             value={nroFactura}
             onChange={(e) => setNroFactura(e.target.value)}
-            className="flex-1 rounded-2xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-marino"
+            className="min-w-0 flex-1 rounded-2xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-marino"
           />
+          <label className="flex items-center gap-1 text-xs text-piedra">
+            Vence
+            <input
+              type="date"
+              value={vence}
+              onChange={(e) => setVence(e.target.value)}
+              className="rounded-xl border border-borde bg-white px-2 py-1.5 text-sm"
+            />
+          </label>
           <button
-            onClick={() => mover("facturado", { nroFactura })}
+            onClick={() => mover("facturado", { nroFactura, vencimiento: vence || null })}
             disabled={pending || !nroFactura.trim()}
             className="rounded-xl bg-verde px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
@@ -191,8 +206,8 @@ const ETIQUETAS: Record<string, string> = {
   pendiente_asignacion: "Pasar a asignación",
   asignado: "Marcar asignada",
   programado: "Marcar programada",
-  aprobado_facturar: "Aprobar → lista para facturar (calcula el total)",
-  cerrado: "Cerrar servicio",
+  aprobado_facturar: "Remito controlado: aprobar para facturar (calcula el total)",
+  cerrado: "Cerrar (sin facturar: garantía, contrato o ya cobrado)",
   cancelado: "Anular orden",
   revision_admin: "Reabrir revisión",
   en_proceso: "Reabrir para el técnico",
