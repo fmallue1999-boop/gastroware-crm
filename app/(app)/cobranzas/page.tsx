@@ -18,6 +18,36 @@ function sumar(lista: FacturaFila[]): Record<string, number> {
   return t;
 }
 
+function Grupo({
+  titulo,
+  lista,
+  color,
+  hoy,
+  puedeAprobar,
+}: {
+  titulo: string;
+  lista: FacturaFila[];
+  color: string;
+  hoy: string;
+  puedeAprobar: boolean;
+}) {
+  if (!lista.length) return null;
+  return (
+    <section>
+      <h2 className="mb-2 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wide text-piedra">
+        <span className={`rounded-full px-2 py-0.5 ${color}`}>{lista.length}</span>
+        {titulo}
+        <span className="font-extrabold normal-case text-tinta">{textoMontos(sumar(lista))}</span>
+      </h2>
+      <div className="grid gap-2 lg:grid-cols-2">
+        {lista.map((f) => (
+          <CobranzaFila key={f.id} f={f} hoy={hoy} puedeAprobar={puedeAprobar} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /**
  * Cobranzas (manual 4.4): lo que hay que cobrar hoy. Vencidas primero,
  * después vencen hoy y en 48 h hábiles, y las promesas. Las facturas que
@@ -44,21 +74,6 @@ export default async function CobranzasPage({ searchParams }: { searchParams: Pr
   const frenan = [...g.vencidas, ...g.hoy, ...g.en48, ...g.prometidas, ...g.alDia].filter((f) => f.frenaDespacho);
   const puedeAprobar = esGestor(rol as string);
 
-  const Grupo = ({ titulo, lista, color }: { titulo: string; lista: FacturaFila[]; color: string }) =>
-    lista.length ? (
-      <section>
-        <h2 className="mb-2 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wide text-piedra">
-          <span className={`rounded-full px-2 py-0.5 ${color}`}>{lista.length}</span>
-          {titulo}
-          <span className="font-extrabold normal-case text-tinta">{textoMontos(sumar(lista))}</span>
-        </h2>
-        <div className="grid gap-2 lg:grid-cols-2">
-          {lista.map((f) => (
-            <CobranzaFila key={f.id} f={f} hoy={hoy} puedeAprobar={puedeAprobar} />
-          ))}
-        </div>
-      </section>
-    ) : null;
 
   const kpi = "rounded-2xl bg-white p-3 shadow-sm";
   return (
@@ -95,10 +110,10 @@ export default async function CobranzasPage({ searchParams }: { searchParams: Pr
           </div>
         </div>
 
-        <Grupo titulo="Vencidas" lista={g.vencidas} color="bg-red-100 text-red-700" />
-        <Grupo titulo="Vencen hoy" lista={g.hoy} color="bg-ambar-soft text-ambar" />
-        <Grupo titulo="Vencen en 48 h" lista={g.en48} color="bg-azul-soft text-azul" />
-        <Grupo titulo="Prometieron pagar" lista={g.prometidas} color="bg-celeste-soft text-marino" />
+        <Grupo titulo="Vencidas" lista={g.vencidas} color="bg-red-100 text-red-700" hoy={hoy} puedeAprobar={puedeAprobar} />
+        <Grupo titulo="Vencen hoy" lista={g.hoy} color="bg-ambar-soft text-ambar" hoy={hoy} puedeAprobar={puedeAprobar} />
+        <Grupo titulo="Vencen en 48 h" lista={g.en48} color="bg-azul-soft text-azul" hoy={hoy} puedeAprobar={puedeAprobar} />
+        <Grupo titulo="Prometieron pagar" lista={g.prometidas} color="bg-celeste-soft text-marino" hoy={hoy} puedeAprobar={puedeAprobar} />
 
         {g.vencidas.length + g.hoy.length + g.en48.length + g.prometidas.length === 0 && (
           <p className="rounded-2xl bg-white px-4 py-6 text-center text-lg font-bold text-verde shadow-sm">Nada para cobrar hoy.</p>
