@@ -27,6 +27,7 @@ function Formulario({
     inicial?.precio != null ? String(inicial.precio) : ""
   );
   const [moneda, setMoneda] = useState(inicial?.moneda ?? "ARS");
+  const [minimo, setMinimo] = useState(inicial?.stock_minimo != null ? String(inicial.stock_minimo) : "");
   const [error, setError] = useState<string | null>(null);
 
   function enviar(e: React.FormEvent) {
@@ -41,6 +42,7 @@ function Formulario({
         costo: costo === "" ? null : Number(costo),
         precio: precio === "" ? null : Number(precio),
         moneda,
+        stock_minimo: minimo === "" ? null : Math.max(0, Math.round(Number(minimo))),
       });
       if (res && "error" in res && res.error) {
         setError(res.error);
@@ -108,6 +110,17 @@ function Formulario({
           <option value="USD">USD</option>
         </select>
       </div>
+      <label className="flex items-center gap-2 text-sm text-piedra">
+        Stock mínimo (repuesto crítico)
+        <input
+          type="number"
+          min={0}
+          placeholder="—"
+          value={minimo}
+          onChange={(e) => setMinimo(e.target.value)}
+          className={`${inputCls} w-24`}
+        />
+      </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <button
@@ -189,6 +202,15 @@ export default function RepuestosAdmin({
                 {r.marca ?? ""}
               </p>
             </div>
+            {r.stock_minimo != null && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                  (r.stock ?? 0) <= r.stock_minimo ? "bg-ambar-soft text-ambar" : "bg-crema text-piedra"
+                }`}
+              >
+                stock {r.stock ?? 0} / mín {r.stock_minimo}
+              </span>
+            )}
             <span className="text-sm text-piedra">
               {r.precio != null ? dinero(r.precio, r.moneda) : "Sin precio"}
             </span>

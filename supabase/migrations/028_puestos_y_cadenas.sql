@@ -55,6 +55,31 @@ create policy territorios_write on territorios for all to authenticated
 
 alter table usuarios add column if not exists territorio text references territorios(codigo);
 
+-- El territorio de cada vendedor lo asigna dirección (igual que el puesto,
+-- el distribuidor y el estado; ver 006).
+create or replace function fn_protege_usuarios() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  if new.rol is distinct from old.rol then
+    if fn_rol() <> 'direccion' then
+      raise exception 'Solo dirección puede cambiar puestos';
+    end if;
+    if old.id = auth.uid() then
+      raise exception 'No podés cambiar tu propio puesto';
+    end if;
+  end if;
+  if (new.distribuidor_id is distinct from old.distribuidor_id
+      or new.activo is distinct from old.activo
+      or new.territorio is distinct from old.territorio)
+     and not fn_es_gestor() then
+    raise exception 'Sin permiso para modificar territorio, distribuidor o estado del usuario';
+  end if;
+  return new;
+end $$;
+
 -- =====================================================================
 -- 3. Interés: calificación y entrega · Venta: datos para facturar y despachar
 -- =====================================================================
@@ -246,6 +271,19 @@ alter table sucursales
 -- Repuestos críticos con mínimo; video instructivo por modelo
 alter table repuestos add column if not exists stock_minimo int;
 alter table productos add column if not exists video_url text;
+
+-- Marketing carga el video instructivo de cada modelo sin tocar precios ni
+-- el resto del catálogo (que sigue siendo de dirección).
+create or replace function fn_set_video_producto(p_producto_id uuid, p_url text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(fn_rol(), '') not in ('direccion','admin','marketing') then
+    raise exception 'El video del modelo lo carga marketing o dirección';
+  end if;
+  update productos set video_url = nullif(trim(coalesce(p_url, '')), '') where id = p_producto_id;
+end $$;
+revoke execute on function fn_set_video_producto(uuid, text) from public, anon;
+grant execute on function fn_set_video_producto(uuid, text) to authenticated, service_role;
 
 -- Transiciones: la administrativa factura y cierra; el técnico puede cerrar
 -- un trabajo programado directo con el remito; un remito devuelto vuelve a
