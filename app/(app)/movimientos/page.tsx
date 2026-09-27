@@ -26,8 +26,8 @@ type Resumen = {
 const TIPOS_POR_FILTRO: Record<string, string[]> = {
   interes: ["interes", "cambio_etapa", "feria", "stock"],
   cotizacion: ["cotizacion"],
-  venta: ["pedido"],
-  service: ["service"],
+  venta: ["pedido", "cobranza"],
+  service: ["service", "caso"],
   nota: ["nota"],
 };
 

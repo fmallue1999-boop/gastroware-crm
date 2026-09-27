@@ -101,7 +101,7 @@ export default async function HoyPage({
     })(),
     esGestor
       ? Promise.all([
-          supabase.from("oportunidades").select("id", { count: "exact", head: true }).eq("etapa", "ganada").eq("pedido_estado", "facturar"),
+          supabase.from("oportunidades").select("id", { count: "exact", head: true }).eq("etapa", "ganada").eq("pedido_estado", "comprometido").not("forma_pago", "is", null),
           supabase.from("ordenes_trabajo").select("id", { count: "exact", head: true }).in("estado", ["finalizado_tecnico", "revision_admin"]),
         ])
       : Promise.resolve(null),

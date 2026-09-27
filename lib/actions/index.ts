@@ -8,3 +8,4 @@ export * from "./marketing";
 export * from "./feria";
 export * from "./admin";
 export * from "./stock";
+export * from "./cobranzas";

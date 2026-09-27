@@ -22,7 +22,7 @@ import PanelesFicha from "@/components/ficha/PanelesFicha";
 import InteresAgregar from "@/components/InteresAgregar";
 import AsignarVendedor from "@/components/AsignarVendedor";
 import IAResumenCliente from "@/components/IAResumenCliente";
-import VentaPaso from "@/components/VentaPaso";
+import VentaPaso, { type FacturaDatos } from "@/components/VentaPaso";
 import NotaForm from "@/components/NotaForm";
 import EquipoForm from "@/components/EquipoForm";
 import DatosClienteForm from "@/components/DatosClienteForm";
@@ -115,6 +115,7 @@ export default async function FichaChat({
     stockInfo,
     plantillasRes,
     materialesRes,
+    facturasRes,
   ] = await Promise.all([
     supabase.from("equipos").select("*, producto:productos(*)").eq("cliente_id", id).is("deleted_at", null).order("fecha_venta", { ascending: false }),
     supabase.from("recurrencias").select("*, producto:productos(*)").eq("cliente_id", id).eq("activa", true),
@@ -132,6 +133,11 @@ export default async function FichaChat({
     infoStockPorProducto(supabase),
     supabase.from("plantillas").select("*"),
     supabase.from("materiales").select("id, nombre, tipo, url, producto_id").order("nombre"),
+    supabase
+      .from("facturas")
+      .select("id, oportunidad_id, numero, vencimiento, monto, moneda, cobro_estado, promesa_fecha, condicion_aprobada_at")
+      .eq("cliente_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const equipos = (equiposRes.data ?? []) as unknown as Equipo[];
@@ -150,7 +156,10 @@ export default async function FichaChat({
 
   const abiertas = oportunidades.filter((o) => (ETAPAS_ABIERTAS as readonly string[]).includes(o.etapa));
   const ventas = oportunidades.filter((o) => o.etapa === "ganada");
-  const ventasEnCurso = ventas.filter((o) => !["entregado", "finalizado"].includes(o.pedido_estado ?? ""));
+  const ventasEnCurso = ventas.filter((o) => o.pedido_estado !== "entregado");
+  const facturaDe = new Map<string, FacturaDatos>();
+  for (const f of (facturasRes.data ?? []) as (FacturaDatos & { oportunidad_id: string | null })[])
+    if (f.oportunidad_id && !facturaDe.has(f.oportunidad_id)) facturaDe.set(f.oportunidad_id, f);
   const perdidas = oportunidades.filter((o) => o.etapa === "perdida");
   const esCliente = c.estado === "cliente_activo" || ventas.length > 0 || equipos.length > 0;
   const serieFaltante = new Set(equipos.filter((e) => e.oportunidad_id && !e.numero_serie).map((e) => e.oportunidad_id));
@@ -413,11 +422,14 @@ export default async function FichaChat({
                 {o.nro_factura ? ` · factura ${o.nro_factura}` : ""}
               </p>
               <VentaPaso
-                oportunidadId={o.id}
-                estado={o.pedido_estado}
-                nroFactura={o.nro_factura}
-                entregaEstimada={o.entrega_estimada}
+                venta={o}
+                rol={(rol as string) ?? "comercial"}
+                hoy={hoy}
+                factura={facturaDe.get(o.id) ?? null}
                 pedirSerie={serieFaltante.has(o.id)}
+                videoUrl={o.producto?.video_url ?? null}
+                sucursales={sucursales}
+                direccionSugerida={[principal?.direccion, principal?.ciudad].filter(Boolean).join(", ")}
                 compacto
               />
             </div>
