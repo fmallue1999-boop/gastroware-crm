@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { atrasoMaximo, diasPostventa, pasoDe, proximoPasoVenta } from "@/lib/ventas";
+import { evaluarFueraDeLista } from "@/lib/propuestas";
 
 describe("circuito de la venta", () => {
   it("ordena los pasos: vendido, facturado, preparar, despachado, entregado", () => {
@@ -37,5 +38,27 @@ describe("circuito de la venta", () => {
   it("agenda la postventa: día 10 siempre; 2 y 30 con instalación", () => {
     expect(diasPostventa(false).map((p) => p.dias)).toEqual([10]);
     expect(diasPostventa(true).map((p) => p.dias)).toEqual([2, 10, 30]);
+  });
+});
+
+describe("propuesta fuera de lista", () => {
+  const lista = [
+    { id: "a", nombre: "Zumex Speed", precio_referencia: 1000, moneda: "USD" },
+    { id: "b", nombre: "Licuadora", precio_referencia: 500, moneda: "ARS" },
+  ];
+  it("a precio de lista no requiere aprobación", () => {
+    expect(evaluarFueraDeLista([{ productoId: "a", descripcion: "", cantidad: 1, precioUnit: 1000 }], lista, "USD", 0, false).requiere).toBe(false);
+  });
+  it("cualquier descuento requiere aprobación si el margen libre es 0", () => {
+    const r = evaluarFueraDeLista([{ productoId: "a", descripcion: "", cantidad: 1, precioUnit: 950 }], lista, "USD", 0, false);
+    expect(r.requiere).toBe(true);
+    expect(r.motivos[0]).toMatch(/5% por debajo/);
+  });
+  it("respeta el descuento libre y la moneda", () => {
+    expect(evaluarFueraDeLista([{ productoId: "a", descripcion: "", cantidad: 1, precioUnit: 950 }], lista, "USD", 5, false).requiere).toBe(false);
+    expect(evaluarFueraDeLista([{ productoId: "b", descripcion: "", cantidad: 1, precioUnit: 10 }], lista, "USD", 0, false).requiere).toBe(false);
+  });
+  it("la condición especial siempre pasa por dirección", () => {
+    expect(evaluarFueraDeLista([], lista, "USD", 0, true).requiere).toBe(true);
   });
 });

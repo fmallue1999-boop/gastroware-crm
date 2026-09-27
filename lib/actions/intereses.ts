@@ -8,9 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { dinero, normalizarTelefono, diasDesde, hoyISO, sumarDias } from "@/lib/format";
 import { sugerenciaSinRespuesta } from "@/lib/cadencia";
+import { evaluarFueraDeLista, type PrecioLista } from "@/lib/propuestas";
 import { NIVELES_INTERES, RUBROS } from "@/lib/constants";
 import type { Etapa } from "@/lib/types";
-import { avisar, usuarioActual } from "./comun";
+import { avisar, puestoActual, regla, usuarioActual, usuariosDePuesto } from "./comun";
 import { camposDeRuta, rutearConsulta } from "@/lib/servidor/ruteo";
 import { anotarContacto, buscarClientePorTelefono } from "./contactos";
 
@@ -133,9 +134,12 @@ export async function registrarCotizacion(input: {
   notas?: string;
   items?: ItemCotizacion[];
   vigenciaDias?: number | null;
+  /** Plazo, financiación o bonificación fuera de lo normal: la aprueba dirección. */
+  condicionEspecial?: boolean;
 }) {
   const supabase = await createClient();
   const user = await usuarioActual();
+  const rol = await puestoActual(supabase);
 
   const { data: existente } = await supabase
     .from("cotizaciones")
@@ -170,6 +174,15 @@ export async function registrarCotizacion(input: {
     ? items.reduce((s, i) => s + i.cantidad * i.precioUnit, 0)
     : input.monto;
 
+  // Fuera de lista → esperando aprobación de dirección (dirección no se aprueba a sí misma)
+  const idsLista = items.map((i) => i.productoId).filter(Boolean) as string[];
+  const { data: lista } = idsLista.length
+    ? await supabase.from("productos").select("id, nombre, precio_referencia, moneda").in("id", idsLista)
+    : { data: [] };
+  const pctLibre = Number((await regla(supabase, "descuento_libre_pct")) ?? "0") || 0;
+  const fuera = evaluarFueraDeLista(items, (lista ?? []) as PrecioLista[], input.moneda, pctLibre, !!input.condicionEspecial);
+  const aprobacion = fuera.requiere && rol !== "direccion" ? "pendiente" : "no_requiere";
+
   const { data: ver, error: errV } = await supabase
     .from("cotizacion_versiones")
     .insert({
@@ -182,6 +195,8 @@ export async function registrarCotizacion(input: {
       archivo_path: input.archivoPath ?? null,
       condiciones: input.notas?.trim() || null,
       creado_por: user?.id ?? null,
+      aprobacion,
+      aprobacion_motivo: fuera.requiere ? fuera.motivos.join(" · ") : null,
     })
     .select("id")
     .single();
@@ -218,9 +233,23 @@ export async function registrarCotizacion(input: {
       tipo: "cotizacion",
       contenido: `Cotización N° ${numeroCot ?? "?"}${version > 1 ? ` v${version}` : ""} armada${
         total != null ? ` · ${dinero(total, input.moneda)}` : ""
-      }`,
+      }${aprobacion === "pendiente" ? ` · fuera de lista, esperando aprobación de dirección (${fuera.motivos.join("; ")})` : ""}`,
       created_by: user?.id ?? null,
     });
+  if (actual && aprobacion === "pendiente") {
+    const direccion = await usuariosDePuesto(supabase, ["direccion"]);
+    await avisar(
+      supabase,
+      direccion,
+      {
+        tipo: "propuesta_a_aprobar",
+        titulo: `Propuesta para aprobar: N° ${numeroCot ?? "?"}${total != null ? ` · ${dinero(total, input.moneda)}` : ""}`,
+        cuerpo: fuera.motivos.join(" · "),
+        url: "/aprobaciones",
+      },
+      user?.id
+    );
+  }
 
   // Una venta ya cerrada (ganada/perdida) no vuelve a "cotizada": solo
   // queda registrada la nueva versión.

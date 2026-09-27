@@ -254,6 +254,13 @@ export interface CotizacionVersion {
   condiciones: string | null;
   archivo_path: string | null;
   created_at: string;
+  creado_por?: string | null;
+  /** Fuera de lista: dirección aprueba antes de presentarla (028). */
+  aprobacion?: "no_requiere" | "pendiente" | "aprobada" | "rechazada";
+  aprobacion_motivo?: string | null;
+  aprobado_por?: string | null;
+  aprobado_at?: string | null;
+  aprobacion_nota?: string | null;
 }
 
 export interface Plantilla {

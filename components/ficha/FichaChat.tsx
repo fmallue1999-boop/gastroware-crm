@@ -198,6 +198,8 @@ export default async function FichaChat({
       forma_pago: v.forma_pago,
       created_at: v.created_at,
       archivoUrl: urlsVersiones[i],
+      aprobacion: v.aprobacion,
+      aprobacion_nota: v.aprobacion_nota,
     });
     versionesPor.set(v.oportunidad_id, lista);
   });

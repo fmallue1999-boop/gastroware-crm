@@ -29,6 +29,8 @@ export type VersionCot = {
   forma_pago: string | null;
   created_at: string;
   archivoUrl: string | null;
+  aprobacion?: string;
+  aprobacion_nota?: string | null;
 };
 export type Guion = { id: string; nombre: string; texto: string };
 export type MaterialLite = { id: string; nombre: string; tipo: string; url: string | null };
@@ -219,11 +221,22 @@ export default function InteresFijado({
                     · {dinero(v.total ?? 0, v.moneda)}
                     {v.forma_pago ? ` · ${v.forma_pago}` : ""}
                     <span className="text-piedra"> · {fechaCorta(v.created_at)}</span>
+                    {v.aprobacion === "pendiente" && (
+                      <span className="ml-1.5 rounded-full bg-ambar-soft px-2 py-0.5 text-xs font-bold text-ambar">esperando aprobación</span>
+                    )}
+                    {v.aprobacion === "aprobada" && (
+                      <span className="ml-1.5 rounded-full bg-verde-soft px-2 py-0.5 text-xs font-bold text-verde">aprobada</span>
+                    )}
+                    {v.aprobacion === "rechazada" && (
+                      <span className="ml-1.5 block text-xs font-bold text-red-600">Rechazada: {v.aprobacion_nota}</span>
+                    )}
                   </span>
                   <span className="flex shrink-0 gap-3">
-                    <Link href={`/cotizacion/${v.cotizacion_id}?v=${v.version}`} className="text-azul underline">
-                      Imprimir
-                    </Link>
+                    {v.aprobacion !== "pendiente" && v.aprobacion !== "rechazada" && (
+                      <Link href={`/cotizacion/${v.cotizacion_id}?v=${v.version}`} className="text-azul underline">
+                        Imprimir
+                      </Link>
+                    )}
                     {v.archivoUrl && (
                       <a href={v.archivoUrl} target="_blank" rel="noopener noreferrer" className="text-azul underline">
                         PDF
