@@ -23,6 +23,8 @@ import InteresAgregar from "@/components/InteresAgregar";
 import AsignarVendedor from "@/components/AsignarVendedor";
 import IAResumenCliente from "@/components/IAResumenCliente";
 import VentaPaso, { type FacturaDatos } from "@/components/VentaPaso";
+import CasoTarjeta from "@/components/casos/CasoTarjeta";
+import { cargarCasos } from "@/lib/servidor/casos";
 import NotaForm from "@/components/NotaForm";
 import EquipoForm from "@/components/EquipoForm";
 import DatosClienteForm from "@/components/DatosClienteForm";
@@ -122,6 +124,7 @@ export default async function FichaChat({
     plantillasRes,
     materialesRes,
     facturasRes,
+    casosAbiertos,
   ] = await Promise.all([
     supabase.from("equipos").select("*, producto:productos(*)").eq("cliente_id", id).is("deleted_at", null).order("fecha_venta", { ascending: false }),
     supabase.from("recurrencias").select("*, producto:productos(*)").eq("cliente_id", id).eq("activa", true),
@@ -144,6 +147,7 @@ export default async function FichaChat({
       .select("id, oportunidad_id, numero, vencimiento, monto, moneda, cobro_estado, promesa_fecha, condicion_aprobada_at")
       .eq("cliente_id", id)
       .order("created_at", { ascending: false }),
+    cargarCasos(supabase, { abiertos: true, clienteId: id, ahora: ahoraMs, hoy }),
   ]);
 
   const equipos = (equiposRes.data ?? []) as unknown as Equipo[];
@@ -314,6 +318,9 @@ export default async function FichaChat({
       contenido: (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
+            <Link href={`/casos/nuevo?cliente=${c.id}`} className="inline-flex min-h-11 items-center rounded-xl bg-ambar px-4 text-[15px] font-bold text-white">
+              Abrir caso (reclamo)
+            </Link>
             {(esTecnico || esGestor) && (
               <Link href={`/servicio/cargar?cliente=${c.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-marino px-4 text-[15px] font-bold text-white">
                 <Wrench className="h-4 w-4" /> Cargar service hecho
@@ -405,6 +412,9 @@ export default async function FichaChat({
     <>
       {!esTecnico && (
         <div className="space-y-2">
+          {casosAbiertos.map((k) => (
+            <CasoTarjeta key={k.id} caso={k} />
+          ))}
           {abiertas.map((o) => (
             <InteresFijado
               key={o.id}

@@ -11,3 +11,4 @@ export * from "./stock";
 export * from "./cobranzas";
 export * from "./equipo";
 export * from "./direccion";
+export * from "./casos";
