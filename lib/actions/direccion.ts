@@ -5,7 +5,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { avisar, puestoActual, usuarioActual } from "./comun";
+import { avisar, puestoActual, usuarioActual, usuariosDePuesto } from "./comun";
+import { hoyISO } from "@/lib/format";
+import { esGestor } from "@/lib/puestos";
+import { lunesDe, periodoInforme } from "@/lib/semana";
+import { numerosInforme } from "@/lib/servidor/informe";
 
 /** Aprueba o rechaza una propuesta fuera de lista. Rechazar pide el motivo. */
 export async function decidirPropuesta(versionId: string, aprobar: boolean, nota?: string) {
@@ -56,6 +60,72 @@ export async function decidirPropuesta(versionId: string, aprobar: boolean, nota
     },
     user?.id
   );
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Informe comercial de los lunes: el CRM completa los números de la semana
+ * anterior y el vendedor agrega bloqueos, decisiones que necesita y agenda.
+ * Se puede guardar y reenviar hasta que dirección responda.
+ */
+export async function enviarInforme(input: { bloqueos: string; decisiones: string; agenda: string; enviar: boolean }) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  if (!user) return { error: "Sesión vencida" };
+  const semana = lunesDe(hoyISO());
+  const { desde, hasta } = periodoInforme(semana);
+  const numeros = await numerosInforme(supabase, user.id, desde, hasta);
+  const { data: previo } = await supabase
+    .from("informes_semanales")
+    .select("id, respondido_at")
+    .eq("usuario_id", user.id)
+    .eq("semana", semana)
+    .maybeSingle();
+  if (previo?.respondido_at) return { error: "Dirección ya respondió este informe" };
+  const fila = {
+    usuario_id: user.id,
+    semana,
+    numeros,
+    bloqueos: input.bloqueos.trim() || null,
+    decisiones: input.decisiones.trim() || null,
+    agenda: input.agenda.trim() || null,
+    ...(input.enviar ? { enviado_at: new Date().toISOString() } : {}),
+  };
+  const { error } = await supabase.from("informes_semanales").upsert(fila, { onConflict: "usuario_id,semana" });
+  if (error) return { error: error.message };
+  if (input.enviar) {
+    const { data: yo } = await supabase.from("usuarios").select("nombre").eq("id", user.id).maybeSingle();
+    const direccion = await usuariosDePuesto(supabase, ["direccion"]);
+    await avisar(
+      supabase,
+      direccion,
+      {
+        tipo: "informe_semanal",
+        titulo: `Informe comercial de ${yo?.nombre ?? "un vendedor"}${input.decisiones.trim() ? ": pide decisiones" : ""}`,
+        url: "/informes",
+      },
+      user.id
+    );
+  }
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Dirección responde las decisiones del informe (le llega al vendedor). */
+export async function responderInforme(informeId: string, respuesta: string) {
+  if (!respuesta.trim()) return { error: "Escribí la respuesta" };
+  const supabase = await createClient();
+  if (!esGestor(await puestoActual(supabase))) return { error: "Responde dirección" };
+  const user = await usuarioActual();
+  const { data: inf } = await supabase.from("informes_semanales").select("usuario_id").eq("id", informeId).maybeSingle();
+  if (!inf) return { error: "No se encontró el informe" };
+  const { error } = await supabase
+    .from("informes_semanales")
+    .update({ respuesta: respuesta.trim(), respondido_por: user?.id ?? null, respondido_at: new Date().toISOString() })
+    .eq("id", informeId);
+  if (error) return { error: error.message };
+  await avisar(supabase, [inf.usuario_id as string], { tipo: "informe_respondido", titulo: "Dirección respondió tu informe semanal", url: "/informe" }, user?.id);
   revalidatePath("/", "layout");
   return { ok: true as const };
 }

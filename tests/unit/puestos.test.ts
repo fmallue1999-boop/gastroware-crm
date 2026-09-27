@@ -3,6 +3,7 @@ import { sumarHabiles, habilesEntre, venceEnHorasHabiles, transcurrido } from "@
 import { siguientePasoPropuesta, sugerenciaSinRespuesta } from "@/lib/cadencia";
 import { territorioDeZona, responsableDe, otroTerritorio, type Territorio } from "@/lib/territorios";
 import { factura, veTodo, vende, controlaServicio } from "@/lib/puestos";
+import { lunesDe, periodoInforme } from "@/lib/semana";
 
 describe("días hábiles", () => {
   it("salta el fin de semana", () => {
@@ -63,5 +64,14 @@ describe("puestos", () => {
     expect(vende("administrativa")).toBe(false);
     expect(controlaServicio("admin")).toBe(true);
     expect(controlaServicio("administrativa")).toBe(false);
+  });
+});
+
+describe("semana del informe", () => {
+  it("lunes de la semana y período informado", () => {
+    expect(lunesDe("2026-10-05")).toBe("2026-10-05"); // lunes
+    expect(lunesDe("2026-10-08")).toBe("2026-10-05"); // jueves
+    expect(lunesDe("2026-10-11")).toBe("2026-10-05"); // domingo
+    expect(periodoInforme("2026-10-05")).toEqual({ desde: "2026-09-28", hasta: "2026-10-04" });
   });
 });
