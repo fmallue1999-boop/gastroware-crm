@@ -171,6 +171,9 @@ export default function CasoTarjeta({ caso, iaOn = false }: { caso: CasoVista; i
                 <MessageCircle className="h-4 w-4" /> WhatsApp
               </a>
             )}
+            <Link href={`/repuestos/nueva?caso=${caso.id}`} className="inline-flex min-h-11 items-center rounded-xl border border-borde bg-white px-3 text-[15px] font-bold">
+              Pedir repuesto
+            </Link>
             {iaOn && <AyudaCasoIA casoId={caso.id} telefono={caso.cliente?.telefono ?? null} />}
           </div>
         ))}

@@ -3,6 +3,14 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.5.0 — 28 de septiembre de 2026
+
+Repuestos (tercera etapa de la organización por apartados). Migración 032.
+
+- solicitudes_repuesto (1:1 con la operación de linea repuestos): equipo o modelo, serie, pieza del catálogo o descripta, código, foto (bucket servicio), cantidad, validación técnica (validador, resultado, nota), disponibilidad, plazo, precio, moneda, caso/service de origen. RLS: quien ve la operación y quien valida.
+- /repuestos (en curso por estado, para validar, ganadas, perdidas) y /repuestos/nueva (desde ficha, caso o service); acciones validar, pedir/saltear validación, cotizar (WhatsApp armado), esperando, confirmar (fn_ganar_venta → circuito de la venta), perder.
+- Mi día: repuestos para validar (validador) y para cotizar (vendedor). Embudo: solo linea equipos. Asistente: herramienta repuestos.
+
 ## v1.4.0 — 28 de septiembre de 2026
 
 Consumibles (segunda etapa de la organización por apartados). Migración 031.

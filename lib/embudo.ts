@@ -124,6 +124,7 @@ export async function cargarEmbudo(
       .from("oportunidades")
       .select(SELECT)
       .in("etapa", [...ETAPAS_ABIERTAS])
+      .eq("linea", "equipos")
       .is("cliente.deleted_at", null)
       .order("id")
       .range(inicio, inicio + 999);
@@ -138,6 +139,7 @@ export async function cargarEmbudo(
     .from("oportunidades")
     .select(SELECT)
     .eq("etapa", "ganada")
+    .eq("linea", "equipos")
     .is("cliente.deleted_at", null)
     .gte("closed_at", desde)
     .lt("closed_at", hasta)

@@ -20,6 +20,7 @@ import {
   Sparkles,
   CalendarCheck,
   Droplets,
+  Cog,
   type LucideIcon,
 } from "lucide-react";
 import type { ClaveIcono } from "@/lib/navegacion";
@@ -45,5 +46,6 @@ export const ICONOS_MENU: Record<ClaveIcono, LucideIcon> = {
   asistente: Sparkles,
   tareas: CalendarCheck,
   consumibles: Droplets,
+  repuestos: Cog,
   mas: Menu,
 };

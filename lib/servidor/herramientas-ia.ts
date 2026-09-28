@@ -6,6 +6,8 @@ import { cargarCasos } from "@/lib/servidor/casos";
 import { cargarMiDia } from "@/lib/servidor/midia";
 import { atrasadasMias, cargarAgenda } from "@/lib/servidor/agenda";
 import { cargarPlanes } from "@/lib/servidor/consumibles";
+import { cargarSolicitudes } from "@/lib/servidor/repuestos";
+import { nombreEstadoRepuesto } from "@/lib/repuestos";
 import { horario, masDias, nombreTipo } from "@/lib/agenda";
 import { calcularTablero, cargarDatosTablero, rangoPeriodo, type Db } from "@/lib/tablero";
 import { buscarClientes } from "@/lib/actions/contactos";
@@ -283,6 +285,36 @@ export function herramientasAsistente(
           link: "/consumibles",
           ficha: `/clientes/${p.cliente_id}`,
         }));
+      },
+    },
+    {
+      nombre: "repuestos",
+      etiqueta: "Mirando los repuestos",
+      descripcion:
+        "Solicitudes de repuestos en curso: qué pieza, para qué equipo, si falta validación técnica, precio, disponibilidad y en qué paso está (validación, para cotizar, cotizada, esperando confirmación). Usala para '¿qué repuestos tengo para cotizar?', '¿qué pasó con el repuesto del Hotel X?'.",
+      parametros: { type: "object", properties: { solo_mias: { type: "boolean" } } },
+      ejecutar: async (a) => {
+        const lista = await cargarSolicitudes(supabase, { limite: 200 });
+        return lista
+          .filter((s) => !["ganada", "perdida"].includes(s.estado))
+          .filter((s) => !a.solo_mias || s.comercial_id === usuario.id || s.validador_id === usuario.id)
+          .map((s) => ({
+            cliente: s.cliente?.nombre_comercial,
+            pieza: s.repuesto?.descripcion ?? s.descripcion,
+            cantidad: s.cantidad,
+            equipo: s.equipoTexto,
+            serie: s.numero_serie,
+            estado: nombreEstadoRepuesto(s.estado),
+            valida: s.validador,
+            precio_unitario: s.precio_unitario,
+            moneda: s.moneda,
+            disponibilidad: s.disponibilidad,
+            plazo_dias: s.plazo_dias,
+            vendedor: s.comercial,
+            proximo_contacto: s.proximo_contacto,
+            link: "/repuestos",
+            ficha: `/clientes/${s.cliente_id}`,
+          }));
       },
     },
     {

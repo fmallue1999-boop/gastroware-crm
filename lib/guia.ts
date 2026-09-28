@@ -449,6 +449,20 @@ export const TAREAS: Tarea[] = [
     ],
     ojo: "El aviso no le manda nada al cliente ni crea ventas solo: le avisa a quien está a cargo cuándo contactarlo. Hay un solo plan por cliente, sucursal y producto: nunca se duplica.",
   },
+  // --- Repuestos ---
+  {
+    id: "repuestos",
+    titulo: "Pedidos de repuestos: validar, cotizar y vender",
+    pasos: [
+      { texto: "“Nueva solicitud” en Repuestos, o desde la ficha (“Pedido de repuesto”), un caso o un service (“Pedir repuesto”): el cliente y el equipo ya vienen cargados.", href: "/repuestos/nueva", boton: "Nueva solicitud" },
+      { texto: "Qué pieza: del catálogo o con sus palabras, con código o una foto de la pieza o la etiqueta, y la cantidad." },
+      { texto: "Si no estás seguro de qué pieza es, “Sí, validarla”: le llega a servicio técnico. Si ya está identificada, “No, ya está identificada”." },
+      { texto: "Servicio técnico: en Repuestos → “Para validar”, confirma la pieza (código, disponibilidad, plazo) o anota que no se pudo identificar. Al vendedor le llega el aviso.", href: "/repuestos?ver=validar", boton: "Para validar" },
+      { texto: "Vendedor: “Cotizar” con precio, disponibilidad y plazo. Después “Mandar cotización” abre el WhatsApp con el mensaje armado." },
+      { texto: "Cuando confirma, “Confirmó”: pasa a Ventas y sigue el circuito de siempre (facturar, cobrar, preparar, entregar). Si no, “No se dio” con el motivo." },
+    ],
+    ojo: "Cada solicitud tiene su próximo paso: aparece en Mi día del vendedor. Lo que falta validar aparece en Mi día de servicio técnico.",
+  },
   // --- Informe y marketing ---
   {
     id: "informe",
@@ -503,7 +517,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Postventa del día.",
       "Lunes antes de las 10: tu informe.",
     ],
-    tareas: ["consumibles", 
+    tareas: ["repuestos", "consumibles", 
       "nueva-consulta",
       "primer-contacto",
       "no-es-mio",
@@ -593,7 +607,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Remitos para controlar.",
       "Garantías con fábrica.",
     ],
-    tareas: ["asignar-service", "presupuesto", "controlar-remito", "garantia", "aliados", "service-hecho", "cerrar-trabajo"],
+    tareas: ["repuestos", "asignar-service", "presupuesto", "controlar-remito", "garantia", "aliados", "service-hecho", "cerrar-trabajo"],
   },
   tecnico: {
     titulo: "Técnico de servicio y depósito",
@@ -606,7 +620,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Qué preparar hoy en el depósito.",
       "Viernes: repuestos en el mínimo.",
     ],
-    tareas: ["cerrar-trabajo", "service-hecho", "deposito", "abrir-caso"],
+    tareas: ["repuestos", "cerrar-trabajo", "service-hecho", "deposito", "abrir-caso"],
   },
   marketing: {
     titulo: "Marketing y contenido",
