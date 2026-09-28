@@ -37,7 +37,7 @@ export default function AvisoGuia({ puesto }: { puesto: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-marino p-4 text-white shadow-sm">
-      <BookOpen className="h-6 w-6 shrink-0 text-[#6fc3e2]" />
+      <BookOpen className="h-6 w-6 shrink-0 text-celeste" />
       <div className="min-w-0 flex-1">
         <p className="text-[16px] font-extrabold">Desde octubre el CRM trabaja por puestos</p>
         <p className="text-[14px] text-white/80">Mirá en 5 minutos cómo se usa como {puesto}: qué ves cada día y cómo se hace cada cosa.</p>

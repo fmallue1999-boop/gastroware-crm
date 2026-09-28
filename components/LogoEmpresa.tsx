@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import Logo from "@/components/Logo";
+import { LOGO_CLARO_OFICIAL } from "@/lib/marca";
 
 /**
  * Logo de la empresa para membretes de documentos (cotización, comprobante,
  * inspección, financiación). Usa el archivo subido en Administración; si no
- * hay ninguno, cae al logo "G" por defecto.
+ * hay ninguno, usa el logo oficial de GastroWare.
  */
 export default async function LogoEmpresa() {
   const supabase = await createClient();
@@ -19,5 +19,6 @@ export default async function LogoEmpresa() {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={url} alt="Logo" className="h-14 w-auto object-contain" />;
   }
-  return <Logo tamano="lg" />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={LOGO_CLARO_OFICIAL} alt="GastroWare" className="h-14 w-auto object-contain" />;
 }

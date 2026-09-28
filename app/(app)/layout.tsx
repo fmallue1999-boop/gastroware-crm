@@ -8,6 +8,9 @@ import { filtroQuien } from "@/lib/quien";
 import BottomNav from "@/components/BottomNav";
 import BotonFlotante from "@/components/BotonFlotante";
 import Rail from "@/components/Rail";
+import EstiloMarca from "@/components/marca/EstiloMarca";
+import LogoSistema from "@/components/marca/LogoSistema";
+import { cargarMarca } from "@/lib/servidor/marca";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   if (!supabaseConfigurado()) redirect("/login");
@@ -18,13 +21,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: yo }, notifRes] = await Promise.all([
+  const [{ data: yo }, notifRes, marca] = await Promise.all([
     supabase.from("usuarios").select("rol, nombre").eq("id", user.id).single(),
     supabase
       .from("notificaciones")
       .select("id", { count: "exact", head: true })
       .eq("usuario_id", user.id)
       .is("leida_at", null),
+    cargarMarca(supabase),
   ]);
   const rol = yo?.rol ?? "comercial";
   const esGestor = ["direccion", "admin"].includes(rol);
@@ -45,15 +49,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[200px_minmax(0,1fr)]">
-      <Rail rol={rol} nombre={yo?.nombre} email={user.email} noLeidas={noLeidas} paraHoy={paraHoy} />
+      <EstiloMarca marca={marca} />
+      <Rail rol={rol} nombre={yo?.nombre} email={user.email} noLeidas={noLeidas} paraHoy={paraHoy} marca={marca} />
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-borde bg-crema/90 px-4 py-2.5 backdrop-blur lg:hidden">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-marino text-base font-extrabold text-[#6fc3e2]">
-              G
-            </span>
-            <span className="text-[16px] font-extrabold tracking-tight">GastroWare</span>
+          <Link href="/" className="flex items-center" aria-label={marca.nombre}>
+            <LogoSistema marca={marca} fondo="claro" tamano="sm" />
           </Link>
           <Link
             href="/notificaciones"

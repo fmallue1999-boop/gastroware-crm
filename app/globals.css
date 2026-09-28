@@ -1,22 +1,25 @@
 @import "tailwindcss";
 
-/* Tema "plataforma" (rediseño de septiembre 2026, aprobado por Franco):
+/* Tema de GastroWare OS. Los colores por defecto son los de la marca
+   (negro, crema y celeste); Administración → Marca los puede cambiar y
+   components/marca/EstiloMarca los pisa en tiempo de ejecución.
+   Tema "plataforma" (rediseño de septiembre 2026):
    fondo cálido, barra lateral azul marino, un color por etapa del embudo y
    verde para todo lo que sea contactar. Los nombres viejos de los tokens se
    conservan (crema, tinta, piedra, borde, celeste-*) para no tocar cada
    componente; los nuevos se suman. */
 @theme {
-  --color-crema: #f4f2ec;        /* fondo de página */
-  --color-crema-deep: #e9e6de;   /* fondos secundarios / hover */
-  --color-celeste: #bcd7f5;      /* acento suave (bordes activos) */
-  --color-celeste-soft: #e4edfb; /* fondos de acento */
+  --color-crema: #f1efe7;        /* fondo de página */
+  --color-crema-deep: #e6e2d4;   /* fondos secundarios / hover */
+  --color-celeste: #a4daee;      /* acento de la marca (etiqueta OS, bordes activos) */
+  --color-celeste-soft: #e3f2f9; /* fondos de acento */
   --color-celeste-deep: #2f6fce; /* acento fuerte */
   --color-piedra: #6b6f76;       /* texto secundario */
   --color-tinta: #17181c;        /* texto principal */
   --color-borde: #dcd9d1;        /* bordes */
 
-  --color-marino: #17233a;       /* barra lateral y botones principales */
-  --color-marino-2: #2a3d63;     /* ítem activo de la barra */
+  --color-marino: #111111;       /* barra lateral y botones principales */
+  --color-marino-2: #2e2e2e;     /* ítem activo de la barra */
   --color-verde: #1f9d5b;        /* contactar, guardar, vendido */
   --color-verde-soft: #e3f5ea;
   --color-azul: #2f6fce;         /* etapa Interesado */
@@ -38,11 +41,11 @@
 }
 
 html {
-  background: #f4f2ec;
+  background: var(--color-crema);
 }
 
 body {
-  background: #f4f2ec;
+  background: var(--color-crema);
   color: #17181c;
   font-family: var(--font-manrope), "Segoe UI", Roboto, Arial, sans-serif;
 }

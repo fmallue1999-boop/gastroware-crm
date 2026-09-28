@@ -41,11 +41,11 @@ export default function SubirLogo({ logoActual }: { logoActual: string | null })
 
   return (
     <section className="rounded-2xl border border-borde bg-white p-4 shadow-sm">
-      <h2 className="text-sm font-semibold">Logo de la empresa</h2>
+      <h2 className="text-lg font-extrabold">Logo para cotizaciones e impresos</h2>
       <p className="mt-0.5 text-xs text-piedra">
         Aparece en el membrete de cotizaciones, comprobantes de service, hojas
-        de inspección y propuestas de financiación. Ideal: PNG con fondo
-        transparente.
+        de inspección y propuestas de financiación. Si no subís uno, se usa el
+        logo oficial de GastroWare. Ideal: PNG con fondo transparente.
       </p>
       <div className="mt-3 flex items-center gap-4">
         {logoActual ? (
@@ -56,9 +56,8 @@ export default function SubirLogo({ logoActual }: { logoActual: string | null })
             className="h-14 w-auto rounded-lg border border-borde bg-white object-contain p-1"
           />
         ) : (
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-marino text-2xl font-bold text-white">
-            G
-          </span>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/marca/logo-claro.svg" alt="Logo oficial" className="h-14 w-auto rounded-lg border border-borde bg-white object-contain p-1" />
         )}
         <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-borde bg-white px-3.5 py-2 text-sm shadow-sm">
           <ImageUp className="h-4 w-4" />
@@ -82,7 +81,7 @@ export default function SubirLogo({ logoActual }: { logoActual: string | null })
             }
             className="text-xs text-piedra underline"
           >
-            Volver al logo G
+            Volver al logo oficial
           </button>
         )}
       </div>

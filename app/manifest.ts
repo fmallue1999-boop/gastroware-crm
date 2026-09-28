@@ -1,12 +1,12 @@
 export default function manifest() {
   return {
-    name: "GastroWare",
-    short_name: "GastroWare",
-    description: "Ventas, servicio técnico y contactos en un solo lugar",
+    name: "GastroWare OS",
+    short_name: "GastroWare OS",
+    description: "Ventas, servicio técnico, administración y clientes en un solo lugar",
     start_url: "/",
     display: "standalone",
-    background_color: "#f4f2ec",
-    theme_color: "#17233a",
+    background_color: "#f1efe7",
+    theme_color: "#111111",
     icons: [
       {
         src: "/icon.svg",
