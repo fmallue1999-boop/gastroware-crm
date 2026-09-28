@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import UsuariosAdmin from "@/components/admin/UsuariosAdmin";
 import TerritoriosAdmin from "@/components/admin/TerritoriosAdmin";
 import ReglasAdmin from "@/components/admin/ReglasAdmin";
-import SubirLogo from "@/components/admin/SubirLogo";
 import { nombrePuesto } from "@/lib/puestos";
 import type { Usuario } from "@/lib/types";
 
@@ -38,7 +37,6 @@ export default async function AdminUsuariosPage() {
           tarifa_hora: config.tarifa_hora ?? "0",
         }}
       />
-      <SubirLogo logoActual={config.logo_url?.trim() || null} />
     </div>
   );
 }

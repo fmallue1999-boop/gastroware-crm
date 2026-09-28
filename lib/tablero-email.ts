@@ -52,7 +52,7 @@ export function htmlResumenSemanal(t: Tablero, per: Periodo, urlBase: string): {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ec"><tr><td align="center" style="padding:24px 12px">
   <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
     <tr><td style="background:#17233a;border-radius:14px;padding:18px 20px;color:#ffffff">
-      <div style="font-size:13px;color:#6fc3e2;font-weight:700">GastroWare · Resumen semanal</div>
+      <div style="font-size:13px;color:#a4daee;font-weight:700">GastroWare OS · Resumen semanal</div>
       <div style="font-size:22px;font-weight:800;margin-top:4px">${esc(per.etiqueta)}</div>
       <div style="font-size:13px;color:#c9d3e6;margin-top:2px">Del lunes al domingo, comparado con la semana anterior</div>
     </td></tr>

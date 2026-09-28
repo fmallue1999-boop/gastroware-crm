@@ -6,6 +6,8 @@ import { Bell, Plus } from "lucide-react";
 import { botonCrear, estaActivo, menuDe } from "@/lib/navegacion";
 import { nombrePuesto } from "@/lib/puestos";
 import { ICONOS_MENU } from "@/components/iconosMenu";
+import LogoSistema from "@/components/marca/LogoSistema";
+import { MARCA_POR_DEFECTO, type Marca } from "@/lib/marca";
 
 /**
  * Barra lateral de la computadora: lo del puesto primero, en orden de uso,
@@ -17,12 +19,14 @@ export default function Rail({
   email,
   noLeidas = 0,
   paraHoy = 0,
+  marca = MARCA_POR_DEFECTO,
 }: {
   rol?: string;
   nombre?: string | null;
   email?: string | null;
   noLeidas?: number;
   paraHoy?: number;
+  marca?: Marca;
 }) {
   const pathname = usePathname();
   const { lateral } = menuDe(rol);
@@ -30,11 +34,8 @@ export default function Rail({
 
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col bg-marino text-white/80 lg:flex">
-      <Link href="/" className="flex items-center gap-2.5 px-5 pt-5 pb-4 text-white">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#6fc3e2] text-base font-extrabold text-marino">
-          G
-        </span>
-        <span className="text-[16px] font-extrabold tracking-tight">GastroWare</span>
+      <Link href="/" className="flex items-center px-5 pt-5 pb-4" aria-label={marca.nombre}>
+        <LogoSistema marca={marca} fondo="oscuro" />
       </Link>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3">

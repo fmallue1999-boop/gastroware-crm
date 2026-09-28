@@ -9,15 +9,16 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "GastroWare",
-  description: "Ventas, servicio técnico y contactos de GastroWare en un solo lugar",
+  title: { default: "GastroWare OS", template: "%s · GastroWare OS" },
+  description: "El sistema operativo de GastroWare: ventas, servicio técnico, administración y clientes en un solo lugar",
+  applicationName: "GastroWare OS",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#17233a",
+  themeColor: "#111111",
 };
 
 export default function RootLayout({

@@ -134,7 +134,7 @@ export default function GuiaUso({ rol, tareaInicial }: { rol: string; tareaInici
             <ul className="mt-1.5 space-y-1.5">
               {guia.cadaDia.map((c) => (
                 <li key={c} className="flex gap-2 text-[15px]">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#6fc3e2]" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-celeste" />
                   {c}
                 </li>
               ))}
