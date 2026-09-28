@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.4.0 — 28 de septiembre de 2026
+
+Consumibles (segunda etapa de la organización por apartados). Migración 031.
+
+- oportunidad_items (cantidad y unidad por producto); recurrencias como plan de reposición (sucursal, anticipación, responsable, última cantidad, suspensión con motivo; índice único de plan activo por cliente/sucursal/producto; auditoría).
+- fn_reponer: una compra reinicia el plan (toma el tiempo del producto si el plan no tenía); fn_ganar_venta: consumibles → plan, repuestos y consumibles ya no crean equipos; backfill de planes para ventas de consumibles ya cerradas.
+- /consumibles (a contactar agrupado, calendario, todos), /consumibles/venta; acciones: contacto, reprogramar, suspender, reactivar, ajustar, cotizar.
+- Catálogo: "repone cada N días" en los consumibles. Mi día: bandeja de reposiciones del responsable. Cron: ya no crea tareas de recompra.
+- Ficha: plan de consumibles, accesos rápidos (venta de consumibles, tarea precargada con link a la ficha). Asistente: herramienta consumibles.
+
 ## v1.3.0 — 28 de septiembre de 2026
 
 Seguimiento comercial (primera etapa de la organización por apartados). Migración 030.

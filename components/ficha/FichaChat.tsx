@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bell, ChevronLeft, Mail, MessageCircle, Phone, Wrench, X } from "lucide-react";
+import { Bell, CalendarPlus, ChevronLeft, Droplets, Mail, MessageCircle, Phone, Wrench, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl, firmarUrls } from "@/lib/core/storage";
 import { iaConfigurada } from "@/lib/core/ia";
@@ -19,6 +19,7 @@ import { ESTADOS_OT, ETAPAS_ABIERTAS } from "@/lib/constants";
 import Compositor from "@/components/ficha/Compositor";
 import PersonasCliente, { type Persona } from "@/components/ficha/PersonasCliente";
 import { nombreLinea, notasSinContacto, textoActividad } from "@/lib/actividad";
+import { cantidadTexto, reposicionEstimada } from "@/lib/consumibles";
 import InteresFijado, { type Guion, type MaterialLite, type VersionCot } from "@/components/ficha/InteresFijado";
 import PanelesFicha from "@/components/ficha/PanelesFicha";
 import InteresAgregar from "@/components/InteresAgregar";
@@ -161,7 +162,10 @@ export default async function FichaChat({
       .order("created_at"),
   ]);
 
-  const equipos = (equiposRes.data ?? []) as unknown as Equipo[];
+  // Los consumibles o repuestos vendidos antes de la v1.4 quedaron como "equipo": no se muestran como equipos
+  const equipos = ((equiposRes.data ?? []) as unknown as Equipo[]).filter(
+    (e) => !e.producto?.es_consumible && e.producto?.categoria !== "repuesto"
+  );
   const recurrencias = (recurrenciasRes.data ?? []) as unknown as Recurrencia[];
   const oportunidades = (oportunidadesRes.data ?? []) as unknown as Oportunidad[];
   const actividades = (actividadesRes.data ?? []) as unknown as Actividad[];
@@ -298,8 +302,8 @@ export default async function FichaChat({
     },
     {
       key: "equipos",
-      label: "Equipos",
-      badge: equipos.length,
+      label: recurrencias.length ? "Equipos y consumibles" : "Equipos",
+      badge: equipos.length + recurrencias.length,
       contenido: (
         <div className="space-y-2">
           {equipos.map((e) => {
@@ -325,13 +329,23 @@ export default async function FichaChat({
               </Link>
             );
           })}
-          {recurrencias.map((r) => (
-            <p key={r.id} className="text-sm text-ambar">
-              <Bell className="mr-1 -mt-0.5 inline h-3.5 w-3.5" />
-              {r.producto?.nombre}: recompra cada {r.frecuencia_dias} días, próximo aviso {fechaCorta(r.proxima_alerta)}
-              {r.ultima_compra ? ` (última hace ${diasDesde(r.ultima_compra)} días)` : ""}
-            </p>
-          ))}
+          {recurrencias.map((r) => {
+            const repone = reposicionEstimada(r.ultima_compra, r.frecuencia_dias);
+            return (
+              <p key={r.id} className="text-sm text-verde">
+                <Bell className="mr-1 -mt-0.5 inline h-3.5 w-3.5" />
+                <span className="font-semibold">{r.producto?.nombre}</span>
+                {r.ultima_compra ? ` · última compra ${fechaCorta(r.ultima_compra)}${r.ultima_cantidad ? ` (${cantidadTexto(r.ultima_cantidad, r.unidad)})` : ""}, hace ${diasDesde(r.ultima_compra)} días` : ""}
+                {r.frecuencia_dias ? ` · repone cada ${r.frecuencia_dias} días${repone ? ` (~${fechaCorta(repone)})` : ""}` : " · tiempo sin definir"}
+                {` · contactar ${fechaCorta(r.proxima_alerta)}`}
+              </p>
+            );
+          })}
+          {recurrencias.length > 0 && (
+            <Link href="/consumibles?ver=todos" className="text-sm font-bold text-marino underline">
+              Ver y ajustar en Consumibles
+            </Link>
+          )}
           {equipos.length === 0 && recurrencias.length === 0 && <p className="text-[15px] text-piedra">Ningún equipo cargado todavía.</p>}
           <details className="pt-1">
             <summary className="cursor-pointer list-none text-sm text-azul underline [&::-webkit-details-marker]:hidden">+ Agregar un equipo que tiene</summary>
@@ -571,6 +585,19 @@ export default async function FichaChat({
           </a>
         ) : null}
       </div>
+      {!esTecnico && (
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/consumibles/venta?cliente=${c.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold">
+            <Droplets className="h-4 w-4 text-verde" /> Venta de consumibles
+          </Link>
+          <Link
+            href={`/tareas/nueva?titulo=${encodeURIComponent(`Seguimiento: ${c.nombre_comercial}`)}&link=${encodeURIComponent(`${(process.env.NEXT_PUBLIC_APP_URL || "https://gastroware-crm.vercel.app").replace(/\/$/, "")}/clientes/${c.id}`)}`}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold"
+          >
+            <CalendarPlus className="h-4 w-4 text-azul" /> Tarea
+          </Link>
+        </div>
+      )}
       {iaConfigurada() && (
         <div>
           <BotonIA pregunta={`Resumime a ${c.nombre_comercial} (qué le interesa, en qué quedamos, qué debe) y decime el próximo paso con un mensaje listo para mandarle`} texto="Resumen y próximo paso con IA" />

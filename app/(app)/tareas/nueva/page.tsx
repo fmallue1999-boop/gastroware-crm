@@ -7,7 +7,11 @@ import AyudaLink from "@/components/guia/AyudaLink";
 export const metadata = { title: "Nueva tarea" };
 
 /** Nueva tarea, reunión, capacitación o pago (?fecha=, ?tipo=, ?persona= la precargan). */
-export default async function NuevaTareaPage({ searchParams }: { searchParams: Promise<{ fecha?: string; tipo?: string; persona?: string }> }) {
+export default async function NuevaTareaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ fecha?: string; tipo?: string; persona?: string; titulo?: string; link?: string }>;
+}) {
   const p = await searchParams;
   const supabase = await createClient();
   const [
@@ -36,6 +40,8 @@ export default async function NuevaTareaPage({ searchParams }: { searchParams: P
             fecha: /^\d{4}-\d{2}-\d{2}$/.test(p.fecha ?? "") ? p.fecha : undefined,
             tipo,
             personas: persona ? [persona] : undefined,
+            titulo: p.titulo?.slice(0, 200),
+            links: p.link && /^https?:\/\//.test(p.link) ? [{ url: p.link.slice(0, 500), texto: "Ficha del cliente" }] : undefined,
           }}
         />
       </section>

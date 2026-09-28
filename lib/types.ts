@@ -298,11 +298,18 @@ export interface Recurrencia {
   id: string;
   cliente_id: string;
   producto_id: string;
-  frecuencia_dias: number;
+  frecuencia_dias: number | null;
   ultima_compra: string | null;
   proxima_alerta: string;
   activa: boolean;
   producto?: Producto;
+  /** Migración 031: plan de reposición. */
+  sucursal_id?: string | null;
+  anticipacion_dias?: number;
+  ultima_cantidad?: number | null;
+  unidad?: string | null;
+  responsable_id?: string | null;
+  motivo_suspension?: string | null;
 }
 
 export interface Actividad {

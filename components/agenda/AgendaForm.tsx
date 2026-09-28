@@ -38,7 +38,7 @@ export default function AgendaForm({
   usuarios: Usuario[];
   yo: string;
   hoy: string;
-  inicial?: { fecha?: string; tipo?: TipoAgenda; personas?: string[] };
+  inicial?: { fecha?: string; tipo?: TipoAgenda; personas?: string[]; titulo?: string; links?: LinkAgenda[] };
   editar?: { id: string; siguientes: number; puedeGestionar: boolean; valores: EntradaAgenda };
 }) {
   const router = useRouter();
@@ -46,14 +46,14 @@ export default function AgendaForm({
   const v = editar?.valores;
   const tipoInicial = v?.tipo ?? inicial?.tipo ?? "tarea";
   const [tipo, setTipo] = useState<TipoAgenda>(tipoInicial);
-  const [titulo, setTitulo] = useState(v?.titulo ?? "");
+  const [titulo, setTitulo] = useState(v?.titulo ?? inicial?.titulo ?? "");
   const [fecha, setFecha] = useState(v?.fecha ?? inicial?.fecha ?? hoy);
   const [hora, setHora] = useState(v?.hora?.slice(0, 5) ?? "");
   const [horaFin, setHoraFin] = useState(v?.horaFin?.slice(0, 5) ?? "");
   const [personas, setPersonas] = useState<string[]>(v?.personas ?? inicial?.personas ?? [yo]);
   const [lugar, setLugar] = useState(v?.lugar ?? "");
   const [descripcion, setDescripcion] = useState(v?.descripcion ?? "");
-  const [links, setLinks] = useState<LinkAgenda[]>(v?.links?.length ? v.links : []);
+  const [links, setLinks] = useState<LinkAgenda[]>(v?.links?.length ? v.links : inicial?.links ?? []);
   const [monto, setMonto] = useState(v?.monto != null ? String(v.monto) : "");
   const [moneda, setMoneda] = useState<"ARS" | "USD">(v?.moneda ?? "ARS");
   const [avisoDias, setAvisoDias] = useState<number>(v?.avisoDias ?? avisoPorDefecto(tipoInicial));

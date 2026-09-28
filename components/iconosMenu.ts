@@ -19,6 +19,7 @@ import {
   Palette,
   Sparkles,
   CalendarCheck,
+  Droplets,
   type LucideIcon,
 } from "lucide-react";
 import type { ClaveIcono } from "@/lib/navegacion";
@@ -43,5 +44,6 @@ export const ICONOS_MENU: Record<ClaveIcono, LucideIcon> = {
   guia: CircleHelp,
   asistente: Sparkles,
   tareas: CalendarCheck,
+  consumibles: Droplets,
   mas: Menu,
 };

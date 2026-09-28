@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Cron diario (Vercel Cron): genera tareas de recompra para las recurrencias
- * vencidas. Protegido con CRON_SECRET.
+ * Cron diario (Vercel Cron): avisos de garantías por vencer. Las reposiciones
+ * de consumibles se siguen desde su plan (migración 031). Protegido con CRON_SECRET.
  */
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
@@ -26,49 +26,11 @@ export async function GET(request: Request) {
     timeZone: "America/Argentina/Buenos_Aires",
   });
 
-  const { data: recurrencias } = await supabase
-    .from("recurrencias")
-    .select("*, producto:productos(nombre), cliente:clientes(nombre_comercial, comercial_id)")
-    .eq("activa", true)
-    .lte("proxima_alerta", hoy);
-
-  // Manual 4.2: el recontacto de consumibles lo hace la administrativa (cuenta
-  // para el vendedor dueño de la cuenta). Si no hay, queda con el vendedor.
-  const { data: administrativas } = await supabase
-    .from("usuarios")
-    .select("id")
-    .eq("rol", "administrativa")
-    .eq("activo", true)
-    .limit(1);
-  const administrativaId = (administrativas?.[0]?.id as string | undefined) ?? null;
-
-  let creadas = 0;
+  // Desde la migración 031 el plan de reposición de consumibles (recurrencias)
+  // es el seguimiento: aparece en Consumibles y en Mi día de quien lo tiene a
+  // cargo. Ya no se crean tareas de recompra aparte (evitaría duplicados).
+  const creadas = 0;
   const errores: string[] = [];
-  for (const rec of recurrencias ?? []) {
-    // Evitar duplicados: ¿ya hay una tarea de recompra pendiente para esta recurrencia?
-    const { count } = await supabase
-      .from("tareas")
-      .select("id", { count: "exact", head: true })
-      .eq("recurrencia_id", rec.id)
-      .is("completada_at", null)
-      .eq("cancelada", false);
-    if ((count ?? 0) > 0) continue;
-
-    const { error } = await supabase.from("tareas").insert({
-      cliente_id: rec.cliente_id,
-      recurrencia_id: rec.id,
-      usuario_id: administrativaId ?? rec.cliente?.comercial_id ?? null,
-      tipo: "recompra",
-      titulo: `Ofrecer recompra: ${rec.producto?.nombre ?? "consumible"}`,
-      vence_el: hoy,
-      auto: true,
-    });
-    if (error) {
-      errores.push(`recompra ${rec.id}: ${error.message}`);
-      continue;
-    }
-    creadas++;
-  }
 
   // --- Garantías por vencer (30 días): una tarea por equipo, sin repetir ---
   const en30 = new Date(hoy + "T12:00:00");

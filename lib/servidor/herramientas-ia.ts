@@ -5,6 +5,7 @@ import { esGestor, veTodo } from "@/lib/puestos";
 import { cargarCasos } from "@/lib/servidor/casos";
 import { cargarMiDia } from "@/lib/servidor/midia";
 import { atrasadasMias, cargarAgenda } from "@/lib/servidor/agenda";
+import { cargarPlanes } from "@/lib/servidor/consumibles";
 import { horario, masDias, nombreTipo } from "@/lib/agenda";
 import { calcularTablero, cargarDatosTablero, rangoPeriodo, type Db } from "@/lib/tablero";
 import { buscarClientes } from "@/lib/actions/contactos";
@@ -258,6 +259,30 @@ export function herramientasAsistente(
           link: `/tareas/${i.id}`,
         });
         return { atrasadas: atrasadas.map(fila), agenda: items.map(fila), nueva: "/tareas/nueva", todo: "/tareas" };
+      },
+    },
+    {
+      nombre: "consumibles",
+      etiqueta: "Mirando las reposiciones",
+      descripcion:
+        "Reposiciones de consumibles (pastillas, insumos): a qué clientes hay que contactar para reponer, con la última compra, la cantidad, cada cuánto reponen y la fecha de contacto. Usala para '¿a quién le toca reponer?', '¿cuándo compró pastillas el Hotel X?'.",
+      parametros: { type: "object", properties: { dias: { type: "number", description: "Hasta cuántos días adelante (por defecto 14)" }, solo_mias: { type: "boolean" } } },
+      ejecutar: async (a) => {
+        const dias = typeof a.dias === "number" && a.dias > 0 && a.dias <= 120 ? Math.round(a.dias) : 14;
+        const planes = await cargarPlanes(supabase, { hasta: masDias(hoy, dias), responsable: a.solo_mias ? usuario.id : null });
+        return planes.map((p) => ({
+          cliente: p.cliente?.nombre_comercial,
+          producto: p.producto?.nombre,
+          ultima_compra: p.ultima_compra,
+          cantidad: p.ultima_cantidad,
+          unidad: p.unidad,
+          repone_cada_dias: p.frecuencia_dias,
+          contactar_el: p.proxima_alerta,
+          atrasada: p.proxima_alerta < hoy,
+          a_cargo: p.responsable,
+          link: "/consumibles",
+          ficha: `/clientes/${p.cliente_id}`,
+        }));
       },
     },
     {
