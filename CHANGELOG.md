@@ -3,6 +3,17 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.2.0 — 28 de septiembre de 2026
+
+Tareas y agenda del equipo. Migración 029 (tablas nuevas `agenda` y `agenda_personas`, columna `notificaciones.push_at`).
+
+- /tareas (lista, calendario del mes, "Lo que asigné", equipo para dirección), /tareas/nueva, /tareas/[id] (detalle, cambiar, borrar, .ics).
+- Tipos: tarea, reunión, capacitación, pago (monto y moneda), otro. Varias personas, links, lugar o videollamada, repetición semanal/quincenal/mensual (una fila por fecha, misma serie), aviso 0/1/3/7 días antes.
+- Permisos (RLS): ve quien la creó, quienes la tienen y dirección; cambia quien la creó, dirección o la única persona asignada; cada uno marca la suya.
+- Mi día: "Tu agenda de hoy" arriba para todos los puestos; el número de Mi día suma la agenda.
+- Avisos: `avisar()` manda también push al celular (lib/servidor/push.ts, una sola vez por aviso con push_at); cron 8:30 deja en la campana los avisos del día y los anticipados (avisado_el) y los suma al push de la mañana.
+- Asistente IA: herramienta `mi_agenda`.
+
 ## v1.1.0 — 27 de septiembre de 2026
 
 Funciones de IA para el trabajo diario (sin migraciones).

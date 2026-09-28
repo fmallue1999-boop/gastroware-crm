@@ -18,6 +18,7 @@ import {
   Wrench,
   Palette,
   Sparkles,
+  CalendarCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { ClaveIcono } from "@/lib/navegacion";
@@ -41,5 +42,6 @@ export const ICONOS_MENU: Record<ClaveIcono, LucideIcon> = {
   videos: PlayCircle,
   guia: CircleHelp,
   asistente: Sparkles,
+  tareas: CalendarCheck,
   mas: Menu,
 };

@@ -28,6 +28,7 @@ import {
   CircleHelp,
   Sparkles,
   Newspaper,
+  CalendarCheck,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -80,6 +81,12 @@ export default async function MasPage() {
     <div className="space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Más</h1>
 
+      <MenuLink
+        href="/tareas"
+        icono={CalendarCheck}
+        titulo="Tareas y agenda"
+        detalle="Tareas, reuniones, capacitaciones y pagos: los tuyos y los que asignás"
+      />
       <MenuLink
         href="/asistente"
         icono={Sparkles}

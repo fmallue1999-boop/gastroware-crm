@@ -17,6 +17,7 @@ import AyudaLink from "@/components/guia/AyudaLink";
 import AvisoGuia from "@/components/guia/AvisoGuia";
 import AvisoVersion from "@/components/version/AvisoVersion";
 import BotonIA from "@/components/ia/BotonIA";
+import AgendaHoy from "@/components/agenda/AgendaHoy";
 
 type InteresFila = {
   id: string;
@@ -90,6 +91,7 @@ export default async function HoyPage({
     return (
       <div className="space-y-4">
         {encabezado()}
+        <AgendaHoy supabase={supabase} yo={userId} gestor={esGestor} hoy={hoy} />
         <Bandejas bandejas={bandejas} />
         <InicioTecnico userId={userId} />
       </div>
@@ -124,6 +126,7 @@ export default async function HoyPage({
               </Link>
             ) : null
           )}
+          <AgendaHoy supabase={supabase} yo={userId} gestor={esGestor} hoy={hoy} />
           <Bandejas bandejas={bandejas.filter((b) => b.clave !== "recompras")} />
           {recompras.length > 0 && (
             <section>
@@ -200,6 +203,8 @@ export default async function HoyPage({
     <ConPanel c={c} interes={interes} cerrarHref="/hoy">
       <div className="space-y-4">
         {encabezado(esGestor ? <SelectorQuienDesplegable valor={quien} vendedores={vendedores} /> : null)}
+
+        <AgendaHoy supabase={supabase} yo={userId} gestor={esGestor} hoy={hoy} />
 
         <Bandejas bandejas={bandejasVenta} />
 
