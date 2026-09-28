@@ -42,6 +42,21 @@ export default async function CotizacionPrintPage({
   const version = (versiones?.[0] ?? null) as CotizacionVersion | null;
   if (!version) notFound();
 
+  // Fuera de lista: no se imprime ni se manda hasta que dirección la apruebe
+  if (version.aprobacion === "pendiente" || version.aprobacion === "rechazada")
+    return (
+      <div className="mx-auto max-w-xl p-8 text-center">
+        <p className="text-xl font-extrabold">
+          {version.aprobacion === "pendiente" ? "Esta propuesta está esperando la aprobación de dirección" : "Dirección rechazó esta propuesta"}
+        </p>
+        <p className="mt-2 text-[15px] text-piedra">
+          {version.aprobacion === "pendiente"
+            ? "Va fuera de lista. Cuando dirección la apruebe te llega el aviso y la podés imprimir."
+            : version.aprobacion_nota ?? "Armá una nueva versión con lo que pidió dirección."}
+        </p>
+      </div>
+    );
+
   const { data: itemsData } = await supabase
     .from("cotizacion_items")
     .select("*")

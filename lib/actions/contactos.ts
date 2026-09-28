@@ -12,6 +12,7 @@ import { hoyISO, sumarDias, normalizarTelefono, fechaCorta } from "@/lib/format"
 import { ETAPAS_ABIERTAS, RUBROS } from "@/lib/constants";
 import type { Cliente } from "@/lib/types";
 import { usuarioActual, type SupabaseServidor } from "./comun";
+import { crearInteres } from "./intereses";
 
 // =====================================================================
 // Clientes y leads
@@ -622,6 +623,8 @@ export async function crearContacto(input: {
   nivel?: string;
   /** true = quiere comprar pero no hay stock: entra en lista de espera. */
   enEspera?: boolean;
+  /** Lugar de entrega: decide el territorio y el vendedor. */
+  zonaEntrega?: string | null;
 }) {
   const nombre = input.nombre.trim();
   if (!nombre) return { error: "Falta el nombre" };
@@ -658,7 +661,7 @@ export async function crearContacto(input: {
       telefono: telefono.length >= 6 ? telefono : null,
       email,
       estado: input.esCliente ? "cliente_activo" : "prospecto",
-      comercial_id: user?.id ?? null,
+      comercial_id: input.zonaEntrega ? null : user?.id ?? null,
       notas,
     })
     .select("id")
@@ -683,17 +686,18 @@ export async function crearContacto(input: {
     : null;
   const enEspera = !!input.enEspera && (productoIds.length > 0 || !!interes);
   if (productoIds.length || interes) {
-    await supabase.from("oportunidades").insert({
-      cliente_id: clienteId,
-      producto_id: productoIds[0] ?? null,
-      productos_extra: productoIds.slice(1),
-      comercial_id: user?.id ?? null,
-      origen: input.origen || "Otro",
-      pedido: "general",
-      etapa: enEspera ? "espera" : "nueva",
-      temperatura: nivel,
-      mensaje_inicial: interes,
+    const r = await crearInteres({
+      clienteId,
+      productoIds,
+      texto: interes ?? undefined,
+      origen: input.origen,
+      nivel: nivel ?? undefined,
+      enEspera,
+      zonaEntrega: input.zonaEntrega,
     });
+    if ("error" in r) return { error: r.error };
+  } else if (input.zonaEntrega) {
+    await supabase.from("clientes").update({ comercial_id: user?.id ?? null }).eq("id", clienteId);
   }
 
   await supabase.from("actividades").insert({

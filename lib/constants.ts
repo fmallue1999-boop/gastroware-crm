@@ -1,3 +1,5 @@
+import { PUESTOS } from "@/lib/puestos";
+
 export const RUBROS = [
   "Cafetería",
   "Cadena de cafeterías",
@@ -110,14 +112,9 @@ export const CATEGORIAS_PRODUCTO: Record<string, string> = {
   otro: "Otros",
 };
 
-export const ROLES = [
-  { value: "direccion", label: "Dirección" },
-  { value: "admin", label: "Administración" },
-  { value: "comercial", label: "Comercial" },
-  { value: "marketing", label: "Marketing" },
-  { value: "tecnico", label: "Técnico" },
-  { value: "distribuidor", label: "Distribuidor" },
-] as const;
+
+/** Puestos (usuarios.rol), con el nombre del modelo operativo. */
+export const ROLES = PUESTOS.map(({ value, label }) => ({ value, label }));
 
 export const CONDICIONES_FISCALES = [
   { value: "responsable_inscripto", label: "Responsable Inscripto" },
@@ -146,25 +143,52 @@ export const NIVELES_INTERES = [
 ] as const;
 
 /**
- * Circuito de la venta, en orden: vendido → preparar → facturar → entregado.
- * "para_entregar" = ya facturada, falta entregar (se muestra dentro de Facturar).
- * Los valores viejos (pendiente_pago, finalizado) ya no se usan: quedaron
- * migrados a para_entregar / entregado.
+ * Circuito de la venta (manual, cadena 1.1): vendido → facturado → (cobro
+ * acreditado o condición aprobada) a preparar → despachado → entregado.
  */
 export const PEDIDO_ESTADOS = [
-  { value: "comprometido", label: "Vendido" },
-  { value: "preparar_envio", label: "Preparar" },
-  { value: "facturar", label: "Facturar" },
-  { value: "para_entregar", label: "Facturado, a entregar" },
+  { value: "comprometido", label: "Vendido · para facturar" },
+  { value: "facturado", label: "Facturado · esperando cobro" },
+  { value: "preparar_envio", label: "A preparar" },
+  { value: "despachado", label: "Despachado" },
   { value: "entregado", label: "Entregado" },
 ] as const;
 
-/** Columnas del tablero de ventas (agrupan estados del pedido). */
+/** Pasos de la venta, en orden (uno por estado). */
 export const VENTA_PASOS = [
   { key: "vendido", label: "Vendido", estados: ["comprometido"] },
-  { key: "preparar", label: "Preparar", estados: ["preparar_envio"] },
-  { key: "facturar", label: "Facturar", estados: ["facturar", "para_entregar"] },
-  { key: "entregado", label: "Entregado", estados: ["entregado", "finalizado"] },
+  { key: "facturado", label: "Facturado", estados: ["facturado"] },
+  { key: "preparar", label: "A preparar", estados: ["preparar_envio"] },
+  { key: "despachado", label: "Despachado", estados: ["despachado"] },
+  { key: "entregado", label: "Entregado", estados: ["entregado"] },
+] as const;
+
+/** Prioridad de un caso de postventa (manual, hoja del técnico: parado primero). */
+export const PRIORIDADES_CASO = [
+  { value: "parado", label: "Equipo parado", horas: 1 },
+  { value: "anda_mal", label: "Anda mal", horas: 24 },
+  { value: "consulta", label: "Consulta o revisión", horas: 24 },
+] as const;
+
+/** Formas de pago que se informan al vender. */
+export const FORMAS_PAGO_VENTA = [
+  "Contado (transferencia)",
+  "Contado (efectivo)",
+  "Anticipo y saldo antes de despachar",
+  "Cheque o e-cheq",
+  "Tarjeta",
+  "Mercado Pago",
+  "Cuenta corriente (condición aprobada)",
+] as const;
+
+/** Relevamiento del lugar antes de instalar (checklist de servicio técnico). */
+export const RELEVAMIENTO_INSTALACION = [
+  { key: "electricidad", label: "Electricidad (tensión, toma, potencia)" },
+  { key: "agua", label: "Agua y desagüe" },
+  { key: "espacio", label: "Espacio y medidas" },
+  { key: "conectividad", label: "Conectividad (wifi)" },
+  { key: "accesos", label: "Accesos (cómo entrar, escaleras, ascensor)" },
+  { key: "horario", label: "Horario para instalar" },
 ] as const;
 
 export const TEMPERATURAS = [

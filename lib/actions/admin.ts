@@ -335,7 +335,7 @@ export async function crearUsuario(input: {
 
 export async function actualizarUsuario(
   usuarioId: string,
-  patch: { nombre?: string; rol?: string; activo?: boolean }
+  patch: { nombre?: string; rol?: string; activo?: boolean; telefono?: string | null; territorio?: string | null }
 ) {
   const rol = await rolActual();
   if (!["direccion", "admin"].includes(rol))
@@ -343,9 +343,12 @@ export async function actualizarUsuario(
   if (patch.rol && rol !== "direccion")
     return { error: "Solo dirección puede cambiar roles" };
   const supabase = await createClient();
+  const limpio: Record<string, unknown> = { ...patch };
+  if ("telefono" in patch) limpio.telefono = patch.telefono?.trim() || null;
+  if ("territorio" in patch) limpio.territorio = patch.territorio || null;
   const { error } = await supabase
     .from("usuarios")
-    .update(patch)
+    .update(limpio)
     .eq("id", usuarioId);
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
@@ -424,9 +427,11 @@ export async function guardarRepuesto(input: {
   precio?: number | null;
   costo?: number | null;
   moneda?: string;
+  stock_minimo?: number | null;
 }) {
   const supabase = await createClient();
   const fila = {
+    stock_minimo: input.stock_minimo ?? null,
     codigo_interno: input.codigo_interno?.trim() || null,
     descripcion: input.descripcion.trim(),
     marca: input.marca?.trim() || null,

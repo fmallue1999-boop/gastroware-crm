@@ -66,6 +66,10 @@ export default function OTTrabajo({
   const [guardado, setGuardado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
+  const [remito, setRemito] = useState(ot.remito_nro ?? "");
+  const [capacitado, setCapacitado] = useState(ot.acta_capacitado ?? "");
+  const [garantiaDesde, setGarantiaDesde] = useState(ot.acta_garantia_desde ?? "");
+  const [remitoGuardado, setRemitoGuardado] = useState(false);
 
   // Ítem nuevo
   const [itemTipo, setItemTipo] = useState<"refaccion" | "gasto">("refaccion");
@@ -134,7 +138,33 @@ export default function OTTrabajo({
     }
   }
 
-  async function subirFoto(archivo: File | null, momento: "antes" | "despues") {
+  function guardarRemito() {
+    startTransition(async () => {
+      const res = await actualizarOT(ot.id, {
+        remito_nro: remito.trim() || null,
+        acta_capacitado: capacitado.trim() || null,
+        acta_garantia_desde: garantiaDesde || null,
+      });
+      if (res && "error" in res && res.error) setError(res.error);
+      else {
+        setRemitoGuardado(true);
+        setTimeout(() => setRemitoGuardado(false), 1500);
+      }
+      router.refresh();
+    });
+  }
+
+  const momentos = new Set(fotos.map((f) => f.momento));
+  const faltan = [
+    !ot.trabajo_realizado?.trim() ? "qué se hizo (guardado)" : null,
+    !ot.remito_nro?.trim() ? "N° de remito (guardado)" : null,
+    !momentos.has("remito") && !firmaUrl ? "foto del remito firmado" : null,
+    !momentos.has("despues") ? "foto del equipo funcionando" : null,
+    ot.tipo === "instalacion" && !ot.acta_capacitado?.trim() ? "acta: a quién capacitaste" : null,
+  ].filter(Boolean) as string[];
+  const esperaCobro = ot.presupuesto_monto != null && !ot.cobro_ok_at;
+
+  async function subirFoto(archivo: File | null, momento: "antes" | "despues" | "remito" | "acta") {
     if (!archivo) return;
     setSubiendo(true);
     try {
@@ -197,6 +227,13 @@ export default function OTTrabajo({
         <p className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           Devuelta por administración: {ot.observacion_admin}
+        </p>
+      )}
+
+      {esperaCobro && (
+        <p className="flex items-start gap-2 rounded-xl bg-ambar-soft px-3 py-2 text-sm font-semibold text-ambar">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          Presupuesto esperando el cobro: no se sale ni se manda el repuesto hasta que administración lo registre.
         </p>
       )}
 
@@ -342,15 +379,51 @@ export default function OTTrabajo({
         </h3>
         {fotos.length > 0 && <GrillaFotos fotos={fotos} />}
         <div className="mt-2 grid grid-cols-2 gap-2">
-          {(["antes", "despues"] as const).map((m) => (
+          {(
+            [
+              { m: "antes", l: "Antes" },
+              { m: "despues", l: "Equipo funcionando" },
+              { m: "remito", l: "Remito firmado" },
+              ...(ot.tipo === "instalacion" ? [{ m: "acta", l: "Acta firmada" }] : []),
+            ] as { m: "antes" | "despues" | "remito" | "acta"; l: string }[]
+          ).map(({ m, l }) => (
             <label key={m} className="block">
-              <span className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-borde py-2 text-sm text-piedra">
-                <Camera className="h-4 w-4" /> {m === "antes" ? "Antes" : "Después"}
+              <span
+                className={`flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 text-sm ${
+                  momentos.has(m) ? "border-verde bg-verde-soft font-semibold text-verde" : "border-dashed border-borde text-piedra"
+                }`}
+              >
+                <Camera className="h-4 w-4" /> {momentos.has(m) ? "✓ " : ""}
+                {l}
               </span>
               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => subirFoto(e.target.files?.[0] ?? null, m)} />
             </label>
           ))}
         </div>
+      </div>
+
+      {/* Remito y acta */}
+      <div className="space-y-2 rounded-xl bg-crema p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-piedra">Remito{ot.tipo === "instalacion" ? " y acta de instalación" : ""}</h3>
+        <input type="text" placeholder="N° de remito en papel" value={remito} onChange={(e) => setRemito(e.target.value)} className={`${inputCls} w-full`} />
+        {ot.tipo === "instalacion" && (
+          <>
+            <input
+              type="text"
+              placeholder="¿A quién capacitaste? (nombre y puesto)"
+              value={capacitado}
+              onChange={(e) => setCapacitado(e.target.value)}
+              className={`${inputCls} w-full`}
+            />
+            <label className="flex items-center gap-2 text-sm text-piedra">
+              La garantía empieza el
+              <input type="date" value={garantiaDesde} onChange={(e) => setGarantiaDesde(e.target.value)} className={inputCls} />
+            </label>
+          </>
+        )}
+        <button onClick={guardarRemito} disabled={pending} className="w-full rounded-xl border border-marino py-2 text-sm font-medium disabled:opacity-50">
+          {remitoGuardado ? "✓ Guardado" : "Guardar remito"}
+        </button>
       </div>
 
       <Firma ot={ot} firmaUrl={firmaUrl} />
@@ -371,13 +444,20 @@ export default function OTTrabajo({
             </button>
           ))}
         {transicionesTecnico.includes("finalizado_tecnico") && (
-          <button
-            onClick={() => accion(() => finalizarOTTecnico(ot.id))}
-            disabled={pending}
-            className="w-full rounded-2xl bg-marino py-3 font-semibold text-white disabled:opacity-60"
-          >
-            Finalizar trabajo (pasa a administración)
-          </button>
+          <>
+            {faltan.length > 0 && (
+              <p className="rounded-xl bg-ambar-soft px-3 py-2 text-sm text-ambar">
+                Para cerrar falta: {faltan.join(", ")}.
+              </p>
+            )}
+            <button
+              onClick={() => accion(() => finalizarOTTecnico(ot.id))}
+              disabled={pending || faltan.length > 0}
+              className="w-full rounded-2xl bg-marino py-3 font-semibold text-white disabled:opacity-60"
+            >
+              Terminar trabajo (pasa a control del remito)
+            </button>
+          </>
         )}
       </div>
     </section>

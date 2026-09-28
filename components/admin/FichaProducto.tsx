@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { crearSubidaBiblioteca, guardarProducto } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/client";
 import type { Producto } from "@/lib/types";
+import VideoModelo from "@/components/VideoModelo";
 
 const inputCls =
   "w-full rounded-xl border border-borde px-3 py-2 text-sm outline-none focus:border-marino";
@@ -113,6 +114,7 @@ export default function FichaProducto({ producto }: { producto: Producto }) {
           </button>
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
+        <VideoModelo productoId={producto.id} inicial={producto.video_url} />
       </div>
     </details>
   );

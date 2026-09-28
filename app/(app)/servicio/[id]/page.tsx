@@ -11,6 +11,9 @@ import OTAdminControl from "@/components/OTAdminControl";
 import ChecklistsOT from "@/components/ChecklistsOT";
 import IAInformeOT from "@/components/IAInformeOT";
 import { iaConfigurada } from "@/lib/core/ia";
+import OTServicioPanel from "@/components/OTServicioPanel";
+import { controlaServicio, factura } from "@/lib/puestos";
+import { ZONAS_TECNICO_PROPIO } from "@/lib/territorios";
 import type {
   OrdenTrabajo,
   OTChecklist,
@@ -85,16 +88,26 @@ export default async function OTPage({
     .single();
 
   const rol = (yo as Usuario | null)?.rol ?? "comercial";
-  const esGestor = ["direccion", "admin"].includes(rol);
-  const esTecnicoAsignado = rol === "tecnico" && ot.tecnico_id === user!.id;
+  // Controla (asigna, aprueba el remito): dirección, dirección de administración
+  // y responsable de servicio. Factura y cierra: administración.
+  const controla = controlaServicio(rol);
+  const administra = factura(rol);
+  const esGestor = controla || administra;
+  const esTecnicoAsignado = rol === "tecnico" && (ot.tecnico_id === user!.id || !ot.tecnico_id);
 
+  const TRABAJO_TECNICO = ["en_camino", "en_proceso", "esperando_repuesto", "esperando_cliente", "finalizado_tecnico"];
   const listaTrans = (transiciones ?? []) as OTTransicion[];
-  const transicionesGestor = esGestor
-    ? listaTrans.map((t) => t.hacia)
-    : [];
-  const transicionesTecnico = (esTecnicoAsignado || esGestor)
+  const puede = (req: string) =>
+    req === "cualquiera" ||
+    (req === "gestor" && controla) ||
+    (req === "administracion" && administra) ||
+    (req === "tecnico" && (controla || rol === "tecnico"));
+  const transicionesGestor = listaTrans
+    .filter((t) => puede(t.requiere_rol) && !TRABAJO_TECNICO.includes(t.hacia) && (controla || administra))
+    .map((t) => t.hacia);
+  const transicionesTecnico = (esTecnicoAsignado || controla)
     ? listaTrans
-        .filter((t) => t.requiere_rol !== "gestor" || esGestor)
+        .filter((t) => puede(t.requiere_rol))
         .map((t) => t.hacia)
         .filter((h) =>
           ["en_camino", "en_proceso", "esperando_repuesto", "esperando_cliente", "finalizado_tecnico"].includes(h)
@@ -117,7 +130,27 @@ export default async function OTPage({
 
   const editable =
     ["programado", "asignado", "en_camino", "en_proceso", "esperando_repuesto", "esperando_cliente", "devuelto_tecnico"].includes(ot.estado) &&
-    (esTecnicoAsignado || esGestor);
+    (esTecnicoAsignado || controla);
+
+  // Para asignar: técnicos propios, aliados y si el local está en la zona del técnico propio
+  const [{ data: tecnicosData }, { data: aliadosData }, { data: sucursalesData }, { data: facturasOt }] = await Promise.all([
+    supabase.from("usuarios").select("id, nombre").eq("rol", "tecnico").eq("activo", true).order("nombre"),
+    supabase.from("tecnicos_aliados").select("id, nombre, zona").eq("activo", true).order("nombre"),
+    supabase.from("sucursales").select("id, ciudad, es_principal").eq("cliente_id", ot.cliente_id),
+    supabase.from("facturas").select("id, numero, cobro_estado").eq("ot_id", ot.id).order("created_at"),
+  ]);
+  const suc = ((sucursalesData ?? []) as { id: string; ciudad: string | null; es_principal: boolean }[]).find((x) =>
+    ot.sucursal_id ? x.id === ot.sucursal_id : x.es_principal
+  );
+  const ciudad = (suc?.ciudad ?? "").toLowerCase();
+  const zonaPropia = ciudad
+    ? /mar del plata|batán|batan|sierra de los padres|miramar|balcarce|mar chiquita|santa clara/.test(ciudad) ||
+      ZONAS_TECNICO_PROPIO.some((z) => ciudad.includes(z.toLowerCase()))
+    : null;
+  const facturaPresupuesto = ((facturasOt ?? []) as { id: string; numero: string; cobro_estado: string }[])[0] ?? null;
+  const aliadoNombre = ot.aliado_id
+    ? ((aliadosData ?? []) as { id: string; nombre: string }[]).find((a) => a.id === ot.aliado_id)?.nombre ?? "aliado"
+    : null;
 
   const garantiaVigente =
     ot.equipo?.garantia_hasta && ot.equipo.garantia_hasta >= hoy;
@@ -160,7 +193,8 @@ export default async function OTPage({
         </p>
         <p className="text-xs text-piedra">
           {ot.fecha_programada ? `Programada ${fechaCorta(ot.fecha_programada)}` : "Sin fecha"}
-          {ot.tecnico ? ` · Técnico: ${ot.tecnico.nombre}` : " · Sin técnico"}
+          {ot.tecnico ? ` · Técnico: ${ot.tecnico.nombre}` : aliadoNombre ? ` · Aliado: ${aliadoNombre}` : " · Sin técnico"}
+          {ot.remito_nro ? ` · Remito ${ot.remito_nro}` : ""}
           {ot.cliente?.telefono ? ` · ${ot.cliente.telefono}` : ""}
         </p>
         {ot.problema && (
@@ -169,6 +203,19 @@ export default async function OTPage({
           </p>
         )}
       </header>
+
+      {(controla || administra) && (
+        <OTServicioPanel
+          ot={ot}
+          hoy={hoy}
+          tecnicos={(tecnicosData ?? []) as { id: string; nombre: string }[]}
+          aliados={(aliadosData ?? []) as { id: string; nombre: string; zona: string | null }[]}
+          zonaPropia={zonaPropia}
+          puedeAsignar={controla}
+          puedeFacturar={administra}
+          facturaPresupuesto={facturaPresupuesto}
+        />
+      )}
 
       <ChecklistsOT
         checklists={(checklists ?? []) as unknown as OTChecklist[]}

@@ -1,15 +1,17 @@
 "use server";
 
-// Ventas: pedido directo y circuito vendido → preparar → facturar → entregado.
+// Ventas: pedido directo y circuito después de vender (manual 1.1):
+// informar → facturar → cobro o condición → preparar → despachar → entregar.
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { exigirGestor } from "@/lib/auth";
-import { normalizarTelefono } from "@/lib/format";
-import { PEDIDO_ESTADOS } from "@/lib/constants";
+import { hoyISO, normalizarTelefono, sumarDias } from "@/lib/format";
+import { PEDIDO_ESTADOS, RELEVAMIENTO_INSTALACION } from "@/lib/constants";
+import { esGestor, factura as puedeFacturar } from "@/lib/puestos";
+import { atrasoMaximo, diasPostventa } from "@/lib/ventas";
 import type { PedidoEstado } from "@/lib/types";
-import { usuarioActual } from "./comun";
+import { avisar, puestoActual, regla, usuarioActual, usuariosDePuesto, type SupabaseServidor } from "./comun";
 import { buscarClientePorTelefono } from "./contactos";
 import { cambiarEtapa } from "./intereses";
 
@@ -104,95 +106,157 @@ export async function setEntregaEstimada(oportunidadId: string, fecha: string) {
   return { ok: true };
 }
 
+
+// =====================================================================
+// Circuito de la venta (manual 1.1, pasos 4 a 12)
+// =====================================================================
+
+const COLS_VENTA =
+  "id, cliente_id, comercial_id, etapa, pedido_estado, producto_id, forma_pago, direccion_entrega, lleva_instalacion, relevamiento, remito_nro, nro_factura, monto_estimado, moneda, entregado_at, vendido_at, cliente:clientes(nombre_comercial), producto:productos(nombre, video_url)";
+
+type VentaFila = {
+  id: string;
+  cliente_id: string;
+  comercial_id: string | null;
+  etapa: string;
+  pedido_estado: PedidoEstado | null;
+  producto_id: string | null;
+  forma_pago: string | null;
+  direccion_entrega: string | null;
+  lleva_instalacion: boolean;
+  relevamiento: Record<string, string> | null;
+  remito_nro: string | null;
+  nro_factura: string | null;
+  monto_estimado: number | null;
+  moneda: string;
+  entregado_at: string | null;
+  vendido_at: string | null;
+  cliente: { nombre_comercial: string } | null;
+  producto: { nombre: string; video_url: string | null } | null;
+};
+
+async function cargarVenta(supabase: SupabaseServidor, id: string): Promise<VentaFila | null> {
+  const { data } = await supabase.from("oportunidades").select(COLS_VENTA).eq("id", id).maybeSingle();
+  return (data as unknown as VentaFila | null) ?? null;
+}
+
+async function movimiento(supabase: SupabaseServidor, v: VentaFila, contenido: string, userId?: string | null) {
+  await supabase.from("actividades").insert({
+    cliente_id: v.cliente_id,
+    oportunidad_id: v.id,
+    tipo: "pedido",
+    contenido,
+    created_by: userId ?? null,
+  });
+}
+
+const nombreVenta = (v: VentaFila) =>
+  `${v.producto?.nombre ?? "venta"} · ${v.cliente?.nombre_comercial ?? "cliente"}`;
+
 /**
- * Avanza la venta por su circuito: vendido → preparar → facturar →
- * (facturado, a entregar) → entregado. No agenda nada solo.
+ * Paso 4: el vendedor informa la venta (forma de pago, dónde se entrega, a
+ * qué razón social se factura y si lleva instalación, con el relevamiento
+ * del lugar). Avisa a la administrativa para facturar.
  */
-export async function avanzarPedido(
+export async function informarVenta(
   oportunidadId: string,
-  estado: PedidoEstado
+  input: {
+    formaPago: string;
+    direccionEntrega: string;
+    sucursalId?: string | null;
+    llevaInstalacion: boolean;
+    relevamiento?: Record<string, string>;
+    entregaEstimada?: string | null;
+    nota?: string;
+  }
 ) {
-  const supabase = await createClient();
-  const user = await usuarioActual();
-  const { data: opp } = await supabase
-    .from("oportunidades")
-    .select("cliente_id, comercial_id, etapa, pedido_estado, entregado_at, producto_id")
-    .eq("id", oportunidadId)
-    .single();
-  if (!opp) return { error: "No se encontró la venta" };
-  if (opp.etapa !== "ganada")
-    return { error: "La venta se sigue una vez vendida" };
-
-  const update: Record<string, unknown> = { pedido_estado: estado };
-  if (estado === "entregado" && !opp.entregado_at)
-    update.entregado_at = new Date().toISOString();
-  const { error } = await supabase
-    .from("oportunidades")
-    .update(update)
-    .eq("id", oportunidadId);
-  if (error) return { error: error.message };
-
-  // Único descuento automático de stock: al entregar se resta 1 del producto
-  // (fn_ajustar_stock, atómico); si se vuelve atrás desde Entregado, se suma.
-  let notaStock = "";
-  if (opp.producto_id) {
-    const estaba = opp.pedido_estado === "entregado";
-    const queda = estado === "entregado";
-    const delta = queda && !estaba ? -1 : estaba && !queda ? 1 : 0;
-    if (delta !== 0) {
-      const { error: eStock } = await supabase.rpc("fn_ajustar_stock", {
-        p_producto_id: opp.producto_id,
-        p_delta: delta,
-      });
-      notaStock = eStock
-        ? " (no se pudo ajustar el stock)"
-        : delta < 0
-          ? " · stock descontado"
-          : " · stock devuelto";
+  const formaPago = input.formaPago.trim();
+  const direccion = input.direccionEntrega.trim();
+  if (!formaPago) return { error: "Elegí la forma de pago" };
+  if (!direccion) return { error: "Poné dónde se entrega (dirección o “retira en el local”)" };
+  let relevamiento: Record<string, string> | null = null;
+  if (input.llevaInstalacion) {
+    relevamiento = {};
+    for (const r of RELEVAMIENTO_INSTALACION) {
+      const valor = input.relevamiento?.[r.key]?.trim() ?? "";
+      if (!valor) return { error: `Falta el relevamiento: ${r.label}. Sin relevamiento no se programa la instalación.` };
+      relevamiento[r.key] = valor;
     }
   }
 
-  const label =
-    PEDIDO_ESTADOS.find((p) => p.value === estado)?.label ?? estado;
-  await supabase.from("actividades").insert({
-    cliente_id: opp.cliente_id,
-    oportunidad_id: oportunidadId,
-    tipo: "pedido",
-    contenido: `Venta: ${label}${notaStock}`,
-    created_by: user?.id ?? null,
-  });
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  let v = await cargarVenta(supabase, oportunidadId);
+  if (!v) return { error: "No se encontró la venta" };
+  if (v.etapa !== "ganada") {
+    const r = await cambiarEtapa(oportunidadId, "ganada");
+    if (r && "error" in r && r.error) return { error: r.error };
+    v = await cargarVenta(supabase, oportunidadId);
+    if (!v) return { error: "No se encontró la venta" };
+  }
+  if ((v.pedido_estado ?? "comprometido") !== "comprometido")
+    return { error: "La venta ya está facturada: los cambios los hace administración" };
 
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({
+      forma_pago: formaPago,
+      direccion_entrega: direccion,
+      sucursal_id: input.sucursalId || null,
+      lleva_instalacion: input.llevaInstalacion,
+      relevamiento,
+      entrega_estimada: input.entregaEstimada || null,
+      vendido_at: v.vendido_at ?? new Date().toISOString(),
+    })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+
+  await movimiento(
+    supabase,
+    v,
+    `Venta informada · pago: ${formaPago} · entrega: ${direccion}${input.llevaInstalacion ? " · con instalación (relevamiento cargado)" : ""}${
+      input.nota?.trim() ? ` · ${input.nota.trim()}` : ""
+    }`,
+    user?.id
+  );
+  const administracion = await usuariosDePuesto(supabase, ["administrativa", "admin", "direccion"]);
+  await avisar(
+    supabase,
+    administracion,
+    { tipo: "venta_para_facturar", titulo: `Venta para facturar: ${nombreVenta(v)}`, url: "/pedidos" },
+    user?.id
+  );
   revalidatePath("/", "layout");
-  return { ok: true };
+  return { ok: true as const };
 }
 
 /**
- * Cierra el paso "Facturar" de la venta: guarda el número de factura y, si
- * la venta incluye un equipo, su número de serie (queda anexado al equipo
- * del cliente). Después queda "facturada, a entregar".
+ * Paso 5: administración factura (número de ZEUS, fecha, vencimiento y
+ * monto). La factura queda en Cobranzas; la venta espera el cobro.
  */
-export async function facturarPedido(
+export async function facturarVenta(
   oportunidadId: string,
-  nroFactura: string,
-  numeroSerie?: string
+  input: {
+    numero: string;
+    fecha?: string;
+    vencimiento?: string | null;
+    monto?: number | null;
+    moneda?: string;
+    serie?: string;
+  }
 ) {
-  if (!nroFactura.trim()) return { error: "Falta el número de factura" };
-  // Facturar es de dirección/administración (la base lo refuerza con
-  // fn_protege_facturacion desde la migración 025).
-  const bloqueo = await exigirGestor();
-  if (bloqueo) return bloqueo;
+  const numero = input.numero.trim();
+  if (!numero) return { error: "Falta el número de factura" };
   const supabase = await createClient();
+  if (!puedeFacturar(await puestoActual(supabase))) return { error: "Factura administración" };
   const user = await usuarioActual();
-  const { data: opp } = await supabase
-    .from("oportunidades")
-    .select("cliente_id, etapa")
-    .eq("id", oportunidadId)
-    .single();
-  if (!opp) return { error: "Oportunidad no encontrada" };
-  if (opp.etapa !== "ganada")
-    return { error: "El pedido se factura una vez ganada la venta" };
+  const v = await cargarVenta(supabase, oportunidadId);
+  if (!v) return { error: "No se encontró la venta" };
+  if (v.etapa !== "ganada") return { error: "Se factura una vez vendida" };
+  if ((v.pedido_estado ?? "comprometido") !== "comprometido") return { error: "Esta venta ya está facturada" };
+  if (!v.forma_pago) return { error: "Falta que el vendedor informe la venta (forma de pago y entrega)" };
 
-  const serie = numeroSerie?.trim();
+  const serie = input.serie?.trim();
   if (serie) {
     const { data: equipo } = await supabase
       .from("equipos")
@@ -200,34 +264,209 @@ export async function facturarPedido(
       .eq("oportunidad_id", oportunidadId)
       .maybeSingle();
     if (equipo && !equipo.numero_serie) {
-      const { error: errSerie } = await supabase
-        .from("equipos")
-        .update({ numero_serie: serie })
-        .eq("id", equipo.id);
+      const { error: errSerie } = await supabase.from("equipos").update({ numero_serie: serie }).eq("id", equipo.id);
       if (errSerie)
         return {
-          error:
-            errSerie.code === "23505"
-              ? `El número de serie ${serie} ya está cargado en otro equipo`
-              : errSerie.message,
+          error: errSerie.code === "23505" ? `El número de serie ${serie} ya está cargado en otro equipo` : errSerie.message,
         };
     }
   }
 
+  const { data: opp } = await supabase.from("oportunidades").select("sucursal_id").eq("id", oportunidadId).single();
+  const fecha = input.fecha && /^\d{4}-\d{2}-\d{2}$/.test(input.fecha) ? input.fecha : hoyISO();
+  const { error: errF } = await supabase.from("facturas").insert({
+    cliente_id: v.cliente_id,
+    sucursal_id: opp?.sucursal_id ?? null,
+    oportunidad_id: oportunidadId,
+    tipo: "venta",
+    numero,
+    fecha,
+    vencimiento: input.vencimiento || fecha,
+    monto: input.monto ?? v.monto_estimado,
+    moneda: input.moneda || v.moneda || "ARS",
+    created_by: user?.id ?? null,
+  });
+  if (errF) return { error: `guardar la factura: ${errF.message}` };
+
   const { error } = await supabase
     .from("oportunidades")
-    .update({ nro_factura: nroFactura.trim(), pedido_estado: "para_entregar" })
+    .update({ nro_factura: numero, pedido_estado: "facturado" })
     .eq("id", oportunidadId);
   if (error) return { error: error.message };
 
-  await supabase.from("actividades").insert({
-    cliente_id: opp.cliente_id,
-    oportunidad_id: oportunidadId,
-    tipo: "pedido",
-    contenido: `Venta facturada (${nroFactura.trim()})${serie ? `, serie ${serie} anexada al equipo` : ""}. Falta entregar.`,
-    created_by: user?.id ?? null,
-  });
-
+  await movimiento(
+    supabase,
+    v,
+    `Venta facturada (${numero})${serie ? `, serie ${serie} anexada al equipo` : ""}. Falta el cobro para preparar.`,
+    user?.id
+  );
+  await avisar(
+    supabase,
+    [v.comercial_id],
+    { tipo: "venta_facturada", titulo: `Facturada: ${nombreVenta(v)}`, url: `/clientes/${v.cliente_id}` },
+    user?.id
+  );
+  if (/cuenta corriente/i.test(v.forma_pago)) {
+    const direccion = await usuariosDePuesto(supabase, ["admin", "direccion"]);
+    await avisar(
+      supabase,
+      direccion,
+      { tipo: "condicion_a_aprobar", titulo: `Condición de pago a aprobar: ${nombreVenta(v)}`, url: "/cobranzas" },
+      user?.id
+    );
+  }
   revalidatePath("/", "layout");
-  return { ok: true };
+  return { ok: true as const };
+}
+
+/** Paso 7: remito y prioridad del día para el depósito. */
+export async function prepararVenta(oportunidadId: string, input: { remito: string; prioridad?: number | null }) {
+  const supabase = await createClient();
+  const rol = await puestoActual(supabase);
+  if (!puedeFacturar(rol) && rol !== "servicio") return { error: "El remito lo hace administración" };
+  const user = await usuarioActual();
+  const v = await cargarVenta(supabase, oportunidadId);
+  if (!v) return { error: "No se encontró la venta" };
+  if (v.pedido_estado !== "preparar_envio") return { error: "La venta todavía no está para preparar (falta factura y cobro)" };
+  const remito = input.remito.trim();
+  if (!remito) return { error: "Poné el número de remito" };
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({ remito_nro: remito, prioridad_despacho: input.prioridad ?? null })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  if (remito !== v.remito_nro) await movimiento(supabase, v, `Remito ${remito} para preparar`, user?.id);
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Paso 9: despacho (transporte, seguimiento y videos del modelo al cliente). */
+export async function despacharVenta(
+  oportunidadId: string,
+  input: { transporte: string; seguimiento?: string; videosEnviados: boolean; remito?: string }
+) {
+  const supabase = await createClient();
+  const rol = await puestoActual(supabase);
+  if (!puedeFacturar(rol) && !["tecnico", "servicio"].includes(rol)) return { error: "Despacha administración o depósito" };
+  const user = await usuarioActual();
+  const v = await cargarVenta(supabase, oportunidadId);
+  if (!v) return { error: "No se encontró la venta" };
+  if (v.pedido_estado !== "preparar_envio")
+    return { error: "Nada se despacha sin factura y cobro acreditado (o condición aprobada)" };
+  const remito = input.remito?.trim() || v.remito_nro;
+  if (!remito) return { error: "Falta el número de remito" };
+  const transporte = input.transporte.trim();
+  if (!transporte) return { error: "Poné cómo sale (transporte, flete propio o retira el cliente)" };
+  const ahora = new Date().toISOString();
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({
+      pedido_estado: "despachado",
+      despachado_at: ahora,
+      remito_nro: remito,
+      transporte,
+      nro_seguimiento: input.seguimiento?.trim() || null,
+      videos_enviados_at: input.videosEnviados ? ahora : null,
+    })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  await movimiento(
+    supabase,
+    v,
+    `Despachado · ${transporte}${input.seguimiento?.trim() ? ` · seguimiento ${input.seguimiento.trim()}` : ""} · remito ${remito}${
+      input.videosEnviados ? " · videos del modelo enviados" : ""
+    }`,
+    user?.id
+  );
+  await avisar(
+    supabase,
+    [v.comercial_id],
+    { tipo: "venta_despachada", titulo: `Despachado: ${nombreVenta(v)}`, url: `/clientes/${v.cliente_id}` },
+    user?.id
+  );
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Paso 10: entregado. Descuenta 1 del stock del producto y agenda la
+ * postventa al vendedor (día 10; con instalación, también 2 y 30).
+ */
+export async function entregarVenta(oportunidadId: string) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const v = await cargarVenta(supabase, oportunidadId);
+  if (!v) return { error: "No se encontró la venta" };
+  if (v.pedido_estado === "entregado") return { ok: true as const };
+  if (v.pedido_estado !== "despachado") return { error: "Primero se despacha (con factura y cobro)" };
+  const hoy = hoyISO();
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({ pedido_estado: "entregado", entregado_at: v.entregado_at ?? new Date().toISOString() })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+
+  let notaStock = "";
+  if (v.producto_id) {
+    const { error: eStock } = await supabase.rpc("fn_ajustar_stock", { p_producto_id: v.producto_id, p_delta: -1 });
+    notaStock = eStock ? " (no se pudo descontar el stock)" : " · stock descontado";
+  }
+
+  const responsable = v.comercial_id ?? user?.id ?? null;
+  const postventa = diasPostventa(v.lleva_instalacion);
+  const { error: errT } = await supabase.from("tareas").insert(
+    postventa.map((p) => ({
+      cliente_id: v.cliente_id,
+      oportunidad_id: v.id,
+      usuario_id: responsable,
+      tipo: "postventa",
+      titulo: p.titulo,
+      vence_el: sumarDias(p.dias, hoy),
+      auto: true,
+    }))
+  );
+  await movimiento(
+    supabase,
+    v,
+    `Entregado${notaStock}. Postventa agendada: día ${postventa.map((p) => p.dias).join(", ")}${errT ? " (no se pudo agendar)" : ""}`,
+    user?.id
+  );
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Corrección de dirección: vuelve la venta a un paso anterior (por ejemplo,
+ * un despacho cargado por error). Si sale de Entregado, devuelve el stock.
+ */
+export async function corregirPasoVenta(oportunidadId: string, estado: PedidoEstado) {
+  const supabase = await createClient();
+  if (!esGestor(await puestoActual(supabase))) return { error: "Solo dirección corrige el paso de una venta" };
+  const user = await usuarioActual();
+  const v = await cargarVenta(supabase, oportunidadId);
+  if (!v) return { error: "No se encontró la venta" };
+  if (v.etapa !== "ganada") return { error: "La venta se sigue una vez vendida" };
+  const update: Record<string, unknown> = { pedido_estado: estado };
+  if (estado !== "entregado") update.entregado_at = null;
+  const { error } = await supabase.from("oportunidades").update(update).eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  if (v.producto_id && v.pedido_estado === "entregado" && estado !== "entregado")
+    await supabase.rpc("fn_ajustar_stock", { p_producto_id: v.producto_id, p_delta: 1 });
+  const label = PEDIDO_ESTADOS.find((p) => p.value === estado)?.label ?? estado;
+  await movimiento(supabase, v, `Venta corregida por dirección: vuelve a ${label}`, user?.id);
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Días de atraso del cliente (se muestra antes de liberar un despacho). */
+export async function atrasoDeCliente(clienteId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("facturas")
+    .select("vencimiento, cobro_estado")
+    .eq("cliente_id", clienteId)
+    .neq("cobro_estado", "cobrado");
+  const dias = atrasoMaximo((data ?? []) as { vencimiento: string | null; cobro_estado: string }[], hoyISO());
+  const limite = Number(await regla(supabase, "dias_atraso_frena_despacho")) || 30;
+  return { dias, limite, frena: dias > limite };
 }

@@ -32,9 +32,14 @@ export default function CotizacionForm({
   const [vigencia, setVigencia] = useState("7");
   const [notas, setNotas] = useState("");
   const [archivo, setArchivo] = useState<File | null>(null);
+  const [condicionEspecial, setCondicionEspecial] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const total = lineas.reduce((s, l) => s + l.cantidad * l.precioUnit, 0);
+  const bajoLista = lineas.some((l) => {
+    const p = productos.find((x) => x.id === l.productoId);
+    return !!p?.precio_referencia && p.moneda === moneda && l.precioUnit < p.precio_referencia - 0.5;
+  });
 
   function agregarProducto(id: string) {
     if (!id) return;
@@ -96,6 +101,7 @@ export default function CotizacionForm({
         archivoPath,
         notas,
         vigenciaDias: vigencia ? Number(vigencia) : null,
+        condicionEspecial,
         items: lineas.map((l) => ({
           productoId: l.productoId,
           descripcion: l.descripcion,
@@ -254,6 +260,16 @@ export default function CotizacionForm({
           className="mt-1 block w-full text-xs file:mr-2 file:rounded-xl file:border file:border-borde file:bg-white file:px-3 file:py-1.5 file:text-xs"
         />
       </label>
+
+      <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
+        <input type="checkbox" checked={condicionEspecial} onChange={(e) => setCondicionEspecial(e.target.checked)} className="h-5 w-5" />
+        Tiene una condición especial (plazo, financiación, bonificación)
+      </label>
+      {(bajoLista || condicionEspecial) && (
+        <p className="rounded-xl bg-ambar-soft px-3 py-2 text-sm font-semibold text-ambar">
+          {condicionEspecial ? "Condición especial" : "Por debajo de lista"}: si pasa lo que podés dar solo, queda esperando la aprobación de dirección antes de imprimirla o mandarla.
+        </p>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirGestor } from "@/lib/auth";
 import { hoyISO } from "@/lib/format";
 import { NOTA_LLEGO_STOCK } from "@/lib/pendientes";
-import { usuarioActual } from "./comun";
+import { puestoActual, usuarioActual } from "./comun";
 
 // =====================================================================
 // Stock e ingresos previstos (lo mantiene administración; lo ven todos)
@@ -58,9 +58,11 @@ export async function crearIngresoStock(input: {
  * verde del inicio de cada vendedor. Nada más.
  */
 export async function recibirIngresoStock(ingresoId: string) {
-  const bloqueo = await exigirGestor();
-  if (bloqueo) return bloqueo;
   const supabase = await createClient();
+  // La mercadería la recibe el depósito (técnico) o administración (manual 4.3/4.4)
+  const rol = await puestoActual(supabase);
+  if (!["direccion", "admin", "administrativa", "servicio", "tecnico"].includes(rol))
+    return { error: "La recepción la marca el depósito o administración" };
   const user = await usuarioActual();
   const { data: ing } = await supabase
     .from("ingresos_stock")
@@ -89,7 +91,18 @@ export async function recibirIngresoStock(ingresoId: string) {
   const nombreProducto =
     (ing.producto as unknown as { nombre: string } | null)?.nombre ?? "el producto";
   if (esperando?.length) {
-    const { error: e3 } = await supabase
+    // El técnico no edita intereses: el aviso a la lista de espera lo hace el sistema
+    let db: typeof supabase = supabase;
+    if (rol === "tecnico") {
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\s+/g, "");
+      if (serviceKey) {
+        const { createClient: createAdmin } = await import("@supabase/supabase-js");
+        db = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        }) as unknown as typeof supabase;
+      }
+    }
+    const { error: e3 } = await db
       .from("oportunidades")
       .update({ proximo_contacto: hoyISO(), proximo_nota: NOTA_LLEGO_STOCK })
       .eq("etapa", "espera")

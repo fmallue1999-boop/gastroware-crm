@@ -15,6 +15,8 @@ import MaterialItem from "@/components/MaterialItem";
 import IAMensaje from "@/components/IAMensaje";
 import { SelectorProductos, chipCls } from "@/components/InteresAgregar";
 import { COLOR_ETAPA, PuntoNivel, textoProximo } from "@/components/PuntoNivel";
+import AsignacionInteres from "@/components/ficha/AsignacionInteres";
+import { CadenciaInteres, CalificacionInteres } from "@/components/ficha/TrabajarInteres";
 import type { Oportunidad, Producto } from "@/lib/types";
 
 export type VersionCot = {
@@ -27,6 +29,8 @@ export type VersionCot = {
   forma_pago: string | null;
   created_at: string;
   archivoUrl: string | null;
+  aprobacion?: string;
+  aprobacion_nota?: string | null;
 };
 export type Guion = { id: string; nombre: string; texto: string };
 export type MaterialLite = { id: string; nombre: string; tipo: string; url: string | null };
@@ -49,6 +53,10 @@ export default function InteresFijado({
   iaOn,
   abierta = false,
   hoy,
+  rol = "comercial",
+  miId = "",
+  responsableNombre = null,
+  ahoraMs = 0,
 }: {
   interes: Oportunidad;
   nombre: string;
@@ -61,6 +69,10 @@ export default function InteresFijado({
   iaOn: boolean;
   abierta?: boolean;
   hoy: string;
+  rol?: string;
+  miId?: string;
+  responsableNombre?: string | null;
+  ahoraMs?: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -117,6 +129,16 @@ export default function InteresFijado({
         {stockTexto ? ` · ${stockTexto}` : ""}
         {sinMovimiento > 7 ? ` · ${sinMovimiento} días sin movimiento` : ""}
       </p>
+      <AsignacionInteres interes={interes} rol={rol} miId={miId} responsableNombre={responsableNombre} ahoraMs={ahoraMs} />
+      {!enEspera && (
+        <CadenciaInteres
+          interes={interes}
+          hoy={hoy}
+          fechaPropuesta={
+            vigente ? new Date(vigente.created_at).toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }) : null
+          }
+        />
+      )}
 
       {aviso && <p className="mt-2 text-sm font-semibold text-verde">✓ {aviso}</p>}
       {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
@@ -199,11 +221,22 @@ export default function InteresFijado({
                     · {dinero(v.total ?? 0, v.moneda)}
                     {v.forma_pago ? ` · ${v.forma_pago}` : ""}
                     <span className="text-piedra"> · {fechaCorta(v.created_at)}</span>
+                    {v.aprobacion === "pendiente" && (
+                      <span className="ml-1.5 rounded-full bg-ambar-soft px-2 py-0.5 text-xs font-bold text-ambar">esperando aprobación</span>
+                    )}
+                    {v.aprobacion === "aprobada" && (
+                      <span className="ml-1.5 rounded-full bg-verde-soft px-2 py-0.5 text-xs font-bold text-verde">aprobada</span>
+                    )}
+                    {v.aprobacion === "rechazada" && (
+                      <span className="ml-1.5 block text-xs font-bold text-red-600">Rechazada: {v.aprobacion_nota}</span>
+                    )}
                   </span>
                   <span className="flex shrink-0 gap-3">
-                    <Link href={`/cotizacion/${v.cotizacion_id}?v=${v.version}`} className="text-azul underline">
-                      Imprimir
-                    </Link>
+                    {v.aprobacion !== "pendiente" && v.aprobacion !== "rechazada" && (
+                      <Link href={`/cotizacion/${v.cotizacion_id}?v=${v.version}`} className="text-azul underline">
+                        Imprimir
+                      </Link>
+                    )}
                     {v.archivoUrl && (
                       <a href={v.archivoUrl} target="_blank" rel="noopener noreferrer" className="text-azul underline">
                         PDF
@@ -244,6 +277,16 @@ export default function InteresFijado({
               Financiación
             </Link>
           </div>
+
+          <details className="group">
+            <summary className={resumen}>
+              Calificación{interes.cantidad || interes.plazo_compra || interes.decisor ? " ✓" : " (cantidad, plazo, quién decide)"}
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-2">
+              <CalificacionInteres interes={interes} />
+            </div>
+          </details>
 
           <div>
             <p className={sub}>Cuánto le interesa</p>

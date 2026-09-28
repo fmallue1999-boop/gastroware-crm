@@ -1,7 +1,9 @@
 export type Rol =
   | "direccion"
   | "admin"
+  | "administrativa"
   | "comercial"
+  | "servicio"
   | "marketing"
   | "tecnico"
   | "distribuidor";
@@ -14,15 +16,13 @@ export type Etapa =
   | "ganada"
   | "perdida";
 
-/** Circuito del pedido después de ganar la venta. */
+/** Circuito de la venta después de vender (manual, cadena 1.1). */
 export type PedidoEstado =
   | "comprometido"
-  | "facturar"
-  | "pendiente_pago"
+  | "facturado"
   | "preparar_envio"
-  | "para_entregar"
-  | "entregado"
-  | "finalizado";
+  | "despachado"
+  | "entregado";
 
 export interface Usuario {
   id: string;
@@ -30,6 +30,9 @@ export interface Usuario {
   rol: Rol;
   distribuidor_id: string | null;
   activo: boolean;
+  telefono?: string | null;
+  /** Territorio que atiende, si es vendedor. */
+  territorio?: string | null;
 }
 
 export interface Distribuidor {
@@ -72,6 +75,11 @@ export interface Sucursal {
   provincia: string | null;
   telefono: string | null;
   es_principal: boolean;
+  /** Local con razón social propia (cuentas con varias razones sociales). */
+  razon_social?: string | null;
+  cuit?: string | null;
+  contacto_facturacion?: string | null;
+  email_facturacion?: string | null;
 }
 
 export interface Contacto {
@@ -99,6 +107,8 @@ export interface Modelo {
 export interface Producto {
   id: string;
   nombre: string;
+  /** Video instructivo del modelo (lo carga marketing; se manda con el despacho). */
+  video_url?: string | null;
   marca: string | null;
   categoria: string;
   modelo_id: string | null;
@@ -136,6 +146,8 @@ export interface Repuesto {
   precio: number | null;
   moneda: string;
   stock: number | null;
+  /** Repuesto crítico: mínimo a tener (los viernes se revisa). */
+  stock_minimo?: number | null;
   ubicacion: string | null;
   garantia_meses: number | null;
   activo: boolean;
@@ -196,6 +208,26 @@ export interface Oportunidad {
   proximo_nota: string | null;
   /** Se actualiza sola con cada movimiento (trigger en actividades). */
   ultimo_movimiento_at: string;
+  /** Calificación y ruteo (manual, 1.1 pasos 2 y 3). */
+  zona_entrega?: string | null;
+  territorio?: string | null;
+  cantidad?: number | null;
+  plazo_compra?: string | null;
+  decisor?: string | null;
+  asignado_at?: string | null;
+  primer_contacto_at?: string | null;
+  /** Datos de la venta para facturar, cobrar y despachar. */
+  forma_pago?: string | null;
+  direccion_entrega?: string | null;
+  lleva_instalacion?: boolean;
+  relevamiento?: Record<string, string> | null;
+  remito_nro?: string | null;
+  prioridad_despacho?: number | null;
+  transporte?: string | null;
+  nro_seguimiento?: string | null;
+  despachado_at?: string | null;
+  videos_enviados_at?: string | null;
+  vendido_at?: string | null;
   created_at: string;
   closed_at: string | null;
   cliente?: Cliente;
@@ -222,6 +254,13 @@ export interface CotizacionVersion {
   condiciones: string | null;
   archivo_path: string | null;
   created_at: string;
+  creado_por?: string | null;
+  /** Fuera de lista: dirección aprueba antes de presentarla (028). */
+  aprobacion?: "no_requiere" | "pendiente" | "aprobada" | "rechazada";
+  aprobacion_motivo?: string | null;
+  aprobado_por?: string | null;
+  aprobado_at?: string | null;
+  aprobacion_nota?: string | null;
 }
 
 export interface Plantilla {
@@ -299,6 +338,20 @@ export interface OrdenTrabajo {
   created_at: string;
   cerrada_tecnico_at: string | null;
   cerrada_admin_at: string | null;
+  /** Modelo operativo (028): caso de origen, aliado, venta, remito y cobro previo. */
+  caso_id?: string | null;
+  aliado_id?: string | null;
+  oportunidad_id?: string | null;
+  remito_nro?: string | null;
+  tiempo_min?: number | null;
+  presupuesto_monto?: number | null;
+  presupuesto_moneda?: string | null;
+  presupuesto_aprobado_at?: string | null;
+  cobro_ok_at?: string | null;
+  acta_capacitado?: string | null;
+  acta_garantia_desde?: string | null;
+  garantia_reclamo?: "a_presentar" | "presentado" | "repuesto_recibido" | "cerrado" | "rechazado" | null;
+  garantia_reclamo_nota?: string | null;
   cliente?: Cliente;
   equipo?: Equipo | null;
   tecnico?: { id: string; nombre: string } | null;
@@ -427,4 +480,61 @@ export interface FeriaLead {
   contactado_por: string | null;
   contactado_at: string | null;
   created_at: string;
+}
+
+/** Factura cargada en el CRM (la emite el sistema de gestión); base de cobranzas. */
+export interface Factura {
+  id: string;
+  cliente_id: string;
+  sucursal_id: string | null;
+  oportunidad_id: string | null;
+  ot_id: string | null;
+  tipo: "venta" | "servicio" | "consumible" | "repuesto";
+  numero: string;
+  fecha: string;
+  vencimiento: string | null;
+  monto: number | null;
+  moneda: string;
+  cobro_estado: "pendiente" | "prometido" | "sin_respuesta" | "cobrado";
+  promesa_fecha: string | null;
+  cobrado_at: string | null;
+  condicion_aprobada_por: string | null;
+  condicion_aprobada_at: string | null;
+  condicion_nota: string | null;
+  ultimo_reclamo_at: string | null;
+  nota: string | null;
+  created_at: string;
+}
+
+/** Caso de postventa (reclamo): primer nivel del vendedor, derivación a servicio. */
+export interface Caso {
+  id: string;
+  numero: number;
+  cliente_id: string;
+  sucursal_id: string | null;
+  equipo_id: string | null;
+  responsable_id: string | null;
+  abierto_por: string | null;
+  prioridad: "parado" | "anda_mal" | "consulta";
+  descripcion: string;
+  estado: "abierto" | "derivado" | "cerrado";
+  primera_respuesta_at: string | null;
+  derivado_at: string | null;
+  ot_id: string | null;
+  cerrado_at: string | null;
+  causa: string | null;
+  solucion: string | null;
+  created_at: string;
+}
+
+/** Técnico aliado (tercero) que trabaja fuera de la zona del técnico propio. */
+export interface TecnicoAliado {
+  id: string;
+  nombre: string;
+  zona: string | null;
+  telefono: string | null;
+  email: string | null;
+  tarifa: string | null;
+  notas: string | null;
+  activo: boolean;
 }

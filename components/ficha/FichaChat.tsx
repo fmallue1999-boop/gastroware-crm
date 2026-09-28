@@ -22,7 +22,9 @@ import PanelesFicha from "@/components/ficha/PanelesFicha";
 import InteresAgregar from "@/components/InteresAgregar";
 import AsignarVendedor from "@/components/AsignarVendedor";
 import IAResumenCliente from "@/components/IAResumenCliente";
-import VentaPaso from "@/components/VentaPaso";
+import VentaPaso, { type FacturaDatos } from "@/components/VentaPaso";
+import CasoTarjeta from "@/components/casos/CasoTarjeta";
+import { cargarCasos } from "@/lib/servidor/casos";
 import NotaForm from "@/components/NotaForm";
 import EquipoForm from "@/components/EquipoForm";
 import DatosClienteForm from "@/components/DatosClienteForm";
@@ -60,6 +62,9 @@ type OT = {
   cerrada_tecnico_at: string | null;
 };
 
+/** Momento actual (fuera del render: la regla de pureza de React no deja llamar a Date.now() adentro). */
+const ahora = () => Date.now();
+
 /** Qué movimientos se muestran como "del sistema" (centrados, en ámbar) y cuáles como burbuja de persona. */
 const DE_PERSONA = new Set(["nota", "feria"]);
 
@@ -85,10 +90,13 @@ export default async function FichaChat({
   const hoy = hoyISO();
   const supabase = await createClient();
 
-  const [{ data: cliente }, { data: rol }] = await Promise.all([
+  const [{ data: cliente }, { data: rol }, { data: auth }] = await Promise.all([
     supabase.from("clientes").select("*, sucursales(*)").eq("id", id).maybeSingle(),
     supabase.rpc("fn_rol"),
+    supabase.auth.getUser(),
   ]);
+  const miId = auth?.user?.id ?? "";
+  const ahoraMs = ahora();
   if (!cliente) {
     if (modo === "panel")
       return <p className="p-4 text-[15px] text-piedra">Ese contacto no está o no lo podés ver.</p>;
@@ -115,6 +123,8 @@ export default async function FichaChat({
     stockInfo,
     plantillasRes,
     materialesRes,
+    facturasRes,
+    casosAbiertos,
   ] = await Promise.all([
     supabase.from("equipos").select("*, producto:productos(*)").eq("cliente_id", id).is("deleted_at", null).order("fecha_venta", { ascending: false }),
     supabase.from("recurrencias").select("*, producto:productos(*)").eq("cliente_id", id).eq("activa", true),
@@ -132,6 +142,12 @@ export default async function FichaChat({
     infoStockPorProducto(supabase),
     supabase.from("plantillas").select("*"),
     supabase.from("materiales").select("id, nombre, tipo, url, producto_id").order("nombre"),
+    supabase
+      .from("facturas")
+      .select("id, oportunidad_id, numero, vencimiento, monto, moneda, cobro_estado, promesa_fecha, condicion_aprobada_at")
+      .eq("cliente_id", id)
+      .order("created_at", { ascending: false }),
+    cargarCasos(supabase, { abiertos: true, clienteId: id, ahora: ahoraMs, hoy }),
   ]);
 
   const equipos = (equiposRes.data ?? []) as unknown as Equipo[];
@@ -150,7 +166,10 @@ export default async function FichaChat({
 
   const abiertas = oportunidades.filter((o) => (ETAPAS_ABIERTAS as readonly string[]).includes(o.etapa));
   const ventas = oportunidades.filter((o) => o.etapa === "ganada");
-  const ventasEnCurso = ventas.filter((o) => !["entregado", "finalizado"].includes(o.pedido_estado ?? ""));
+  const ventasEnCurso = ventas.filter((o) => o.pedido_estado !== "entregado");
+  const facturaDe = new Map<string, FacturaDatos>();
+  for (const f of (facturasRes.data ?? []) as (FacturaDatos & { oportunidad_id: string | null })[])
+    if (f.oportunidad_id && !facturaDe.has(f.oportunidad_id)) facturaDe.set(f.oportunidad_id, f);
   const perdidas = oportunidades.filter((o) => o.etapa === "perdida");
   const esCliente = c.estado === "cliente_activo" || ventas.length > 0 || equipos.length > 0;
   const serieFaltante = new Set(equipos.filter((e) => e.oportunidad_id && !e.numero_serie).map((e) => e.oportunidad_id));
@@ -183,6 +202,8 @@ export default async function FichaChat({
       forma_pago: v.forma_pago,
       created_at: v.created_at,
       archivoUrl: urlsVersiones[i],
+      aprobacion: v.aprobacion,
+      aprobacion_nota: v.aprobacion_nota,
     });
     versionesPor.set(v.oportunidad_id, lista);
   });
@@ -297,6 +318,9 @@ export default async function FichaChat({
       contenido: (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
+            <Link href={`/casos/nuevo?cliente=${c.id}`} className="inline-flex min-h-11 items-center rounded-xl bg-ambar px-4 text-[15px] font-bold text-white">
+              Abrir caso (reclamo)
+            </Link>
             {(esTecnico || esGestor) && (
               <Link href={`/servicio/cargar?cliente=${c.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-marino px-4 text-[15px] font-bold text-white">
                 <Wrench className="h-4 w-4" /> Cargar service hecho
@@ -388,6 +412,9 @@ export default async function FichaChat({
     <>
       {!esTecnico && (
         <div className="space-y-2">
+          {casosAbiertos.map((k) => (
+            <CasoTarjeta key={k.id} caso={k} />
+          ))}
           {abiertas.map((o) => (
             <InteresFijado
               key={o.id}
@@ -402,6 +429,10 @@ export default async function FichaChat({
               iaOn={iaConfigurada()}
               abierta={o.id === interesAbierto}
               hoy={hoy}
+              rol={(rol as string) ?? "comercial"}
+              miId={miId}
+              responsableNombre={o.comercial_id ? nombres.get(o.comercial_id) ?? null : null}
+              ahoraMs={ahoraMs}
             />
           ))}
           {ventasEnCurso.map((o) => (
@@ -413,11 +444,14 @@ export default async function FichaChat({
                 {o.nro_factura ? ` · factura ${o.nro_factura}` : ""}
               </p>
               <VentaPaso
-                oportunidadId={o.id}
-                estado={o.pedido_estado}
-                nroFactura={o.nro_factura}
-                entregaEstimada={o.entrega_estimada}
+                venta={o}
+                rol={(rol as string) ?? "comercial"}
+                hoy={hoy}
+                factura={facturaDe.get(o.id) ?? null}
                 pedirSerie={serieFaltante.has(o.id)}
+                videoUrl={o.producto?.video_url ?? null}
+                sucursales={sucursales}
+                direccionSugerida={[principal?.direccion, principal?.ciudad].filter(Boolean).join(", ")}
                 compacto
               />
             </div>
