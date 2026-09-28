@@ -17,6 +17,8 @@ import {
 } from "@/lib/format";
 import { ESTADOS_OT, ETAPAS_ABIERTAS } from "@/lib/constants";
 import Compositor from "@/components/ficha/Compositor";
+import PersonasCliente, { type Persona } from "@/components/ficha/PersonasCliente";
+import { nombreLinea, notasSinContacto, textoActividad } from "@/lib/actividad";
 import InteresFijado, { type Guion, type MaterialLite, type VersionCot } from "@/components/ficha/InteresFijado";
 import PanelesFicha from "@/components/ficha/PanelesFicha";
 import InteresAgregar from "@/components/InteresAgregar";
@@ -126,6 +128,7 @@ export default async function FichaChat({
     materialesRes,
     facturasRes,
     casosAbiertos,
+    personasRes,
   ] = await Promise.all([
     supabase.from("equipos").select("*, producto:productos(*)").eq("cliente_id", id).is("deleted_at", null).order("fecha_venta", { ascending: false }),
     supabase.from("recurrencias").select("*, producto:productos(*)").eq("cliente_id", id).eq("activa", true),
@@ -149,6 +152,13 @@ export default async function FichaChat({
       .eq("cliente_id", id)
       .order("created_at", { ascending: false }),
     cargarCasos(supabase, { abiertos: true, clienteId: id, ahora: ahoraMs, hoy }),
+    supabase
+      .from("contactos")
+      .select("id, nombre, cargo, telefono, email, es_decisor")
+      .eq("cliente_id", id)
+      .is("deleted_at", null)
+      .order("es_decisor", { ascending: false })
+      .order("created_at"),
   ]);
 
   const equipos = (equiposRes.data ?? []) as unknown as Equipo[];
@@ -164,6 +174,9 @@ export default async function FichaChat({
     .filter((u) => u.activo && ["comercial", "direccion", "admin"].includes(u.rol))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
   const ots = (otsRes.data ?? []) as OT[];
+  const personas = (personasRes.data ?? []) as Persona[];
+  const nombrePersona = new Map(personas.map((p) => [p.id, p.nombre]));
+  const principalPersona = personas[0] ?? null;
 
   const abiertas = oportunidades.filter((o) => (ETAPAS_ABIERTAS as readonly string[]).includes(o.etapa));
   const ventas = oportunidades.filter((o) => o.etapa === "ganada");
@@ -236,7 +249,12 @@ export default async function FichaChat({
   const atiende = c.comercial_id ? nombres.get(c.comercial_id) : null;
   const empresa =
     c.razon_social && c.razon_social.trim().toLowerCase() !== c.nombre_comercial.trim().toLowerCase() ? c.razon_social : null;
-  const interesesResumen = abiertas.map((o) => ({ id: o.id, texto: nombreProductos(o) }));
+  const interesesResumen = abiertas.map((o) => ({
+    id: o.id,
+    texto: `${o.linea && o.linea !== "equipos" ? `${nombreLinea(o.linea)}: ` : ""}${nombreProductos(o)}`,
+    proximo: o.proximo_contacto,
+    accion: o.proxima_accion ?? null,
+  }));
   const interesPreseleccionado = abiertas.some((o) => o.id === interesAbierto) ? interesAbierto : null;
 
   // El chat: lo más viejo arriba, lo último cerca de la caja. Los primeros 30 a la vista.
@@ -249,7 +267,13 @@ export default async function FichaChat({
     const cuando = `${haceCuanto(a.created_at)} · ${fechaCorta(a.created_at)}`;
     return persona ? (
       <div key={a.id} className="max-w-[88%] rounded-2xl rounded-bl-md bg-white px-3.5 py-2.5 text-[15px] shadow-sm">
-        <p className="whitespace-pre-wrap">{a.contenido}</p>
+        {a.medio && (
+          <p className="mb-0.5 text-xs font-bold text-marino">
+            {textoActividad(a.medio, a.resultado)}
+            {a.contacto_id && nombrePersona.get(a.contacto_id) ? ` · con ${nombrePersona.get(a.contacto_id)}` : ""}
+          </p>
+        )}
+        {(!a.medio || a.contenido !== textoActividad(a.medio, a.resultado)) && <p className="whitespace-pre-wrap">{a.contenido}</p>}
         <p className="mt-0.5 text-xs text-piedra">
           {quien ? `${quien} · ` : ""}
           {cuando}
@@ -266,6 +290,12 @@ export default async function FichaChat({
   const botonContacto = "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-[15px] font-bold";
 
   const paneles = [
+    {
+      key: "personas",
+      label: "Personas",
+      badge: personas.length,
+      contenido: <PersonasCliente clienteId={c.id} personas={personas} />,
+    },
     {
       key: "equipos",
       label: "Equipos",
@@ -494,6 +524,13 @@ export default async function FichaChat({
               {esCliente ? "Cliente" : "Interesado"}
             </span>
           </div>
+          {principalPersona && principalPersona.nombre.trim().toLowerCase() !== c.nombre_comercial.trim().toLowerCase() && (
+            <p className="text-[15px] font-semibold text-tinta/80">
+              {principalPersona.nombre}
+              {principalPersona.cargo ? ` (${principalPersona.cargo})` : ""}
+              {personas.length > 1 ? ` · y ${personas.length - 1} más` : ""}
+            </p>
+          )}
           <p className="text-sm text-piedra">
             {[empresa, c.rubro !== "Otro" ? c.rubro : null, c.ciudad, c.telefono ? telefonoProlijo(c.telefono) : null].filter(Boolean).join(" · ") ||
               "Sin más datos por ahora"}
@@ -512,7 +549,9 @@ export default async function FichaChat({
           </Link>
         ) : null}
       </div>
-      {c.notas && <p className="text-[15px] text-tinta/70">{c.notas}</p>}
+      {(personas.length ? notasSinContacto(c.notas) : c.notas) && (
+        <p className="text-[15px] text-tinta/70">{personas.length ? notasSinContacto(c.notas) : c.notas}</p>
+      )}
       <div className="flex gap-2">
         {c.telefono ? (
           <>
@@ -542,7 +581,12 @@ export default async function FichaChat({
   );
 
   const compositor = (
-    <Compositor clienteId={c.id} intereses={interesesResumen} oportunidadId={interesPreseleccionado} />
+    <Compositor
+      clienteId={c.id}
+      intereses={interesesResumen}
+      oportunidadId={interesPreseleccionado}
+      personas={personas.map((p) => ({ id: p.id, nombre: p.nombre }))}
+    />
   );
 
   if (modo === "panel") {

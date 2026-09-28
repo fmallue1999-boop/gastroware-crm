@@ -93,6 +93,7 @@ export interface Contacto {
   es_decisor: boolean;
   consentimiento_email: boolean;
   consentimiento_whatsapp: boolean;
+  deleted_at?: string | null;
 }
 
 export interface Modelo {
@@ -198,6 +199,10 @@ export interface Oportunidad {
   pedido: "precio" | "info" | "general" | null;
   /** Ids de productos consultados además del principal (producto_id). */
   productos_extra: string[];
+  /** Apartado: equipos, consumibles o repuestos (migración 030). */
+  linea?: string;
+  /** Qué hacer en el próximo contacto (migración 030). */
+  proxima_accion?: string | null;
   pedido_estado: PedidoEstado | null;
   entregado_at: string | null;
   entrega_estimada: string | null;
@@ -308,6 +313,11 @@ export interface Actividad {
   contenido: string | null;
   created_by: string | null;
   created_at: string;
+  /** Migración 030: cómo fue el contacto y su resultado. */
+  medio?: string | null;
+  resultado?: string | null;
+  ocurrio_at?: string | null;
+  contacto_id?: string | null;
 }
 
 export interface OrdenTrabajo {

@@ -3,6 +3,7 @@
 // Contactos: alta, edición, búsqueda, notas, seguimientos y documentos.
 
 import { revalidatePath } from "next/cache";
+import { ACCIONES, MEDIOS, RESULTADOS, esConversacion, textoActividad } from "@/lib/actividad";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -31,6 +32,42 @@ export async function buscarClientePorTelefono(
     .is("deleted_at", null)
     .maybeSingle();
   return data as Cliente | null;
+}
+
+export type PosibleDuplicado = { id: string; nombre: string; telefono: string | null; por: "teléfono" | "email" };
+
+/**
+ * Posibles duplicados por teléfono o email (del cliente o de sus personas).
+ * Solo avisa: nunca une solo, porque hay teléfonos compartidos.
+ */
+export async function buscarDuplicados(telefono?: string | null, email?: string | null): Promise<PosibleDuplicado[]> {
+  const tel = normalizarTelefono(telefono ?? "");
+  const mail = email?.trim().toLowerCase() || "";
+  if (tel.length < 6 && !mail) return [];
+  const supabase = await createClient();
+  const encontrados = new Map<string, PosibleDuplicado["por"]>();
+  const [porTelCli, porMailCli, porTelPer, porMailPer] = await Promise.all([
+    tel.length >= 6 ? supabase.from("clientes").select("id").eq("telefono", tel).is("deleted_at", null).limit(5) : Promise.resolve({ data: [] }),
+    mail ? supabase.from("clientes").select("id").ilike("email", mail).is("deleted_at", null).limit(5) : Promise.resolve({ data: [] }),
+    tel.length >= 6 ? supabase.from("contactos").select("cliente_id").eq("telefono", tel).is("deleted_at", null).limit(5) : Promise.resolve({ data: [] }),
+    mail ? supabase.from("contactos").select("cliente_id").ilike("email", mail).is("deleted_at", null).limit(5) : Promise.resolve({ data: [] }),
+  ]);
+  for (const c of (porTelCli.data ?? []) as { id: string }[]) encontrados.set(c.id, "teléfono");
+  for (const c of (porTelPer.data ?? []) as { cliente_id: string }[]) if (!encontrados.has(c.cliente_id)) encontrados.set(c.cliente_id, "teléfono");
+  for (const c of (porMailCli.data ?? []) as { id: string }[]) if (!encontrados.has(c.id)) encontrados.set(c.id, "email");
+  for (const c of (porMailPer.data ?? []) as { cliente_id: string }[]) if (!encontrados.has(c.cliente_id)) encontrados.set(c.cliente_id, "email");
+  if (!encontrados.size) return [];
+  const { data } = await supabase
+    .from("clientes")
+    .select("id, nombre_comercial, telefono")
+    .in("id", [...encontrados.keys()])
+    .is("deleted_at", null);
+  return ((data ?? []) as { id: string; nombre_comercial: string; telefono: string | null }[]).map((c) => ({
+    id: c.id,
+    nombre: c.nombre_comercial,
+    telefono: c.telefono,
+    por: encontrados.get(c.id) ?? "teléfono",
+  }));
 }
 
 /** Alta de contacto directo, sin interés (para cargar la cartera). */
@@ -584,7 +621,8 @@ async function agendarVolver(
   fecha: string | null,
   usuarioId: string | null,
   nota?: string,
-  oportunidadId?: string | null
+  oportunidadId?: string | null,
+  accion?: string | null
 ): Promise<{ error: string } | { ok: true; oportunidadId: string }> {
   if (fecha && (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha < hoyISO()))
     return { error: "Elegí una fecha de hoy en adelante" };
@@ -595,6 +633,7 @@ async function agendarVolver(
     .update({
       proximo_contacto: fecha,
       proximo_nota: fecha ? nota?.trim().slice(0, 80) || null : null,
+      proxima_accion: fecha && accion && ACCIONES.some((a) => a.value === accion) ? accion : null,
     })
     .eq("id", interes.id);
   if (error) return { error: error.message };
@@ -625,6 +664,7 @@ export async function crearContacto(input: {
   enEspera?: boolean;
   /** Lugar de entrega: decide el territorio y el vendedor. */
   zonaEntrega?: string | null;
+  provincia?: string;
 }) {
   const nombre = input.nombre.trim();
   if (!nombre) return { error: "Falta el nombre" };
@@ -647,9 +687,7 @@ export async function crearContacto(input: {
 
   const empresa = input.empresa?.trim();
   const nota = input.nota?.trim() || null;
-  const notas =
-    [empresa ? `Contacto: ${nombre}` : null, nota].filter(Boolean).join(" | ") ||
-    null;
+  const notas = nota;
 
   const { data: nuevo, error } = await supabase
     .from("clientes")
@@ -670,11 +708,21 @@ export async function crearContacto(input: {
     return { error: error?.message ?? "No se pudo crear el contacto" };
   const clienteId = nuevo.id as string;
 
-  if (input.ciudad?.trim()) {
+  // La persona, separada de la empresa
+  await supabase.from("contactos").insert({
+    cliente_id: clienteId,
+    nombre,
+    telefono: telefono.length >= 6 ? telefono : null,
+    email,
+    es_decisor: true,
+  });
+
+  if (input.ciudad?.trim() || input.provincia?.trim()) {
     await supabase.from("sucursales").insert({
       cliente_id: clienteId,
       nombre: "Principal",
-      ciudad: input.ciudad.trim(),
+      ciudad: input.ciudad?.trim() || null,
+      provincia: input.provincia?.trim() || null,
       es_principal: true,
     });
   }
@@ -731,11 +779,28 @@ export async function anotarContacto(
   clienteId: string,
   texto: string,
   volverEl?: string | null,
-  opciones?: { oportunidadId?: string | null; sinFecha?: boolean }
+  opciones?: {
+    oportunidadId?: string | null;
+    sinFecha?: boolean;
+    /** Cómo fue: llamada, WhatsApp, email, visita, demo (vacío = nota). */
+    medio?: string | null;
+    resultado?: string | null;
+    /** Qué hacer en el próximo contacto. */
+    accion?: string | null;
+    /** Dejar el próximo contacto que ya estaba (no crear otro). */
+    mantener?: boolean;
+    /** Por qué se cambió la fecha del próximo contacto. */
+    motivo?: string | null;
+    /** Con quién se habló. */
+    contactoId?: string | null;
+  }
 ) {
   const contenido = texto.trim();
-  const sinFecha = !!opciones?.sinFecha && !volverEl;
-  if (!contenido && !volverEl && !sinFecha)
+  const medio = MEDIOS.some((m) => m.value === opciones?.medio) ? (opciones!.medio as string) : null;
+  const resultado = opciones?.resultado && opciones.resultado in RESULTADOS ? opciones.resultado : null;
+  const mantener = !!opciones?.mantener && !volverEl;
+  const sinFecha = !!opciones?.sinFecha && !volverEl && !mantener;
+  if (!contenido && !medio && !volverEl && !sinFecha)
     return { error: "Escribí qué pasó o elegí cuándo volver a contactar" };
   const supabase = await createClient();
   const user = await usuarioActual();
@@ -752,18 +817,32 @@ export async function anotarContacto(
     contenido
   );
 
-  const { error } = await supabase.from("actividades").insert({
-    cliente_id: clienteId,
-    oportunidad_id: interes?.id ?? null,
-    tipo: "nota",
-    contenido:
-      contenido ||
-      (volverEl
-        ? `Volver a contactar el ${fechaCorta(volverEl)}`
-        : "Queda sin próxima fecha"),
-    created_by: usuarioId,
-  });
-  if (error) return { error: error.message };
+  // Fecha anterior, para dejar registro si se reprograma
+  let previo: string | null = null;
+  if (interes && volverEl) {
+    const { data: antes } = await supabase.from("oportunidades").select("proximo_contacto").eq("id", interes.id).maybeSingle();
+    previo = (antes?.proximo_contacto as string | null | undefined) ?? null;
+  }
+
+  // Lo que pasó (si solo se reprograma, no hay actividad de contacto)
+  if (contenido || medio || !volverEl) {
+    const { error } = await supabase.from("actividades").insert({
+      cliente_id: clienteId,
+      oportunidad_id: interes?.id ?? null,
+      tipo: "nota",
+      contenido:
+        contenido ||
+        textoActividad(medio, resultado) ||
+        (volverEl
+          ? `Volver a contactar el ${fechaCorta(volverEl)}`
+          : "Queda sin próxima fecha"),
+      medio,
+      resultado,
+      contacto_id: opciones?.contactoId || null,
+      created_by: usuarioId,
+    });
+    if (error) return { error: error.message };
+  }
 
   if (volverEl) {
     const r = await agendarVolver(
@@ -772,18 +851,28 @@ export async function anotarContacto(
       volverEl,
       usuarioId,
       contenido || undefined,
-      interes?.id
+      interes?.id,
+      opciones?.accion
     );
     if ("error" in r) return { error: r.error };
+    // Reprogramar conserva la fecha anterior y el motivo
+    if (previo && previo !== volverEl)
+      await supabase.from("actividades").insert({
+        cliente_id: clienteId,
+        oportunidad_id: interes?.id ?? null,
+        tipo: "interes",
+        contenido: `Próximo contacto: del ${fechaCorta(previo)} al ${fechaCorta(volverEl)}${opciones?.motivo?.trim() ? ` (${opciones.motivo.trim().slice(0, 120)})` : ""}`,
+        created_by: usuarioId,
+      });
   } else if (sinFecha && interes) {
     const { error: errSin } = await supabase
       .from("oportunidades")
-      .update({ proximo_contacto: null, proximo_nota: null })
+      .update({ proximo_contacto: null, proximo_nota: null, proxima_accion: null })
       .eq("id", interes.id);
     if (errSin) return { error: errSin.message };
   }
 
-  if (interes?.etapa === "cotizada" && contenido) {
+  if (interes?.etapa === "cotizada" && (contenido || esConversacion(resultado))) {
     await supabase
       .from("oportunidades")
       .update({ etapa: "seguimiento" })

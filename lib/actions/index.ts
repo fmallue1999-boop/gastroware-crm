@@ -16,3 +16,4 @@ export * from "./material";
 export * from "./marca";
 export * from "./ia";
 export * from "./agenda";
+export * from "./personas";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { nombreAccion, nombreLinea } from "@/lib/actividad";
 import Link from "next/link";
 import { MessageCircle, PenLine, Phone } from "lucide-react";
 import { linkWhatsApp } from "@/lib/format";
@@ -16,6 +17,13 @@ export type Pendiente = {
   nivel: string | null;
   nota: string | null;
   detalle?: string | null;
+  /** Apartado: equipos, consumibles o repuestos. */
+  linea?: string | null;
+  /** Próximo contacto y su acción (para mantenerlo o cambiarlo). */
+  proximo?: string | null;
+  accion?: string | null;
+  /** Vendedor a cargo (cuando dirección mira todo el equipo). */
+  responsable?: string | null;
 };
 
 /**
@@ -30,14 +38,19 @@ export default function PendienteFila({ item }: { item: Pendiente }) {
     <div className="rounded-2xl border border-borde bg-white p-3 shadow-sm">
       <div className="flex items-start gap-2">
         <Link href={`/clientes/${item.clienteId}?interes=${item.id}`} className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold">{item.nombre}</p>
+          <p className="flex items-center gap-1.5 truncate text-[15px] font-semibold">
+            <span className="truncate">{item.nombre}</span>
+            {item.linea && item.linea !== "equipos" && (
+              <span className="shrink-0 rounded-full bg-violeta-soft px-2 py-0.5 text-[11px] font-bold text-violeta">{nombreLinea(item.linea)}</span>
+            )}
+          </p>
           <p className="flex items-center gap-1.5 truncate text-[15px] text-tinta/80">
             <PuntoNivel nivel={item.nivel} />
             <span className="truncate">{item.interes}</span>
           </p>
-          {(item.nota || item.detalle) && (
+          {(item.nota || item.detalle || item.accion || item.responsable) && (
             <p className="truncate text-xs text-piedra">
-              {[item.detalle, item.nota].filter(Boolean).join(" · ")}
+              {[nombreAccion(item.accion), item.detalle, item.nota, item.responsable].filter(Boolean).join(" · ")}
             </p>
           )}
         </Link>
@@ -79,6 +92,7 @@ export default function PendienteFila({ item }: { item: Pendiente }) {
           <AnotarContacto
             clienteId={item.clienteId}
             oportunidadId={item.id}
+            proximoActual={{ fecha: item.proximo ?? null, accion: item.accion ?? null }}
             compacto
             onGuardado={() => setAnotando(false)}
           />

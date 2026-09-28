@@ -1,5 +1,6 @@
 import { NIVELES_INTERES } from "@/lib/constants";
 import { fechaCorta } from "@/lib/format";
+import { nombreAccion } from "@/lib/actividad";
 
 const PUNTO_NIVEL: Record<string, string> = {
   caliente: "bg-naranja",
@@ -19,12 +20,13 @@ export function PuntoNivel({ nivel, conTexto = false }: { nivel: string | null; 
 }
 
 /** Texto de la próxima fecha: atrasado / hoy / fecha / sin fecha. Sin rojos. */
-export function textoProximo(proximo: string | null, nota: string | null, hoy: string) {
-  if (!proximo) return { texto: "Sin próxima fecha", clase: "text-piedra" };
+export function textoProximo(proximo: string | null, nota: string | null, hoy: string, accion?: string | null) {
+  if (!proximo) return { texto: "Sin próximo paso", clase: "text-piedra" };
   const n = nota ? ` · ${nota}` : "";
-  if (proximo < hoy) return { texto: `Era para el ${fechaCorta(proximo)}${n}`, clase: "text-ambar font-semibold" };
-  if (proximo === hoy) return { texto: `Contactar hoy${n}`, clase: "text-tinta font-semibold" };
-  return { texto: `Volver a contactar el ${fechaCorta(proximo)}${n}`, clase: "text-azul" };
+  const a = nombreAccion(accion);
+  if (proximo < hoy) return { texto: `${a ? `${a}: e` : "E"}ra para el ${fechaCorta(proximo)}${n}`, clase: "text-ambar font-semibold" };
+  if (proximo === hoy) return { texto: `${a ?? "Contactar"} hoy${n}`, clase: "text-tinta font-semibold" };
+  return { texto: `${a ? `${a} el` : "Volver a contactar el"} ${fechaCorta(proximo)}${n}`, clase: "text-azul" };
 }
 
 export const COLOR_ETAPA: Record<string, string> = {
