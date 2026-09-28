@@ -15,6 +15,7 @@ import SeguimientoItem from "@/components/SeguimientoItem";
 import Bandejas from "@/components/midia/Bandejas";
 import AyudaLink from "@/components/guia/AyudaLink";
 import AvisoGuia from "@/components/guia/AvisoGuia";
+import AvisoVersion from "@/components/version/AvisoVersion";
 
 type InteresFila = {
   id: string;
@@ -76,6 +77,7 @@ export default async function HoyPage({
         </div>
         {extra}
       </div>
+      <AvisoVersion />
       <AvisoGuia puesto={nombrePuesto(rol).toLowerCase()} />
     </>
   );

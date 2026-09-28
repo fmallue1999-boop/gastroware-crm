@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import LogoSistema from "@/components/marca/LogoSistema";
 import type { Marca } from "@/lib/marca";
+import { versionCorta } from "@/lib/novedades";
 
 /** Formulario de ingreso (la página de servidor le pasa la marca). */
 export default function LoginForm({ marca }: { marca: Marca }) {
@@ -94,6 +95,9 @@ export default function LoginForm({ marca }: { marca: Marca }) {
             </button>
           </form>
         )}
+        <p className="mt-6 text-center text-xs text-piedra">
+          {marca.nombre} {versionCorta()}
+        </p>
       </div>
     </main>
   );
