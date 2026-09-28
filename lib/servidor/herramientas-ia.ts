@@ -4,6 +4,8 @@ import { buscarTareas } from "@/lib/guia";
 import { esGestor, veTodo } from "@/lib/puestos";
 import { cargarCasos } from "@/lib/servidor/casos";
 import { cargarMiDia } from "@/lib/servidor/midia";
+import { atrasadasMias, cargarAgenda } from "@/lib/servidor/agenda";
+import { horario, masDias, nombreTipo } from "@/lib/agenda";
 import { calcularTablero, cargarDatosTablero, rangoPeriodo, type Db } from "@/lib/tablero";
 import { buscarClientes } from "@/lib/actions/contactos";
 import type { HerramientaIA } from "@/lib/core/ia";
@@ -218,6 +220,42 @@ export function herramientasAsistente(
           espera_cobro: o.presupuesto_monto != null && !o.cobro_ok_at,
           link: `/servicio/${o.id}`,
         }));
+      },
+    },
+    {
+      nombre: "mi_agenda",
+      etiqueta: "Mirando tu agenda",
+      descripcion:
+        "Tareas, reuniones, capacitaciones y pagos de la agenda de la persona (lo que tiene asignado), entre dos fechas, más lo atrasado. Usala para '¿qué reuniones tengo esta semana?', '¿cuándo vence el alquiler?', '¿qué tareas me asignaron?'. Con asignadas_por_mi=true devuelve lo que la persona asignó a otros y quién lo terminó.",
+      parametros: {
+        type: "object",
+        properties: {
+          desde: { type: "string", description: "YYYY-MM-DD (por defecto hoy)" },
+          hasta: { type: "string", description: "YYYY-MM-DD (por defecto en 14 días)" },
+          asignadas_por_mi: { type: "boolean" },
+        },
+      },
+      ejecutar: async (a) => {
+        const fecha = (v: unknown, def: string) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : def);
+        const desde = fecha(a.desde, hoy);
+        const hasta = fecha(a.hasta, masDias(desde, 14));
+        const q = { yo: usuario.id, gestor: esGestor(usuario.rol) };
+        const [items, atrasadas] = await Promise.all([
+          cargarAgenda(supabase, q, { desde, hasta, alcance: a.asignadas_por_mi ? "asigne" : "mia" }),
+          a.asignadas_por_mi ? Promise.resolve([]) : atrasadasMias(supabase, q, hoy),
+        ]);
+        const fila = (i: (typeof items)[number]) => ({
+          que: i.titulo,
+          tipo: nombreTipo(i.tipo),
+          fecha: i.fecha,
+          hora: horario(i.hora, i.hora_fin) || null,
+          monto: i.tipo === "pago" && i.monto != null ? `${i.moneda} ${i.monto}` : null,
+          donde: i.lugar,
+          personas: i.personas.map((p) => `${p.nombre}${p.hecha_at ? " (hecha)" : ""}`),
+          hecha_por_mi: i.hechaYo,
+          link: `/tareas/${i.id}`,
+        });
+        return { atrasadas: atrasadas.map(fila), agenda: items.map(fila), nueva: "/tareas/nueva", todo: "/tareas" };
       },
     },
     {

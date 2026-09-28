@@ -3,6 +3,7 @@
 // Feria (HOTELGA): lectura de credencial, alta de lead y seguimiento.
 
 import { revalidatePath } from "next/cache";
+import { avisarAlCelular } from "@/lib/servidor/push";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { rolActual } from "@/lib/auth";
@@ -253,6 +254,7 @@ export async function asignarFeriaLead(id: string, usuarioId: string | null) {
         titulo: "Te asignaron un contacto de HOTELGA",
         url: "/hotelga?vista=mios",
       });
+    avisarAlCelular();
   }
   revalidatePath("/hotelga");
   revalidatePath("/", "layout");

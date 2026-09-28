@@ -3,6 +3,7 @@
 // Servicio técnico: órdenes de trabajo, tiempos, ítems, fotos, firma, checklists y service hecho.
 
 import { revalidatePath } from "next/cache";
+import { avisarAlCelular } from "@/lib/servidor/push";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
@@ -95,6 +96,7 @@ export async function crearOT(input: {
       titulo: `Te asignaron la OT-${ot.numero}`,
       url: `/servicio/${ot.id}`,
     });
+    avisarAlCelular();
   }
 
   revalidatePath("/", "layout");
@@ -281,6 +283,7 @@ export async function transicionarOT(
       titulo: `OT-${ot.numero} devuelta: ${extra?.observacion?.slice(0, 80) ?? ""}`,
       url: `/servicio/${otId}`,
     });
+    avisarAlCelular();
   }
 
   revalidatePath("/", "layout");

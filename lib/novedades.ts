@@ -19,6 +19,22 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.2.0",
+    fecha: "2026-09-28",
+    titulo: "Tareas y agenda del equipo, con avisos al celular",
+    cambios: [
+      "Nuevo apartado Tareas: tareas sueltas, reuniones, capacitaciones y recordatorios de pago (por ejemplo, el alquiler).",
+      "Se asignan a una persona, a varias o a todo el equipo, con fecha, hora, links, link de la videollamada, monto y detalle.",
+      "Se pueden repetir cada semana, cada 2 semanas o cada mes, y avisar el mismo día o unos días antes.",
+      "Lo de hoy aparece arriba de todo en Mi día: se marca hecha (o pagado) con un toque. Lo atrasado queda en rojo.",
+      "Tareas en lista o en el calendario del mes; “Lo que asigné” muestra quién ya lo hizo. Dirección ve la agenda de todo el equipo.",
+      "Avisos: al que le asignan algo, le cambian la fecha o se cancela, le llega a la campana y al celular al instante; a las 8:30 llega lo del día y lo que está por vencer.",
+      "Todos los avisos de la campana (consultas asignadas, aprobaciones, services…) ahora llegan también al celular apenas pasan.",
+      "Botones para sumar cada tarea a Google Calendar o al calendario del iPhone / Outlook.",
+      "El Asistente IA también responde sobre tu agenda (“¿qué reuniones tengo esta semana?”).",
+    ],
+  },
+  {
     version: "1.1.0",
     fecha: "2026-09-27",
     titulo: "Asistente con IA para el trabajo de todos los días",

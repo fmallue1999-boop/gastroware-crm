@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { avisarAlCelular } from "@/lib/servidor/push";
 
 /**
  * Recibe consultas del formulario del sitio (zumex.com.ar / gastroware.com.ar)
@@ -83,5 +84,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: msg }, { status: 400, headers });
   }
 
+  avisarAlCelular();
   return NextResponse.json({ ok: true }, { headers });
 }

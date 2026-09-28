@@ -3,6 +3,7 @@ import type { Puesto } from "@/lib/puestos";
 /** Preguntas de ejemplo del asistente, por puesto (se tocan y se mandan). */
 export const SUGERENCIAS_IA: Record<Puesto, string[]> = {
   comercial: [
+    "¿Qué tengo en la agenda esta semana?",
     "¿Qué tengo que hacer hoy?",
     "¿Qué propuestas no seguí hace más de una semana?",
     "¿Qué consultas tengo sin primer contacto?",
@@ -10,6 +11,7 @@ export const SUGERENCIAS_IA: Record<Puesto, string[]> = {
     "¿Cómo informo una venta para que la facturen?",
   ],
   direccion: [
+    "¿Qué tengo en la agenda esta semana?",
     "¿Cómo viene el mes comparado con el anterior?",
     "¿Qué alertas hay hoy y qué hago con cada una?",
     "¿Qué propuestas esperan mi aprobación?",
@@ -17,12 +19,14 @@ export const SUGERENCIAS_IA: Record<Puesto, string[]> = {
     "¿Qué cobranzas vencidas son las más grandes?",
   ],
   admin: [
+    "¿Qué tengo en la agenda esta semana?",
     "¿Qué cobranzas están vencidas y cuánto suman?",
     "¿Qué services hay para asignar y cuáles están parados?",
     "¿Qué remitos faltan controlar?",
     "¿Cómo viene el mes?",
   ],
   administrativa: [
+    "¿Qué tengo en la agenda esta semana?",
     "¿Qué ventas tengo para facturar hoy?",
     "Armame los mensajes de reclamo de las facturas vencidas",
     "¿Qué hay para preparar y despachar?",
@@ -30,18 +34,21 @@ export const SUGERENCIAS_IA: Record<Puesto, string[]> = {
     "¿Cómo registro un cobro?",
   ],
   servicio: [
+    "¿Qué tengo en la agenda esta semana?",
     "¿Qué services hay para asignar?",
     "¿Qué remitos faltan controlar?",
     "¿Qué casos tienen la respuesta vencida?",
     "¿Cómo sigo un reclamo de garantía?",
   ],
   tecnico: [
+    "¿Qué tengo en la agenda esta semana?",
     "¿Qué trabajos tengo hoy?",
     "¿Cómo cierro un service con el remito?",
     "¿Qué tengo que preparar en el depósito?",
     "¿Qué trabajos están esperando el cobro?",
   ],
   marketing: [
+    "¿Qué tengo en la agenda esta semana?",
     "¿Qué pedidos de material tengo pendientes?",
     "¿De qué modelos falta el video?",
     "¿Qué productos del catálogo no tienen descripción completa?",

@@ -6,6 +6,7 @@ import { calcularTablero, cargarDatosTablero, rangoPeriodo, type Db as DbTablero
 import { htmlResumenSemanal } from "@/lib/tablero-email";
 import { cargarMiDia, type Bandeja } from "@/lib/servidor/midia";
 import { lunesDe } from "@/lib/semana";
+import { recordatoriosAgenda } from "@/lib/servidor/recordatorios";
 import type { SupabaseServidor } from "@/lib/actions/comun";
 
 const ABIERTAS = ["nueva", "cotizada", "seguimiento", "espera"];
@@ -82,6 +83,9 @@ export async function GET(request: Request) {
   const esLunesHoy = new Date(hoy + "T12:00:00Z").getUTCDay() === 1;
   const bandejasDe = new Map<string, Bandeja[]>();
   const ahoraMs = Date.now();
+  // Agenda (tareas, reuniones, pagos): deja los avisos del día en la campana
+  // de todos y arma una línea por persona para el celular
+  const agendaDe = await recordatoriosAgenda(supabase as unknown as SupabaseServidor, hoy);
 
   type Interes = {
     comercial_id: string | null;
@@ -101,11 +105,17 @@ export async function GET(request: Request) {
       if (!bandejasDe.has(u.id))
         bandejasDe.set(u.id, await cargarMiDia(supabase as unknown as SupabaseServidor, { rol: u.rol, userId: u.id, hoy, ahora: ahoraMs }));
       const con = (bandejasDe.get(u.id) ?? []).filter((b) => b.cantidad > 0);
-      if (!con.length) continue;
-      const body = con
-        .slice(0, 4)
-        .map((b) => `${b.cantidad} ${b.titulo.toLowerCase()}`)
-        .join(" · ");
+      const agenda = agendaDe.get(u.id);
+      if (!con.length && !agenda) continue;
+      const body = [
+        agenda,
+        con
+          .slice(0, 4)
+          .map((b) => `${b.cantidad} ${b.titulo.toLowerCase()}`)
+          .join(" · "),
+      ]
+        .filter(Boolean)
+        .join(" ");
       try {
         await webpush.sendNotification(sub.subscription, JSON.stringify({ title: "Mi día", body, url: "/hoy" }));
         enviadas++;
@@ -122,7 +132,8 @@ export async function GET(request: Request) {
     const llegoStock = mios.filter((i) => i.proximo_nota === "Llegó stock").length;
     const recompra = (recompras ?? []).filter((t) => t.usuario_id === sub.usuario_id).length;
     const faltaInforme = esLunesHoy && u.rol === "comercial" && !conInforme.has(u.id);
-    if (atrasados + deHoy + recompra === 0 && !faltaInforme) continue;
+    const agenda = agendaDe.get(u.id);
+    if (atrasados + deHoy + recompra === 0 && !faltaInforme && !agenda) continue;
 
     const partes: string[] = [];
     if (deHoy > 0) partes.push(`${deHoy} para hoy`);
@@ -130,15 +141,16 @@ export async function GET(request: Request) {
     if (recompra > 0) partes.push(`${recompra} recompra${recompra > 1 ? "s" : ""}`);
     const primero = mios[0]?.cliente?.nombre_comercial;
     const body =
-      `Tenés ${partes.join(", ")}` +
-      (llegoStock > 0 ? `. Llegó stock para ${llegoStock}` : "") +
-      (primero ? `. Primero: ${primero}.` : ".") +
-      (faltaInforme ? " Hoy es lunes: mandá el informe antes de las 10." : "");
+      (partes.length
+        ? `Tenés ${partes.join(", ")}` + (llegoStock > 0 ? `. Llegó stock para ${llegoStock}` : "") + (primero ? `. Primero: ${primero}.` : ".")
+        : "") +
+      (faltaInforme ? " Hoy es lunes: mandá el informe antes de las 10." : "") +
+      (agenda ? ` ${agenda}` : "");
 
     try {
       await webpush.sendNotification(
         sub.subscription,
-        JSON.stringify({ title: "Para contactar hoy", body, url: "/hoy" })
+        JSON.stringify({ title: partes.length ? "Para contactar hoy" : "Mi día", body: body.trim(), url: "/hoy" })
       );
       enviadas++;
     } catch (e: unknown) {

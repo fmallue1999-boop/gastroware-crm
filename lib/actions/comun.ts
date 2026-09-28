@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { avisarAlCelular } from "@/lib/servidor/push";
 
 export type SupabaseServidor = Awaited<ReturnType<typeof createClient>>;
 
@@ -35,7 +36,7 @@ export async function usuariosDePuesto(
   return [];
 }
 
-/** Deja un aviso en la campana de cada usuario (sin repetir al que lo genera). */
+/** Deja un aviso en la campana de cada usuario (sin repetir al que lo genera) y lo manda al celular. */
 export async function avisar(
   supabase: SupabaseServidor,
   usuarioIds: (string | null | undefined)[],
@@ -53,6 +54,7 @@ export async function avisar(
       url: aviso.url ?? null,
     }))
   );
+  avisarAlCelular();
 }
 
 /** Valor de una regla de Administración → Reglas (tabla config). */

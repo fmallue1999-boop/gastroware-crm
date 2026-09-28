@@ -11,6 +11,9 @@ import Rail from "@/components/Rail";
 import EstiloMarca from "@/components/marca/EstiloMarca";
 import LogoSistema from "@/components/marca/LogoSistema";
 import { cargarMarca } from "@/lib/servidor/marca";
+import { contarAgendaHoy } from "@/lib/servidor/agenda";
+import { mandarAvisosPendientes } from "@/lib/servidor/push";
+import { after } from "next/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   if (!supabaseConfigurado()) redirect("/login");
@@ -46,6 +49,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (comercialId) q = q.eq("comercial_id", comercialId);
     paraHoy = (await q).count ?? 0;
   }
+  // Más lo de la agenda para hoy (tareas, reuniones, pagos)
+  paraHoy += await contarAgendaHoy(supabase, user.id, hoyISO());
+
+  // Avisos creados por la base (consultas web, asignaciones) que falten mandar al celular
+  after(async () => {
+    await mandarAvisosPendientes();
+  });
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[200px_minmax(0,1fr)]">

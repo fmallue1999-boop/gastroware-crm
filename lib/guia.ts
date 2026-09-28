@@ -74,6 +74,21 @@ export const BASICOS: Tarea[] = [
     ],
   },
   {
+    id: "agenda",
+    titulo: "Tareas, reuniones, capacitaciones y pagos",
+    pasos: [
+      { texto: "Entrá a “Tareas” en el menú (en el celular, desde Mi día o Más) y tocá “Nueva”.", href: "/tareas/nueva", boton: "Nueva tarea" },
+      { texto: "Elegí el tipo (Tarea, Reunión, Capacitación, Pago u Otro), el título, la fecha y, si querés, la hora." },
+      { texto: "Elegí quiénes: vos, una o varias personas, o “Todo el equipo”. A cada una le llega el aviso en la campana y en el celular." },
+      { texto: "Podés sumar links (una presentación, un documento), el link de la videollamada, el monto de un pago y un detalle." },
+      { texto: "“Repetir”: cada semana, cada 2 semanas o cada mes (por ejemplo, la reunión de los lunes o el alquiler del 10)." },
+      { texto: "“Aviso”: el mismo día o unos días antes. Llega a las 8:30 a la campana y al celular." },
+      { texto: "Lo de hoy aparece arriba de todo en Mi día. Tocá el círculo para marcarla hecha (o pagado).", href: "/hoy", boton: "Ir a Mi día" },
+      { texto: "En Tareas tenés tu agenda en lista o en el calendario del mes, y “Lo que asigné” para ver quién ya lo hizo.", href: "/tareas", boton: "Ir a Tareas" },
+    ],
+    ojo: "Si una tarea la tenés solo vos, la podés mover de día. Si es de varios, la cambia quien la creó (o dirección) y a todos les llega el aviso del cambio. Con “Google Calendar” o “iPhone / Outlook” la sumás al calendario de tu celular.",
+  },
+  {
     id: "asistente",
     titulo: "Preguntarle al asistente (IA)",
     pasos: [
