@@ -11,6 +11,8 @@ export type SolicitudVista = {
   oportunidad_id: string;
   cliente_id: string;
   cliente: { nombre_comercial: string; telefono: string | null } | null;
+  /** Persona principal del cliente (para saludar por el nombre). */
+  contacto: string | null;
   equipo_id: string | null;
   equipoTexto: string | null;
   numero_serie: string | null;
@@ -92,11 +94,25 @@ export async function cargarSolicitudes(
   const [{ data }, { data: usuarios }] = await Promise.all([q, supabase.from("usuarios").select("id, nombre")]);
   const nombres = new Map(((usuarios ?? []) as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]));
   const filas = ((data ?? []) as unknown as Fila[]).filter((f) => !f.opp?.deleted_at);
-  const urls = await firmarUrls("servicio", filas.map((f) => f.foto_path));
+  const [urls, { data: personas }] = await Promise.all([
+    firmarUrls("servicio", filas.map((f) => f.foto_path)),
+    filas.length
+      ? supabase
+          .from("contactos")
+          .select("cliente_id, nombre")
+          .in("cliente_id", [...new Set(filas.map((f) => f.cliente_id))])
+          .is("deleted_at", null)
+          .order("es_decisor", { ascending: false })
+          .order("created_at")
+      : Promise.resolve({ data: [] }),
+  ]);
+  const personaDe = new Map<string, string>();
+  for (const p of (personas ?? []) as { cliente_id: string; nombre: string }[]) if (!personaDe.has(p.cliente_id)) personaDe.set(p.cliente_id, p.nombre);
   return filas.map((f, i) => ({
     oportunidad_id: f.oportunidad_id,
     cliente_id: f.cliente_id,
     cliente: f.cliente,
+    contacto: personaDe.get(f.cliente_id) ?? null,
     equipo_id: f.equipo_id,
     equipoTexto: f.equipo?.producto?.nombre ?? f.equipo?.marca_modelo_libre ?? f.modelo_texto ?? null,
     numero_serie: f.numero_serie ?? f.equipo?.numero_serie ?? null,

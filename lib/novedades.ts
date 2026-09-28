@@ -19,6 +19,12 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.5.1",
+    fecha: "2026-09-28",
+    titulo: "Arreglo: la cotización de repuestos saluda a la persona",
+    cambios: ["El WhatsApp de “Mandar cotización” saluda a la persona del cliente por su nombre (“Hola Martín”) en vez del nombre de la empresa."],
+  },
+  {
     version: "1.5.0",
     fecha: "2026-09-28",
     titulo: "Repuestos: de la consulta al pedido",

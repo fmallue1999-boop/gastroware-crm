@@ -87,7 +87,8 @@ export default function TarjetaRepuesto({
   const textoWhatsApp =
     total != null
       ? mensajeCotizacion({
-          contacto: s.cliente?.nombre_comercial ?? "",
+          // Se saluda a la persona (su nombre de pila) y, si no hay, a la empresa
+          contacto: s.contacto?.trim().split(/\s+/)[0] ?? s.cliente?.nombre_comercial ?? "",
           descripcion: s.descripcion,
           equipo: s.equipoTexto,
           cantidad: s.cantidad,

@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.5.1 — 28 de septiembre de 2026
+
+- Repuestos: la cotización por WhatsApp saluda a la persona principal del cliente (contactos), no a la empresa.
+
 ## v1.5.0 — 28 de septiembre de 2026
 
 Repuestos (tercera etapa de la organización por apartados). Migración 032.
