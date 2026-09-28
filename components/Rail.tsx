@@ -8,6 +8,7 @@ import { nombrePuesto } from "@/lib/puestos";
 import { ICONOS_MENU } from "@/components/iconosMenu";
 import LogoSistema from "@/components/marca/LogoSistema";
 import { MARCA_POR_DEFECTO, type Marca } from "@/lib/marca";
+import { versionCorta } from "@/lib/novedades";
 
 /**
  * Barra lateral de la computadora: lo del puesto primero, en orden de uso,
@@ -87,6 +88,9 @@ export default function Rail({
         <p className="truncate text-sm font-bold text-white">{nombre ?? "Usuario"}</p>
         <p className="truncate text-xs text-white/60">{nombrePuesto(rol)}</p>
         <p className="truncate text-xs text-white/40">{email}</p>
+        <Link href="/novedades" className="mt-1 inline-block text-[11px] font-bold text-white/50 hover:text-white">
+          {marca.nombre} {versionCorta()}
+        </Link>
       </div>
     </aside>
   );

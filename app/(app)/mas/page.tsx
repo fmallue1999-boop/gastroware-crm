@@ -26,11 +26,13 @@ import {
   Users,
   Package,
   CircleHelp,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { cerrarSesion } from "@/lib/actions";
 import PushToggle from "@/components/PushToggle";
+import { versionCorta } from "@/lib/novedades";
 import { nombrePuesto, veTodo, esGestor as esGestorPuesto } from "@/lib/puestos";
 
 function MenuLink({
@@ -82,6 +84,12 @@ export default async function MasPage() {
         icono={CircleHelp}
         titulo="Guía de uso"
         detalle="Cómo se trabaja en el CRM según tu puesto, paso a paso"
+      />
+      <MenuLink
+        href="/novedades"
+        icono={Sparkles}
+        titulo={`Novedades · GastroWare OS ${versionCorta()}`}
+        detalle="Qué cambió en cada versión"
       />
 
       <section className="space-y-2">
