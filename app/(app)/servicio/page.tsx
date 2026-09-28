@@ -6,6 +6,7 @@ import { ESTADOS_OT_ACTIVOS } from "@/lib/constants";
 import { controlaServicio, factura, veTodo } from "@/lib/puestos";
 import { EstadoOTBadge } from "@/components/Badges";
 import type { OrdenTrabajo, Usuario } from "@/lib/types";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 const TIPO: Record<string, string> = {
   correctivo: "Reparación",
@@ -117,7 +118,9 @@ export default async function ServiciosPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-extrabold tracking-tight">Services</h1>
+        <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Services <AyudaLink tarea={rol === "tecnico" ? "cerrar-trabajo" : "asignar-service"} />
+        </h1>
         <div className="flex flex-wrap gap-2">
           {veTodo(rol) && (
             <Link href="/servicio/aliados" className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-borde bg-white px-3.5 text-[15px] font-bold shadow-sm">

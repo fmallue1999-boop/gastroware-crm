@@ -2,6 +2,7 @@ import {
   Activity,
   BadgeCheck,
   Boxes,
+  CircleHelp,
   ClipboardList,
   Filter,
   Gauge,
@@ -37,5 +38,6 @@ export const ICONOS_MENU: Record<ClaveIcono, LucideIcon> = {
   marketing: Megaphone,
   pedidos_material: Palette,
   videos: PlayCircle,
+  guia: CircleHelp,
   mas: Menu,
 };

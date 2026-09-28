@@ -4,6 +4,7 @@ import { lunesDe, periodoInforme, type NumerosInforme as Numeros } from "@/lib/s
 import { numerosInforme } from "@/lib/servidor/informe";
 import NumerosInforme from "@/components/informe/NumerosInforme";
 import { InformeForm } from "@/components/informe/InformeForm";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 type Informe = {
   id: string;
@@ -37,7 +38,9 @@ export default async function InformePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Informe de la semana</h1>
+        <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Informe de la semana <AyudaLink tarea="informe" />
+        </h1>
         <p className="text-[15px] text-piedra">
           Del {fechaCorta(desde)} al {fechaCorta(hasta)}. Se manda los lunes antes de las 10: los números los pone el CRM, vos
           agregás lo que falta.

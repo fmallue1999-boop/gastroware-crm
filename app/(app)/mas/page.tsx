@@ -25,6 +25,7 @@ import {
   PlayCircle,
   Users,
   Package,
+  CircleHelp,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -75,6 +76,13 @@ export default async function MasPage() {
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Más</h1>
+
+      <MenuLink
+        href="/guia"
+        icono={CircleHelp}
+        titulo="Guía de uso"
+        detalle="Cómo se trabaja en el CRM según tu puesto, paso a paso"
+      />
 
       <section className="space-y-2">
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">

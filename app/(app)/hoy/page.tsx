@@ -13,6 +13,8 @@ import SelectorQuienDesplegable from "@/components/embudo/SelectorQuienDesplegab
 import InicioTecnico from "@/components/inicio/InicioTecnico";
 import SeguimientoItem from "@/components/SeguimientoItem";
 import Bandejas from "@/components/midia/Bandejas";
+import AyudaLink from "@/components/guia/AyudaLink";
+import AvisoGuia from "@/components/guia/AvisoGuia";
 
 type InteresFila = {
   id: string;
@@ -62,15 +64,20 @@ export default async function HoyPage({
   const bandejas = await cargarMiDia(supabase, { rol, userId, hoy, ahora: ahora() });
 
   const encabezado = (extra?: React.ReactNode) => (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Mi día</h1>
-        <p className="text-[15px] text-piedra">
-          <span className="capitalize">{fecha}</span> · {nombrePuesto(rol)}
-        </p>
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+            Mi día <AyudaLink tarea="mi-dia" />
+          </h1>
+          <p className="text-[15px] text-piedra">
+            <span className="capitalize">{fecha}</span> · {nombrePuesto(rol)}
+          </p>
+        </div>
+        {extra}
       </div>
-      {extra}
-    </div>
+      <AvisoGuia puesto={nombrePuesto(rol).toLowerCase()} />
+    </>
   );
 
   if (rol === "tecnico") {

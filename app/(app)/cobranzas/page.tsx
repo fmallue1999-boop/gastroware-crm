@@ -8,6 +8,7 @@ import { esGestor, veTodo } from "@/lib/puestos";
 import ConPanel from "@/components/ficha/ConPanel";
 import CobranzaFila, { type FacturaFila } from "@/components/cobranzas/CobranzaFila";
 import CargarFactura from "@/components/cobranzas/CargarFactura";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 const COLS =
   "id, cliente_id, numero, tipo, fecha, vencimiento, monto, moneda, cobro_estado, promesa_fecha, ultimo_reclamo_at, condicion_aprobada_at, condicion_nota, oportunidad_id, cliente:clientes(nombre_comercial, telefono)";
@@ -81,7 +82,9 @@ export default async function CobranzasPage({ searchParams }: { searchParams: Pr
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Cobranzas</h1>
+            <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Cobranzas <AyudaLink tarea="cobranzas" />
+        </h1>
             <p className="text-[15px] text-piedra">Nada se despacha sin cobro acreditado o condición aprobada.</p>
           </div>
           <CargarFactura hoy={hoy} />
