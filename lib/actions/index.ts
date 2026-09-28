@@ -17,3 +17,4 @@ export * from "./marca";
 export * from "./ia";
 export * from "./agenda";
 export * from "./personas";
+export * from "./consumibles";

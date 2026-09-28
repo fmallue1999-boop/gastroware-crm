@@ -366,8 +366,12 @@ export async function guardarProducto(
     descripcion?: string | null;
     destacados?: string[];
     imagen_url?: string | null;
+    /** Consumibles: cada cuántos días repone un cliente típico (se reinicia con cada compra). */
+    frecuencia_recompra_dias?: number | null;
   }
 ) {
+  if (patch.frecuencia_recompra_dias != null && (!Number.isInteger(patch.frecuencia_recompra_dias) || patch.frecuencia_recompra_dias < 1 || patch.frecuencia_recompra_dias > 730))
+    return { error: "El tiempo de reposición va de 1 a 730 días" };
   const supabase = await createClient();
   if (productoId) {
     const { error } = await supabase
@@ -399,6 +403,8 @@ export async function crearProducto(input: {
     moneda: input.moneda || "ARS",
     precio_referencia: input.precio_referencia ?? null,
     garantia_meses: input.garantia_meses ?? null,
+    // Los consumibles se marcan como tales (reposición en el apartado Consumibles)
+    es_consumible: input.categoria === "consumible",
   });
   if (error) return { error: error.message };
   revalidatePath("/", "layout");

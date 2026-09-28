@@ -19,6 +19,21 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.4.0",
+    fecha: "2026-09-28",
+    titulo: "Consumibles: ventas y reposición de cada cliente",
+    cambios: [
+      "Nuevo apartado Consumibles en el menú: a quién contactar para reponer (agrupado por cliente), calendario de reposiciones y todos los planes.",
+      "Cada consumible tiene su tiempo de reposición (Administración → Catálogo, “repone cada”). Con cada compra el plazo se reinicia desde la fecha de compra, y se puede ajustar para cada cliente.",
+      "Registrar venta de consumibles: cliente, productos con cantidad, cada cuánto repone y cuántos días antes contactarlo; muestra el próximo contacto. La venta sigue el circuito de siempre (facturar, cobrar, entregar).",
+      "Desde cada reposición: anotar el contacto, registrar la venta, cotizar, “Tiene stock” (volver a contactar más adelante), suspender con motivo o ajustar el tiempo.",
+      "El aviso de reposición llega a Mi día de quien está a cargo (por defecto la administrativa). No le manda nada al cliente ni crea ventas solo.",
+      "Un solo plan por cliente, sucursal y producto: una nueva compra actualiza el mismo plan, nunca lo duplica.",
+      "La ficha muestra los consumibles de cada cliente con su última compra y próximo contacto, y tiene accesos rápidos a “Venta de consumibles” y “Tarea”.",
+      "Arreglo: vender un consumible o un repuesto ya no lo carga como si fuera un equipo.",
+    ],
+  },
+  {
     version: "1.3.0",
     fecha: "2026-09-28",
     titulo: "Seguimiento comercial: qué pasó, con quién y cuál es el próximo paso",

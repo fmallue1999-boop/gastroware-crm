@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { horaCorta, masMeses, nombreMes, semanasDelMes } from "@/lib/agenda";
-import type { ItemAgenda } from "@/lib/servidor/agenda";
 import { estiloTipo } from "@/components/agenda/estilo";
+
+/** Lo mínimo para mostrar algo en el calendario (tareas, reposiciones). */
+export type ItemCalendario = { id: string; fecha: string; titulo: string; hora: string | null; tipo: string; hechaYo: boolean };
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -18,13 +20,13 @@ export default function CalendarioMes({
   mes: string;
   hoy: string;
   diaElegido: string | null;
-  items: ItemAgenda[];
+  items: ItemCalendario[];
   /** Arma el link conservando los filtros: href({ mes, dia }). */
   href: (p: { mes?: string; dia?: string }) => string;
 }) {
   const semanas = semanasDelMes(mes);
   const delMes = mes.slice(0, 7);
-  const porDia = new Map<string, ItemAgenda[]>();
+  const porDia = new Map<string, ItemCalendario[]>();
   for (const i of items) porDia.set(i.fecha, [...(porDia.get(i.fecha) ?? []), i]);
 
   return (

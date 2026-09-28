@@ -56,6 +56,36 @@ export async function cargarMiDia(
   const administra = factura(rol);
   const controla = controlaServicio(rol);
 
+  // --- Consumibles: reposiciones a mi cargo para contactar (hoy o atrasadas) ---
+  {
+    const { data } = await supabase
+      .from("recurrencias")
+      .select("id, cliente_id, proxima_alerta, cliente:clientes!inner(nombre_comercial, deleted_at), producto:productos(nombre)")
+      .eq("responsable_id", userId)
+      .eq("activa", true)
+      .lte("proxima_alerta", hoy)
+      .is("cliente.deleted_at", null)
+      .order("proxima_alerta")
+      .limit(100);
+    const filas = (data ?? []) as unknown as { id: string; cliente_id: string; proxima_alerta: string; cliente: { nombre_comercial: string } | null; producto: { nombre: string } | null }[];
+    if (filas.length)
+      bandejas.push(
+        bandeja({
+          clave: "reposiciones",
+          titulo: "Consumibles: reposiciones para contactar",
+          ayuda: "No se manda nada solo: contactalo y registrá la venta o reprogramá",
+          href: "/consumibles?quien=mios",
+          tono: filas.some((f) => f.proxima_alerta < hoy) ? "ambar" : "verde",
+          lista: filas.map((f) => ({
+            id: f.id,
+            titulo: f.cliente?.nombre_comercial ?? "Cliente",
+            detalle: `${f.producto?.nombre ?? "Consumible"}${f.proxima_alerta < hoy ? ` · desde el ${f.proxima_alerta.split("-").reverse().slice(0, 2).join("/")}` : ""}`,
+            href: "/consumibles?quien=mios",
+          })),
+        })
+      );
+  }
+
   // --- Consultas (entrada) ---
   if (vendedor) {
     const { data } = await supabase

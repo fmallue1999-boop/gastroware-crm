@@ -434,6 +434,21 @@ export const TAREAS: Tarea[] = [
     ],
     ojo: "El puesto lo cambia solo dirección general. Si alguien entra, sale o cambia de puesto, se cambia acá y el CRM se reacomoda solo.",
   },
+  // --- Consumibles ---
+  {
+    id: "consumibles",
+    titulo: "Vender consumibles y seguir la reposición",
+    pasos: [
+      { texto: "Cada consumible tiene su tiempo de reposición (por ejemplo, cada 45 días). Se carga en Administración → Catálogo, en “repone cada”.", href: "/admin/catalogo", boton: "Ir al Catálogo" },
+      { texto: "Venta: Consumibles → “Registrar venta” (o desde la ficha, “Venta de consumibles”). Elegí el cliente, los productos y la cantidad.", href: "/consumibles/venta", boton: "Registrar venta" },
+      { texto: "Cada producto trae su tiempo; si este cliente gasta más rápido o más lento, cambialo ahí. “Contactar antes” son los días de anticipación (10 por defecto). Se ve el próximo contacto." },
+      { texto: "Cada compra reinicia el plazo desde la fecha de compra. Si todavía no se sabe cada cuánto repone, poné la fecha de contacto a mano." },
+      { texto: "La venta sigue el circuito de siempre: facturar, cobrar, preparar y entregar." },
+      { texto: "El día que toca, aparece en Mi día de quien está a cargo y en Consumibles → “A contactar”, agrupado por cliente.", href: "/consumibles", boton: "Ir a Consumibles" },
+      { texto: "Desde ahí: “Anotar contacto”, “Registrar venta” (reinicia el plazo), “Cotizar”, “Tiene stock” (volver a contactar más adelante), “Suspender” con el motivo, o el botón de ajuste para cambiar el tiempo de ese cliente." },
+    ],
+    ojo: "El aviso no le manda nada al cliente ni crea ventas solo: le avisa a quien está a cargo cuándo contactarlo. Hay un solo plan por cliente, sucursal y producto: nunca se duplica.",
+  },
   // --- Informe y marketing ---
   {
     id: "informe",
@@ -488,7 +503,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Postventa del día.",
       "Lunes antes de las 10: tu informe.",
     ],
-    tareas: [
+    tareas: ["consumibles", 
       "nueva-consulta",
       "primer-contacto",
       "no-es-mio",
@@ -554,7 +569,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Cobranzas: vencidas, vencen hoy y en 48 h.",
       "Recontactos de consumibles.",
     ],
-    tareas: [
+    tareas: ["consumibles", 
       "asignar-consulta",
       "nueva-consulta",
       "facturar-venta",
