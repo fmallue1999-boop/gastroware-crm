@@ -27,6 +27,7 @@ import {
   Package,
   CircleHelp,
   Sparkles,
+  Newspaper,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -80,6 +81,12 @@ export default async function MasPage() {
       <h1 className="text-2xl font-bold tracking-tight">Más</h1>
 
       <MenuLink
+        href="/asistente"
+        icono={Sparkles}
+        titulo="Asistente IA"
+        detalle="Preguntale con tus palabras: tus pendientes, un contacto, cómo se hace algo"
+      />
+      <MenuLink
         href="/guia"
         icono={CircleHelp}
         titulo="Guía de uso"
@@ -87,7 +94,7 @@ export default async function MasPage() {
       />
       <MenuLink
         href="/novedades"
-        icono={Sparkles}
+        icono={Newspaper}
         titulo={`Novedades · GastroWare OS ${versionCorta()}`}
         detalle="Qué cambió en cada versión"
       />

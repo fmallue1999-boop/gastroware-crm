@@ -7,10 +7,14 @@ import { cargarCasos } from "@/lib/servidor/casos";
 import ConPanel from "@/components/ficha/ConPanel";
 import CasoTarjeta, { type CasoVista } from "@/components/casos/CasoTarjeta";
 import AyudaLink from "@/components/guia/AyudaLink";
+import { iaConfigurada } from "@/lib/core/ia";
 
 const ahora = () => Date.now();
 
-function Grupo({ titulo, casos, color }: { titulo: string; casos: CasoVista[]; color: string }) {
+// La ayuda con IA de los casos puede tardar unos segundos
+export const maxDuration = 60;
+
+function Grupo({ titulo, casos, color, iaOn }: { titulo: string; casos: CasoVista[]; color: string; iaOn: boolean }) {
   if (!casos.length) return null;
   return (
     <section>
@@ -20,7 +24,7 @@ function Grupo({ titulo, casos, color }: { titulo: string; casos: CasoVista[]; c
       </h2>
       <div className="grid gap-2 lg:grid-cols-2">
         {casos.map((c) => (
-          <CasoTarjeta key={c.id} caso={c} />
+          <CasoTarjeta key={c.id} caso={c} iaOn={iaOn} />
         ))}
       </div>
     </section>
@@ -37,6 +41,7 @@ export default async function CasosPage({
   searchParams: Promise<{ c?: string; interes?: string; ver?: string }>;
 }) {
   const { c, interes, ver } = await searchParams;
+  const iaOn = iaConfigurada();
   const supabase = await createClient();
   const [{ data: rol }, { data: auth }] = await Promise.all([supabase.rpc("fn_rol"), supabase.auth.getUser()]);
   const todos = veTodo(rol as string) && ver !== "mios";
@@ -80,9 +85,9 @@ export default async function CasosPage({
         {abiertos.length === 0 && (
           <p className="rounded-2xl bg-white px-4 py-6 text-center text-lg font-bold text-verde shadow-sm">No hay casos abiertos.</p>
         )}
-        <Grupo titulo="Sin primera respuesta" casos={sinRespuesta} color="bg-red-100 text-red-700" />
-        <Grupo titulo="Abiertos" casos={enCurso} color="bg-ambar-soft text-ambar" />
-        <Grupo titulo="Derivados a servicio técnico" casos={derivados} color="bg-azul-soft text-azul" />
+        <Grupo iaOn={iaOn} titulo="Sin primera respuesta" casos={sinRespuesta} color="bg-red-100 text-red-700" />
+        <Grupo iaOn={iaOn} titulo="Abiertos" casos={enCurso} color="bg-ambar-soft text-ambar" />
+        <Grupo iaOn={iaOn} titulo="Derivados a servicio técnico" casos={derivados} color="bg-azul-soft text-azul" />
 
         {cerrados.length > 0 && (
           <details className="group">

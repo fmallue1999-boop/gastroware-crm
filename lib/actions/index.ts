@@ -14,3 +14,4 @@ export * from "./direccion";
 export * from "./casos";
 export * from "./material";
 export * from "./marca";
+export * from "./ia";

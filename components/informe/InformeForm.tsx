@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { enviarInforme, responderInforme } from "@/lib/actions";
+import { Sparkles } from "lucide-react";
+import { enviarInforme, iaBorradorInforme, responderInforme } from "@/lib/actions";
 
 const cls = "w-full rounded-xl border border-borde bg-white px-3 py-2 text-[15px] outline-none focus:border-marino";
 
@@ -10,12 +11,15 @@ const cls = "w-full rounded-xl border border-borde bg-white px-3 py-2 text-[15px
 export function InformeForm({
   inicial,
   enviado,
+  iaOn = false,
 }: {
   inicial: { bloqueos: string; decisiones: string; agenda: string };
   enviado: boolean;
+  iaOn?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [pensando, startIA] = useTransition();
   const [f, setF] = useState(inicial);
   const [msg, setMsg] = useState<{ texto: string; error?: boolean } | null>(null);
 
@@ -31,8 +35,32 @@ export function InformeForm({
     });
   }
 
+  function borradorIA() {
+    const lleno = f.bloqueos.trim() || f.decisiones.trim() || f.agenda.trim();
+    if (lleno && !window.confirm("La IA va a reemplazar lo que escribiste. ¿Seguimos?")) return;
+    setMsg(null);
+    startIA(async () => {
+      const r = await iaBorradorInforme();
+      if (r && "datos" in r && r.datos) {
+        setF(r.datos);
+        setMsg({ texto: "Borrador listo: revisalo, corregí lo que haga falta y envialo." });
+      } else setMsg({ texto: (r as { error?: string })?.error ?? "No se pudo armar", error: true });
+    });
+  }
+
   return (
     <div className="space-y-2">
+      {iaOn && (
+        <button
+          type="button"
+          disabled={pensando || pending}
+          onClick={borradorIA}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-violeta/30 bg-violeta-soft px-3 text-[15px] font-bold text-violeta disabled:opacity-60"
+        >
+          <Sparkles className={`h-4 w-4 ${pensando ? "animate-pulse" : ""}`} />
+          {pensando ? "Armando el borrador…" : "Armar borrador con IA"}
+        </button>
+      )}
       <label className="block">
         <span className="text-[15px] font-bold">¿Qué te está frenando?</span>
         <textarea rows={2} value={f.bloqueos} onChange={(e) => setF({ ...f, bloqueos: e.target.value })} placeholder="Stock, precios, un cliente que no responde…" className={cls} />

@@ -17,6 +17,7 @@ import {
   Wallet,
   Wrench,
   Palette,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import type { ClaveIcono } from "@/lib/navegacion";
@@ -39,5 +40,6 @@ export const ICONOS_MENU: Record<ClaveIcono, LucideIcon> = {
   pedidos_material: Palette,
   videos: PlayCircle,
   guia: CircleHelp,
+  asistente: Sparkles,
   mas: Menu,
 };
