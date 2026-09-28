@@ -3,6 +3,9 @@ import FichaChat from "@/components/ficha/FichaChat";
 import AvisoFlash from "@/components/AvisoFlash";
 
 /** La ficha del contacto, como un chat, a pantalla completa. */
+// Resumen y ayuda de casos con IA pueden tardar unos segundos
+export const maxDuration = 60;
+
 export default async function ContactoPage({
   params,
   searchParams,

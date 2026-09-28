@@ -5,6 +5,10 @@ import { numerosInforme } from "@/lib/servidor/informe";
 import NumerosInforme from "@/components/informe/NumerosInforme";
 import { InformeForm } from "@/components/informe/InformeForm";
 import AyudaLink from "@/components/guia/AyudaLink";
+import { iaConfigurada } from "@/lib/core/ia";
+
+// El borrador con IA puede tardar unos segundos
+export const maxDuration = 60;
 
 type Informe = {
   id: string;
@@ -59,6 +63,7 @@ export default async function InformePage() {
               <p className="text-[14px] font-bold text-verde">Enviado el {fechaCorta(actual.enviado_at)}. Esperando la respuesta de dirección.</p>
             )}
             <InformeForm
+              iaOn={iaConfigurada()}
               enviado={Boolean(actual?.enviado_at)}
               inicial={{ bloqueos: actual?.bloqueos ?? "", decisiones: actual?.decisiones ?? "", agenda: actual?.agenda ?? "" }}
             />

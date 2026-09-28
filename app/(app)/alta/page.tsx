@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { infoStockPorProducto } from "@/lib/stock";
 import InteresNuevoForm from "@/components/InteresNuevoForm";
+import { iaConfigurada } from "@/lib/core/ia";
+import AyudaLink from "@/components/guia/AyudaLink";
 import type { Producto } from "@/lib/types";
 
 /**
@@ -8,6 +10,9 @@ import type { Producto } from "@/lib/types";
  * después quién, y al final (opcional) una nota y cuándo volver a contactar.
  * Recibe también texto compartido desde WhatsApp (PWA share target).
  */
+// Leer el mensaje con IA puede tardar unos segundos
+export const maxDuration = 60;
+
 export default async function NuevoInteresPage({
   searchParams,
 }: {
@@ -33,9 +38,11 @@ export default async function NuevoInteresPage({
 
   return (
     <div className="mx-auto max-w-lg">
-      <h1 className="mb-1 text-2xl font-bold tracking-tight">Nuevo interés</h1>
+      <h1 className="mb-1 flex flex-wrap items-center gap-x-2 text-2xl font-bold tracking-tight">
+        Nueva consulta <AyudaLink tarea="nueva-consulta" />
+      </h1>
       <p className="mb-4 text-[15px] text-piedra">
-        Qué le interesa, a quién, y listo.
+        Qué le interesa, a quién y dónde se entrega. O pegá el mensaje y que la IA lo complete.
       </p>
       <InteresNuevoForm
         productos={(data ?? []) as Producto[]}
@@ -44,6 +51,8 @@ export default async function NuevoInteresPage({
         notaInicial={
           compartido ? compartido.replace(telefonoDetectado, "").trim() : ""
         }
+        iaOn={iaConfigurada()}
+        compartido={compartido}
       />
     </div>
   );

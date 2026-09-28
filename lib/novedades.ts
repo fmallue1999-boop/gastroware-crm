@@ -19,6 +19,20 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.1.0",
+    fecha: "2026-09-27",
+    titulo: "Asistente con IA para el trabajo de todos los días",
+    cambios: [
+      "Nuevo Asistente IA en el menú: preguntale con tus palabras qué tenés pendiente, qué pasa con un cliente, cómo se hace algo o pedile que te arme un WhatsApp. Mira solo lo que tu puesto puede ver y te lleva a la pantalla donde se resuelve.",
+      "Nueva consulta: “Cargar desde un mensaje o una captura”. Pegás el WhatsApp o subís la captura del chat y la IA completa el formulario; vos revisás y guardás.",
+      "Mi informe de los lunes: “Armar borrador con IA” lo completa con tus consultas, propuestas y números.",
+      "Casos: “Ayuda IA” sugiere qué preguntarle al cliente, pruebas simples y seguras, un WhatsApp listo y si conviene derivar a servicio técnico.",
+      "Botones violetas de IA en la ficha del contacto, Mi día, el tablero y cobranzas.",
+      "Administración → IA: dirección elige el modelo de IA y ve el uso del mes.",
+      "La IA nunca guarda, cambia ni envía nada sola: todo es borrador o consulta.",
+    ],
+  },
+  {
     version: "1.0.0",
     fecha: "2026-09-27",
     titulo: "GastroWare OS: la empresa trabaja por puestos",

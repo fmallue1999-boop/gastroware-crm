@@ -24,6 +24,7 @@ import AsignarVendedor from "@/components/AsignarVendedor";
 import IAResumenCliente from "@/components/IAResumenCliente";
 import VentaPaso, { type FacturaDatos } from "@/components/VentaPaso";
 import CasoTarjeta from "@/components/casos/CasoTarjeta";
+import BotonIA from "@/components/ia/BotonIA";
 import { cargarCasos } from "@/lib/servidor/casos";
 import NotaForm from "@/components/NotaForm";
 import EquipoForm from "@/components/EquipoForm";
@@ -413,7 +414,7 @@ export default async function FichaChat({
       {!esTecnico && (
         <div className="space-y-2">
           {casosAbiertos.map((k) => (
-            <CasoTarjeta key={k.id} caso={k} />
+            <CasoTarjeta key={k.id} caso={k} iaOn={iaConfigurada()} />
           ))}
           {abiertas.map((o) => (
             <InteresFijado
@@ -531,6 +532,11 @@ export default async function FichaChat({
           </a>
         ) : null}
       </div>
+      {iaConfigurada() && (
+        <div>
+          <BotonIA pregunta={`Resumime a ${c.nombre_comercial} (qué le interesa, en qué quedamos, qué debe) y decime el próximo paso con un mensaje listo para mandarle`} texto="Resumen y próximo paso con IA" />
+        </div>
+      )}
       <PanelesFicha paneles={paneles} />
     </header>
   );

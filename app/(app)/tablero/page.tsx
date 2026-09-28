@@ -24,6 +24,7 @@ import FiltrosTablero from "@/components/tablero/FiltrosTablero";
 import Operacion from "@/components/tablero/Operacion";
 import Barras from "@/components/tablero/Barras";
 import AyudaLink from "@/components/guia/AyudaLink";
+import BotonIA from "@/components/ia/BotonIA";
 
 type Params = { p?: string; v?: string; prod?: string; ver?: string; vv?: string; c?: string; interes?: string };
 
@@ -111,6 +112,12 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
           <p className="text-[15px] text-piedra">
             {per.etiqueta} · comparado con {contra}
           </p>
+          <div className="mt-2">
+            <BotonIA
+              pregunta="Analizá los números de este mes comparados con el anterior y las alertas: decime en 5 puntos qué está bien, qué me preocupa y qué hago esta semana"
+              texto="¿Qué miro este mes? (IA)"
+            />
+          </div>
         </div>
         <Suspense fallback={null}>
           <FiltrosTablero periodos={PERIODOS} vendedores={vendedoresSelect} productos={(prods ?? []) as { id: string; nombre: string }[]} />

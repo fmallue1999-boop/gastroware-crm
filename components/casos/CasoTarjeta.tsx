@@ -8,6 +8,7 @@ import { cerrarCaso, derivarCaso, responderCaso } from "@/lib/actions";
 import { PRIORIDADES_CASO, ESTADOS_OT } from "@/lib/constants";
 import { fechaCorta, linkWhatsApp } from "@/lib/format";
 import LinkContacto from "@/components/LinkContacto";
+import AyudaCasoIA from "@/components/casos/AyudaCasoIA";
 
 export type CasoVista = {
   id: string;
@@ -36,7 +37,7 @@ const COLOR_PRIORIDAD: Record<string, string> = {
 };
 
 /** Un caso: responder, derivar a servicio técnico o cerrar con causa y solución. */
-export default function CasoTarjeta({ caso }: { caso: CasoVista }) {
+export default function CasoTarjeta({ caso, iaOn = false }: { caso: CasoVista; iaOn?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [modo, setModo] = useState<null | "responder" | "derivar" | "cerrar">(null);
@@ -170,6 +171,7 @@ export default function CasoTarjeta({ caso }: { caso: CasoVista }) {
                 <MessageCircle className="h-4 w-4" /> WhatsApp
               </a>
             )}
+            {iaOn && <AyudaCasoIA casoId={caso.id} telefono={caso.cliente?.telefono ?? null} />}
           </div>
         ))}
       {msg && <p className={`mt-1.5 text-[14px] font-bold ${msg.error ? "text-red-600" : "text-verde"}`}>{msg.texto}</p>}

@@ -74,6 +74,17 @@ export const BASICOS: Tarea[] = [
     ],
   },
   {
+    id: "asistente",
+    titulo: "Preguntarle al asistente (IA)",
+    pasos: [
+      { texto: "Entrá a “Asistente IA” (en el menú, o en Más desde el celular).", href: "/asistente", boton: "Abrir el asistente" },
+      { texto: "Preguntale con tus palabras: “¿qué tengo pendiente hoy?”, “¿qué pasa con el Hotel X?”, “¿cómo cargo una factura?”, “armame un WhatsApp para…”." },
+      { texto: "Mira tus datos (solo lo que tu puesto puede ver) y te contesta con links a la pantalla donde se resuelve." },
+      { texto: "Los botones violetas “IA” de otras pantallas (ficha, Mi día, tablero, cobranzas) le hacen la pregunta por vos." },
+    ],
+    ojo: "El asistente no cambia nada solo: te dice qué hacer y dónde, y lo hacés vos. Si un dato no está en el sistema, te lo dice.",
+  },
+  {
     id: "contrasena",
     titulo: "Cambiar mi contraseña",
     pasos: [{ texto: "Más → Cambiar contraseña. Poné una tuya, sobre todo si te dieron una inicial.", href: "/password", boton: "Cambiar contraseña" }],
@@ -94,6 +105,7 @@ export const TAREAS: Tarea[] = [
       { texto: "Buscá a la persona en la base o cargala nueva con nombre y teléfono." },
       { texto: "Marcá dónde se entrega: eso decide qué vendedor la atiende. Si no sabés, “Todavía no sé”." },
       { texto: "Marcá por dónde llegó (WhatsApp, web, llamada…) y Guardar." },
+      { texto: "Atajo con IA: arriba de todo, “Cargar desde un mensaje o una captura”. Pegá el WhatsApp o subí la captura del chat, “Completar con IA”, revisá lo que completó y Guardar." },
     ],
     ojo: "Si la zona es de otro territorio, la consulta le llega sola al vendedor de ese territorio con un aviso.",
   },
@@ -270,6 +282,7 @@ export const TAREAS: Tarea[] = [
       { texto: "En Casos o en la ficha: “Responder” y anotá qué le dijiste o qué probaron a distancia.", href: "/casos", boton: "Ir a Casos" },
       { texto: "Si no se resuelve a distancia: “Derivar a servicio”. Se crea el service y se avisa a servicio técnico." },
       { texto: "Cuando está resuelto: “Cerrar” con la causa y la solución (en 5 días hábiles)." },
+      { texto: "“Ayuda IA” en el caso: te da qué preguntarle al cliente, pruebas simples y seguras, un WhatsApp listo y si conviene derivar." },
     ],
   },
   {
@@ -399,6 +412,7 @@ export const TAREAS: Tarea[] = [
       { texto: "Los lunes antes de las 10: “Mi informe”.", href: "/informe", boton: "Ir a Mi informe" },
       { texto: "Los números de la semana los pone el CRM." },
       { texto: "Completá qué te frena, qué decisiones necesitás de dirección y tu agenda. “Enviar a dirección”." },
+      { texto: "Atajo con IA: “Armar borrador con IA” lo completa con tus consultas, propuestas y números. Revisalo, corregí y enviá." },
       { texto: "La respuesta de dirección aparece en la misma pantalla." },
     ],
   },
@@ -594,3 +608,20 @@ export const REGLAS_MANUAL: { regla: string; como: string }[] = [
 ];
 
 export const tareaPorId = (id: string) => [...BASICOS, ...TAREAS].find((t) => t.id === id) ?? null;
+
+const sinAcentos = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+/** Busca tareas de la guía por palabras (todas deben aparecer, sin importar acentos). */
+export function buscarTareas(q: string): Tarea[] {
+  const palabras = sinAcentos(q)
+    .split(/\s+/)
+    .filter((p) => p.length >= 3 && !["como", "que", "hago", "para", "una", "los", "las", "del", "con"].includes(p));
+  if (!palabras.length) return [];
+  const todas = [...BASICOS, ...TAREAS];
+  const texto = (t: Tarea) => sinAcentos([t.titulo, t.ojo ?? "", ...t.pasos.map((p) => p.texto)].join(" "));
+  const puntuadas = todas
+    .map((t) => ({ t, n: palabras.filter((p) => texto(t).includes(p)).length }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n);
+  return puntuadas.slice(0, 4).map((x) => x.t);
+}

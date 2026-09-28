@@ -9,6 +9,7 @@ import ConPanel from "@/components/ficha/ConPanel";
 import CobranzaFila, { type FacturaFila } from "@/components/cobranzas/CobranzaFila";
 import CargarFactura from "@/components/cobranzas/CargarFactura";
 import AyudaLink from "@/components/guia/AyudaLink";
+import BotonIA from "@/components/ia/BotonIA";
 
 const COLS =
   "id, cliente_id, numero, tipo, fecha, vencimiento, monto, moneda, cobro_estado, promesa_fecha, ultimo_reclamo_at, condicion_aprobada_at, condicion_nota, oportunidad_id, cliente:clientes(nombre_comercial, telefono)";
@@ -87,7 +88,10 @@ export default async function CobranzasPage({ searchParams }: { searchParams: Pr
         </h1>
             <p className="text-[15px] text-piedra">Nada se despacha sin cobro acreditado o condición aprobada.</p>
           </div>
-          <CargarFactura hoy={hoy} />
+          <div className="flex flex-wrap gap-2">
+            <BotonIA pregunta="Armame un mensaje de reclamo por WhatsApp para cada factura vencida, empezando por la de más atraso, con el número, el monto y el vencimiento" texto="Reclamos con IA" />
+            <CargarFactura hoy={hoy} />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">

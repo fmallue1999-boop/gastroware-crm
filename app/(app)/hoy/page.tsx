@@ -16,6 +16,7 @@ import Bandejas from "@/components/midia/Bandejas";
 import AyudaLink from "@/components/guia/AyudaLink";
 import AvisoGuia from "@/components/guia/AvisoGuia";
 import AvisoVersion from "@/components/version/AvisoVersion";
+import BotonIA from "@/components/ia/BotonIA";
 
 type InteresFila = {
   id: string;
@@ -75,7 +76,10 @@ export default async function HoyPage({
             <span className="capitalize">{fecha}</span> · {nombrePuesto(rol)}
           </p>
         </div>
-        {extra}
+        <div className="flex flex-wrap items-center gap-2">
+          <BotonIA />
+          {extra}
+        </div>
       </div>
       <AvisoVersion />
       <AvisoGuia puesto={nombrePuesto(rol).toLowerCase()} />

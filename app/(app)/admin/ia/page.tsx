@@ -1,18 +1,29 @@
 import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { iaConfigurada } from "@/lib/core/ia";
+import { iaConfigurada, modeloIA, MODELOS_IA } from "@/lib/core/ia";
 import { hoyISO } from "@/lib/format";
 import LimiteIA from "@/components/admin/LimiteIA";
-
-// Precios de claude-opus-5 por millón de tokens (USD)
-const PRECIO_ENTRADA = 5;
-const PRECIO_SALIDA = 25;
+import ModeloIA from "@/components/admin/ModeloIA";
 
 const ETIQUETAS_FUNCION: Record<string, string> = {
+  asistente: "Asistente (preguntas)",
+  leer_consulta: "Consultas cargadas desde un mensaje",
+  borrador_informe: "Borradores de informe",
+  ayuda_caso: "Ayuda en casos",
   mensaje_oportunidad: "Mensajes a medida",
   resumen_cliente: "Resúmenes de cliente",
   informe_ot: "Informes de service",
+  campania_marketing: "Campañas de marketing",
+  campania_diseno: "Diseño de campañas",
+  leer_credencial: "Lectura de credenciales de feria",
 };
+
+/** Tokens en formato corto: 12.345 → "12 mil", 2.300.000 → "2,3 M". */
+function tokens(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000).toLocaleString("es-AR")} mil`;
+  return String(n);
+}
 
 export default async function AdminIAPage() {
   const supabase = await createClient();
@@ -20,22 +31,20 @@ export default async function AdminIAPage() {
   const hoy = hoyISO();
   const inicioMes = hoy.slice(0, 8) + "01";
 
-  const [{ data: cfg }, { data: usosMes }] = await Promise.all([
+  const [{ data: cfg }, { data: usosMes }, modelo] = await Promise.all([
     supabase.from("config").select("valor").eq("clave", "ia_limite_diario").maybeSingle(),
     supabase
       .from("ia_usos")
       .select("funcion, tokens_entrada, tokens_salida, created_at")
       .gte("created_at", `${inicioMes}T00:00:00-03:00`)
       .limit(5000),
+    modeloIA(supabase),
   ]);
 
   const usos = usosMes ?? [];
   const usosHoy = usos.filter((u) => u.created_at >= `${hoy}T00:00:00-03:00`);
   const entradaMes = usos.reduce((s, u) => s + u.tokens_entrada, 0);
   const salidaMes = usos.reduce((s, u) => s + u.tokens_salida, 0);
-  const costoMes =
-    (entradaMes / 1_000_000) * PRECIO_ENTRADA +
-    (salidaMes / 1_000_000) * PRECIO_SALIDA;
 
   const porFuncion = new Map<string, number>();
   for (const u of usos)
@@ -56,10 +65,12 @@ export default async function AdminIAPage() {
         </p>
         {configurada ? (
           <p className="mt-1 text-sm text-verde">
-            Las funciones de IA están disponibles en oportunidades (mensajes a
-            medida), fichas de cliente (resumen para la llamada) y órdenes de
-            servicio (informe prolijo). Todo es borrador: nada se envía ni se
-            guarda sin aprobación de una persona.
+            Todos tienen el Asistente en el menú (preguntas con sus datos,
+            cómo se hace cada cosa, mensajes). Además: cargar una consulta desde
+            un mensaje o captura, borrador del informe de los lunes, ayuda para
+            resolver casos, resumen del contacto, mensajes a medida e informes
+            de service. Todo es borrador o consulta: la IA no guarda, no cambia
+            ni envía nada sola.
           </p>
         ) : (
           <div className="mt-1 space-y-1 text-sm text-ambar">
@@ -83,6 +94,14 @@ export default async function AdminIAPage() {
       </div>
 
       <section className="rounded-2xl border border-borde bg-white p-4 shadow-sm">
+        <p className="mb-2 text-sm font-semibold">Modelo de IA</p>
+        <ModeloIA actual={modelo} opciones={MODELOS_IA.map((m) => ({ id: m.id, nombre: m.nombre, detalle: m.detalle }))} />
+        <p className="mt-1.5 text-xs text-piedra">
+          Lo usa todo el sistema. El más capaz responde mejor; el más económico gasta menos.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-borde bg-white p-4 shadow-sm">
         <p className="mb-2 text-sm font-semibold">Límite de costo</p>
         <LimiteIA actual={cfg?.valor ?? "100"} />
         <p className="mt-1.5 text-xs text-piedra">
@@ -103,14 +122,14 @@ export default async function AdminIAPage() {
             <p className="text-xs text-piedra">usos en el mes</p>
           </div>
           <div className="rounded-xl bg-crema p-3">
-            <p className="text-xl font-bold">
-              {costoMes < 0.01 && usos.length > 0
-                ? "<0.01"
-                : costoMes.toFixed(2)}
-            </p>
-            <p className="text-xs text-piedra">USD estimados</p>
+            <p className="text-xl font-bold">{tokens(entradaMes + salidaMes)}</p>
+            <p className="text-xs text-piedra">tokens en el mes</p>
           </div>
         </div>
+        <p className="mt-2 text-xs text-piedra">
+          Leídos {tokens(entradaMes)} · escritos {tokens(salidaMes)}. El costo real en dólares se ve en
+          console.anthropic.com → Usage.
+        </p>
         {porFuncion.size > 0 && (
           <div className="mt-3 space-y-1 text-sm">
             {Array.from(porFuncion.entries()).map(([f, n]) => (

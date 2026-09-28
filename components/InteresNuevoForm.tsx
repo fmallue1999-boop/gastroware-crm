@@ -7,6 +7,8 @@ import { fechaCorta, hoyISO, normalizarTelefono, sumarDias, telefonoProlijo } fr
 import { CATEGORIAS_PRODUCTO, NIVELES_INTERES, ORIGENES_INTERES, RUBROS, SEGUIMIENTO_RAPIDO } from "@/lib/constants";
 import { textoStock, type InfoStock } from "@/lib/stock";
 import { ZONAS_ENTREGA } from "@/lib/territorios";
+import LeerConsultaIA from "@/components/ia/LeerConsultaIA";
+import type { ConsultaLeida } from "@/lib/actions";
 import type { Cliente, Producto } from "@/lib/types";
 
 const inputCls =
@@ -28,11 +30,17 @@ export default function InteresNuevoForm({
   stockInfo = {},
   telefonoInicial = "",
   notaInicial = "",
+  iaOn = false,
+  compartido = "",
 }: {
   productos: Producto[];
   stockInfo?: Record<string, InfoStock>;
   telefonoInicial?: string;
   notaInicial?: string;
+  /** IA activa: muestra "Cargar desde un mensaje". */
+  iaOn?: boolean;
+  /** Texto compartido desde WhatsApp, para leerlo con IA. */
+  compartido?: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [filtro, setFiltro] = useState("");
@@ -85,6 +93,42 @@ export default function InteresNuevoForm({
       items: productos.filter((p) => p.categoria === cat && (!f || p.nombre.toLowerCase().includes(f))),
     }))
     .filter((g) => g.items.length > 0);
+
+  /** Completa el formulario con lo que leyó la IA (la persona revisa y guarda). */
+  async function aplicarIA(d: ConsultaLeida) {
+    const ids = d.productoIds.filter((id) => productos.some((p) => p.id === id));
+    if (ids.length) {
+      setProductoIds(ids);
+      if (ids.some((id) => (stockInfo[id]?.stock ?? 1) <= 0)) setEnEspera(true);
+    }
+    if (d.interesTexto) {
+      setOtro(true);
+      setInteresTexto(d.interesTexto);
+    }
+    if (d.nivel) setNivel(d.nivel);
+    if (d.zona) setZona(d.zona);
+    if (d.origen) setOrigen(d.origen);
+    if (d.nota) setNota(d.nota);
+    const tel = d.telefono ? normalizarTelefono(d.telefono) : "";
+    if (tel.length >= 8) {
+      const encontrados = await buscarClientes(tel);
+      if (encontrados.length) {
+        setCliente(encontrados[0]);
+        setEsNuevo(false);
+        setResultados([]);
+        return;
+      }
+    }
+    if (d.nombre || tel || d.email) {
+      setCliente(null);
+      setEsNuevo(true);
+      setResultados([]);
+      if (d.nombre) setNombre(d.nombre);
+      if (tel) setTelefono(telefonoProlijo(tel));
+      if (d.email) setEmail(d.email);
+      if (d.empresa) setEmpresa(d.empresa);
+    }
+  }
 
   function alternarProducto(id: string) {
     const quitar = productoIds.includes(id);
@@ -146,6 +190,8 @@ export default function InteresNuevoForm({
 
   return (
     <div className="space-y-5">
+      {iaOn && <LeerConsultaIA textoInicial={compartido} onDatos={aplicarIA} />}
+
       {/* Qué */}
       <section className="space-y-2">
         <p className={seccion}>¿Qué le interesa?</p>
