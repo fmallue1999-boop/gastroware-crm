@@ -6,6 +6,7 @@ import { esGestor } from "@/lib/puestos";
 import { lunesDe, periodoInforme, type NumerosInforme as Numeros } from "@/lib/semana";
 import NumerosInforme from "@/components/informe/NumerosInforme";
 import { ResponderInforme } from "@/components/informe/InformeForm";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 type Informe = {
   id: string;
@@ -41,7 +42,9 @@ export default async function InformesPage({ searchParams }: { searchParams: Pro
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Informes comerciales</h1>
+          <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Informes comerciales <AyudaLink tarea="responder-informes" />
+        </h1>
           <p className="text-[15px] text-piedra">
             Semana del {fechaCorta(desde)} al {fechaCorta(hasta)} · se mandan los lunes antes de las 10
           </p>

@@ -9,6 +9,7 @@ import ConPanel from "@/components/ficha/ConPanel";
 import LinkContacto from "@/components/LinkContacto";
 import VentaPaso, { type FacturaDatos } from "@/components/VentaPaso";
 import type { Oportunidad, Producto } from "@/lib/types";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 const COLOR_PASO = [
   "bg-ambar-soft text-ambar",
@@ -126,7 +127,9 @@ export default async function VentasPage({
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Ventas</h1>
+            <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Ventas <AyudaLink tarea="datos-venta" />
+        </h1>
             <p className="text-[15px] text-piedra">En curso · {enCurso}. Nada se prepara sin factura y cobro.</p>
           </div>
           <Link href="/pedidos/nuevo" className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-marino px-4 text-[15px] font-extrabold text-white shadow-sm">

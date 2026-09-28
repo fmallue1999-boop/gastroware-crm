@@ -6,6 +6,7 @@ import { veTodo } from "@/lib/puestos";
 import { cargarCasos } from "@/lib/servidor/casos";
 import ConPanel from "@/components/ficha/ConPanel";
 import CasoTarjeta, { type CasoVista } from "@/components/casos/CasoTarjeta";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 const ahora = () => Date.now();
 
@@ -54,7 +55,9 @@ export default async function CasosPage({
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Casos</h1>
+            <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Casos <AyudaLink tarea="responder-caso" />
+        </h1>
             <p className="text-[15px] text-piedra">
               Reclamos y consultas de clientes: responder en 24 h hábiles (1 h si está parado) y cerrar en 5 días hábiles.
             </p>

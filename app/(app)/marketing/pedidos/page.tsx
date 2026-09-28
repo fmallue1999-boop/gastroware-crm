@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { esGestor } from "@/lib/puestos";
 import PedidosMaterial, { type PedidoMaterial } from "@/components/marketing/PedidosMaterial";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 /** Pedidos de material a marketing (manual 4.6). */
 export default async function PedidosMaterialPage() {
@@ -18,7 +19,9 @@ export default async function PedidosMaterialPage() {
   return (
     <div className="space-y-3">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Pedidos de material</h1>
+        <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Pedidos de material <AyudaLink tarea="pedir-material" />
+        </h1>
         <p className="text-[15px] text-piedra">Folletos, videos, fichas o posteos que necesita comercial. Marketing compromete la fecha.</p>
       </div>
       <PedidosMaterial pedidos={pedidos} gestiona={rol === "marketing" || esGestor(rol as string)} />

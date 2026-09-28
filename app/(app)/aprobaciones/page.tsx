@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dinero, fechaCorta } from "@/lib/format";
 import { esGestor } from "@/lib/puestos";
 import DecidirPropuesta from "@/components/DecidirPropuesta";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 type Pendiente = {
   id: string;
@@ -64,7 +65,9 @@ export default async function AprobacionesPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Aprobaciones</h1>
+        <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Aprobaciones <AyudaLink tarea="aprobar-propuestas" />
+        </h1>
         <p className="text-[15px] text-piedra">
           Propuestas fuera de lista: no se pueden imprimir ni mandar hasta que dirección las apruebe.
           {rol !== "direccion" ? " Las aprueba dirección general." : ""}

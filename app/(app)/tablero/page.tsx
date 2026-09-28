@@ -23,6 +23,7 @@ import { PuntoNivel } from "@/components/PuntoNivel";
 import FiltrosTablero from "@/components/tablero/FiltrosTablero";
 import Operacion from "@/components/tablero/Operacion";
 import Barras from "@/components/tablero/Barras";
+import AyudaLink from "@/components/guia/AyudaLink";
 
 type Params = { p?: string; v?: string; prod?: string; ver?: string; vv?: string; c?: string; interes?: string };
 
@@ -104,7 +105,9 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
     <ConPanel c={sp.c} interes={sp.interes} cerrarHref={cerrarPanel}>
       <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Tablero</h1>
+          <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
+          Tablero <AyudaLink tarea="tablero" />
+        </h1>
           <p className="text-[15px] text-piedra">
             {per.etiqueta} · comparado con {contra}
           </p>
