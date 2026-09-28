@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClipboardCheck, FileText, History } from "lucide-react";
+import { ClipboardCheck, Cog, FileText, History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl, firmarUrls } from "@/lib/core/storage";
 import { fechaCorta, dinero, hoyISO } from "@/lib/format";
@@ -280,6 +280,13 @@ export default async function OTPage({
           <FileText className="h-4 w-4" /> Ver informe de service
         </Link>
       )}
+
+      <Link
+        href={`/repuestos/nueva?ot=${ot.id}`}
+        className="flex items-center justify-center gap-2 rounded-2xl border border-borde bg-white py-3 text-center text-sm font-medium shadow-sm"
+      >
+        <Cog className="h-4 w-4" /> Pedir un repuesto para este equipo
+      </Link>
 
       {(checklists ?? []).length > 0 && (
         <Link

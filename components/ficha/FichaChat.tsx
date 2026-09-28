@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bell, CalendarPlus, ChevronLeft, Droplets, Mail, MessageCircle, Phone, Wrench, X } from "lucide-react";
+import { Bell, CalendarPlus, ChevronLeft, Cog, Droplets, Mail, MessageCircle, Phone, Wrench, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl, firmarUrls } from "@/lib/core/storage";
 import { iaConfigurada } from "@/lib/core/ia";
@@ -18,6 +18,8 @@ import {
 import { ESTADOS_OT, ETAPAS_ABIERTAS } from "@/lib/constants";
 import Compositor from "@/components/ficha/Compositor";
 import PersonasCliente, { type Persona } from "@/components/ficha/PersonasCliente";
+import TarjetaRepuesto from "@/components/repuestos/TarjetaRepuesto";
+import { cargarSolicitudes } from "@/lib/servidor/repuestos";
 import { nombreLinea, notasSinContacto, textoActividad } from "@/lib/actividad";
 import { cantidadTexto, reposicionEstimada } from "@/lib/consumibles";
 import InteresFijado, { type Guion, type MaterialLite, type VersionCot } from "@/components/ficha/InteresFijado";
@@ -130,6 +132,7 @@ export default async function FichaChat({
     facturasRes,
     casosAbiertos,
     personasRes,
+    solicitudesRep,
   ] = await Promise.all([
     supabase.from("equipos").select("*, producto:productos(*)").eq("cliente_id", id).is("deleted_at", null).order("fecha_venta", { ascending: false }),
     supabase.from("recurrencias").select("*, producto:productos(*)").eq("cliente_id", id).eq("activa", true),
@@ -160,6 +163,7 @@ export default async function FichaChat({
       .is("deleted_at", null)
       .order("es_decisor", { ascending: false })
       .order("created_at"),
+    cargarSolicitudes(supabase, { clienteId: id, limite: 50 }),
   ]);
 
   // Los consumibles o repuestos vendidos antes de la v1.4 quedaron como "equipo": no se muestran como equipos
@@ -460,7 +464,12 @@ export default async function FichaChat({
           {casosAbiertos.map((k) => (
             <CasoTarjeta key={k.id} caso={k} iaOn={iaConfigurada()} />
           ))}
-          {abiertas.map((o) => (
+          {solicitudesRep
+            .filter((s) => !["ganada", "perdida"].includes(s.estado))
+            .map((s) => (
+              <TarjetaRepuesto key={s.oportunidad_id} s={s} hoy={hoy} yo={miId} puedeValidar={["tecnico", "servicio", "direccion", "admin"].includes((rol as string) ?? "")} />
+            ))}
+          {abiertas.filter((o) => !solicitudesRep.some((s) => s.oportunidad_id === o.id)).map((o) => (
             <InteresFijado
               key={o.id}
               interes={o}
@@ -589,6 +598,9 @@ export default async function FichaChat({
         <div className="flex flex-wrap gap-2">
           <Link href={`/consumibles/venta?cliente=${c.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold">
             <Droplets className="h-4 w-4 text-verde" /> Venta de consumibles
+          </Link>
+          <Link href={`/repuestos/nueva?cliente=${c.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold">
+            <Cog className="h-4 w-4 text-violeta" /> Pedido de repuesto
           </Link>
           <Link
             href={`/tareas/nueva?titulo=${encodeURIComponent(`Seguimiento: ${c.nombre_comercial}`)}&link=${encodeURIComponent(`${(process.env.NEXT_PUBLIC_APP_URL || "https://gastroware-crm.vercel.app").replace(/\/$/, "")}/clientes/${c.id}`)}`}

@@ -25,6 +25,7 @@ export type ClaveIcono =
   | "asistente"
   | "tareas"
   | "consumibles"
+  | "repuestos"
   | "mas";
 
 export type ItemMenu = { href: string; label: string; icono: ClaveIcono; badgeHoy?: boolean };
@@ -51,6 +52,7 @@ const I = {
   asistente: { href: "/asistente", label: "Asistente IA", icono: "asistente" },
   tareas: { href: "/tareas", label: "Tareas", icono: "tareas" },
   consumibles: { href: "/consumibles", label: "Consumibles", icono: "consumibles" },
+  repuestos: { href: "/repuestos", label: "Repuestos", icono: "repuestos" },
   mas: { href: "/mas", label: "Más", icono: "mas" },
 } satisfies Record<string, ItemMenu>;
 
@@ -58,22 +60,22 @@ export function menuDe(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
   switch (rol) {
     case "tecnico":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.services, I.equipos, I.contactos, I.stock, I.ventas, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.services, I.repuestos, I.equipos, I.contactos, I.stock, I.ventas, I.movimientos, I.guia, I.mas],
         celular: [I.midia, I.services, I.equipos, I.mas],
       };
     case "servicio":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.services, I.casos, I.equipos, I.contactos, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.services, I.casos, I.repuestos, I.equipos, I.contactos, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.midia, I.services, I.casos, I.mas],
       };
     case "administrativa":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.ventas, I.consumibles, I.cobranzas, I.contactos, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.contactos, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.midia, I.ventas, I.cobranzas, I.mas],
       };
     case "admin":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.tablero, I.cobranzas, I.ventas, I.consumibles, I.services, I.casos, I.contactos, I.stock, I.informes, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.tablero, I.cobranzas, I.ventas, I.consumibles, I.repuestos, I.services, I.casos, I.contactos, I.stock, I.informes, I.movimientos, I.guia, I.mas],
         celular: [I.midia, I.cobranzas, I.services, I.mas],
       };
     case "marketing":
@@ -83,7 +85,7 @@ export function menuDe(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
       };
     case "direccion":
       return {
-        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.tablero, I.aprobaciones, I.informes, I.contactos, I.ventas, I.consumibles, I.cobranzas, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.tablero, I.aprobaciones, I.informes, I.contactos, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.embudo, I.midia, I.contactos, I.mas],
       };
     case "distribuidor":
@@ -91,7 +93,7 @@ export function menuDe(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
     default:
       // Vendedor de territorio
       return {
-        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.contactos, I.ventas, I.consumibles, I.casos, I.informe, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.contactos, I.ventas, I.consumibles, I.repuestos, I.casos, I.informe, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.embudo, I.midia, I.contactos, I.mas],
       };
   }

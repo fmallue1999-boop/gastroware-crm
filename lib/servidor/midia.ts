@@ -86,6 +86,51 @@ export async function cargarMiDia(
       );
   }
 
+  // --- Repuestos: para validar (a quien le toca) y para cotizar (su vendedor) ---
+  {
+    const [{ data: validar }, { data: cotizar }] = await Promise.all([
+      supabase
+        .from("solicitudes_repuesto")
+        .select("oportunidad_id, descripcion, cliente:clientes(nombre_comercial)")
+        .eq("validador_id", userId)
+        .eq("validacion", "pendiente")
+        .limit(50),
+      supabase
+        .from("solicitudes_repuesto")
+        .select("oportunidad_id, cliente_id, descripcion, validacion, cliente:clientes(nombre_comercial), opp:oportunidades!inner(etapa, comercial_id, deleted_at)")
+        .neq("validacion", "pendiente")
+        .eq("opp.etapa", "nueva")
+        .eq("opp.comercial_id", userId)
+        .is("opp.deleted_at", null)
+        .limit(50),
+    ]);
+    type Sol = { oportunidad_id: string; cliente_id?: string; descripcion: string; cliente: { nombre_comercial: string } | null };
+    const v = (validar ?? []) as unknown as Sol[];
+    const c = (cotizar ?? []) as unknown as Sol[];
+    if (v.length)
+      bandejas.push(
+        bandeja({
+          clave: "repuestos_validar",
+          titulo: "Repuestos para validar",
+          ayuda: "Confirmá qué pieza es para que el vendedor cotice",
+          href: "/repuestos?ver=validar",
+          tono: "violeta",
+          lista: v.map((s) => ({ id: s.oportunidad_id, titulo: s.cliente?.nombre_comercial ?? "Cliente", detalle: s.descripcion, href: "/repuestos?ver=validar" })),
+        })
+      );
+    if (c.length)
+      bandejas.push(
+        bandeja({
+          clave: "repuestos_cotizar",
+          titulo: "Repuestos para cotizar",
+          ayuda: "Precio, disponibilidad y plazo",
+          href: "/repuestos?quien=mias",
+          tono: "ambar",
+          lista: c.map((s) => ({ id: s.oportunidad_id, titulo: s.cliente?.nombre_comercial ?? "Cliente", detalle: s.descripcion, href: "/repuestos?quien=mias" })),
+        })
+      );
+  }
+
   // --- Consultas (entrada) ---
   if (vendedor) {
     const { data } = await supabase

@@ -19,6 +19,19 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.5.0",
+    fecha: "2026-09-28",
+    titulo: "Repuestos: de la consulta al pedido",
+    cambios: [
+      "Nuevo apartado Repuestos: cada solicitud con cliente, equipo y serie, qué pieza (del catálogo o descripta, con código o foto), cantidad, precio, disponibilidad y plazo.",
+      "Pasos: Validación técnica (si hace falta) → Para cotizar → Cotización enviada → Esperando confirmación → Ganada o Perdida.",
+      "Servicio técnico valida la pieza desde “Para validar” o su Mi día; al vendedor le llega el aviso para cotizar.",
+      "Al cotizar, “Mandar cotización” abre el WhatsApp con el mensaje armado. “Confirmó” la pasa a Ventas: sigue el circuito de siempre (facturar, cobrar, preparar, entregar).",
+      "Se puede pedir un repuesto desde la ficha del cliente, un caso o un service, sin volver a cargar cliente ni equipo.",
+      "El Embudo muestra solo la venta de equipos, el negocio principal; consumibles y repuestos se trabajan en su apartado.",
+    ],
+  },
+  {
     version: "1.4.0",
     fecha: "2026-09-28",
     titulo: "Consumibles: ventas y reposición de cada cliente",
