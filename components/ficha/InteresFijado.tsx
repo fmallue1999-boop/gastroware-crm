@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { nombreLinea } from "@/lib/actividad";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Sparkles } from "lucide-react";
@@ -88,7 +89,7 @@ export default function InteresFijado({
 
   const enEspera = interes.etapa === "espera";
   const etapaLabel = ETAPAS.find((e) => e.value === interes.etapa)?.label ?? interes.etapa;
-  const prox = textoProximo(interes.proximo_contacto ?? null, interes.proximo_nota ?? null, hoy);
+  const prox = textoProximo(interes.proximo_contacto ?? null, interes.proximo_nota ?? null, hoy, interes.proxima_accion);
   const sinMovimiento = diasDesde(interes.ultimo_movimiento_at ?? interes.created_at);
   const categoria = interes.producto?.categoria ?? "otro";
   const conDiagnostico = categoria === "exprimidora" || categoria === "licuadora";
@@ -120,6 +121,9 @@ export default function InteresFijado({
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${COLOR_ETAPA[interes.etapa] ?? "bg-crema-deep text-piedra"}`}>
           {etapaLabel}
         </span>
+        {interes.linea && interes.linea !== "equipos" && (
+          <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-marino">{nombreLinea(interes.linea)}</span>
+        )}
       </div>
       <p className={`mt-0.5 text-[15px] ${prox.clase}`}>{prox.texto}</p>
       <p className="text-xs text-piedra">

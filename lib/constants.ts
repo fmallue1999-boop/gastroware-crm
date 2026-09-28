@@ -49,11 +49,14 @@ export const ORIGENES = [
 /** De dónde viene un interés (chips de la tercera pantalla de + Interés). */
 export const ORIGENES_INTERES = [
   "WhatsApp",
+  "Instagram",
   "Llamada",
   "Web",
   "Feria",
   "Recomendado",
   "Visita",
+  "Prospección",
+  "Otro",
 ] as const;
 
 /** Qué pidió el cliente al entrar: define el guión y la primera tarea. */

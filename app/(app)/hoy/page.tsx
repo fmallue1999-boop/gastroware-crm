@@ -22,6 +22,11 @@ import AgendaHoy from "@/components/agenda/AgendaHoy";
 type InteresFila = {
   id: string;
   cliente_id: string;
+  comercial_id: string | null;
+  linea: string | null;
+  proxima_accion: string | null;
+  asignado_at: string | null;
+  primer_contacto_at: string | null;
   etapa: string;
   temperatura: string | null;
   proximo_contacto: string | null;
@@ -151,7 +156,7 @@ export default async function HoyPage({
         let q = supabase
           .from("oportunidades")
           .select(
-            "id, cliente_id, etapa, temperatura, proximo_contacto, proximo_nota, ultimo_movimiento_at, mensaje_inicial, producto:productos(nombre), cliente:clientes!inner(nombre_comercial, telefono, deleted_at)"
+            "id, cliente_id, comercial_id, linea, proxima_accion, asignado_at, primer_contacto_at, etapa, temperatura, proximo_contacto, proximo_nota, ultimo_movimiento_at, mensaje_inicial, producto:productos(nombre), cliente:clientes!inner(nombre_comercial, telefono, deleted_at)"
           )
           .in("etapa", [...ETAPAS_ABIERTAS])
           .is("cliente.deleted_at", null)
@@ -188,6 +193,11 @@ export default async function HoyPage({
     nivel: i.temperatura,
     nota: i.proximo_nota,
     detalle: detalle ?? null,
+    linea: i.linea,
+    proximo: i.proximo_contacto,
+    accion: i.proxima_accion,
+    // Si dirección mira todo el equipo, cada fila dice de quién es
+    responsable: !comercialId && i.comercial_id && i.comercial_id !== userId ? nombres.get(i.comercial_id) ?? null : null,
   });
   const lista: Pendiente[] = [
     ...bloques.llegoStock.map((i) => aPendiente(i, "Llegó stock")),
@@ -195,6 +205,16 @@ export default async function HoyPage({
     ...bloques.hoy.map((i) => aPendiente(i)),
   ];
   const proximos = bloques.proximos.map((i) => aPendiente(i, fechaCorta(i.proximo_contacto)));
+  // Operaciones abiertas sin próximo paso (las sin primer contacto van en su bandeja)
+  const sinProximo = intereses
+    .filter(
+      (i) =>
+        !i.proximo_contacto &&
+        i.etapa !== "espera" &&
+        !(i.asignado_at && !i.primer_contacto_at)
+    )
+    .sort((a, b) => (a.ultimo_movimiento_at ?? "").localeCompare(b.ultimo_movimiento_at ?? ""))
+    .map((i) => aPendiente(i, i.ultimo_movimiento_at ? `Último movimiento ${fechaCorta(i.ultimo_movimiento_at)}` : "Sin movimientos"));
   // Lo que ya aparece en las listas de abajo no se repite como bandeja
   const bandejasVenta = bandejas.filter((b) => !["postventa", "primer_contacto"].includes(b.clave));
   const sinPrimerContacto = bandejas.find((b) => b.clave === "primer_contacto")?.cantidad ?? 0;
@@ -248,6 +268,28 @@ export default async function HoyPage({
               ))}
             </div>
           </section>
+        )}
+
+        {sinProximo.length > 0 && (
+          <details className="group">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-[15px] font-bold text-ambar [&::-webkit-details-marker]:hidden">
+              Sin próximo paso ({sinProximo.length})
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+            </summary>
+            <p className="mb-2 text-xs text-piedra">
+              Operaciones abiertas sin fecha de próximo contacto. Anotá qué pasó y el próximo paso, o cerralas si no siguen.
+            </p>
+            <div className="space-y-2">
+              {sinProximo.slice(0, 40).map((p) => (
+                <PendienteFila key={p.id} item={p} />
+              ))}
+              {sinProximo.length > 40 && (
+                <Link href="/" className="block text-center text-[15px] font-bold text-marino">
+                  Ver las {sinProximo.length} en el embudo
+                </Link>
+              )}
+            </div>
+          </details>
         )}
 
         {proximos.length > 0 && (

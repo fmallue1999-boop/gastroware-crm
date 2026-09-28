@@ -19,6 +19,22 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.3.0",
+    fecha: "2026-09-28",
+    titulo: "Seguimiento comercial: qué pasó, con quién y cuál es el próximo paso",
+    cambios: [
+      "Registrar actividad: elegís cómo fue (Llamada, WhatsApp, Email, Visita, Demo), el resultado (Conversamos, No respondió, Quedó en responder, No le interesa) y el próximo paso con su fecha, todo en un solo guardado.",
+      "El próximo paso dice qué hacer: Llamar, Escribir, Cotizar, Coordinar demo o Visitar. Si ya había uno, se puede mantener sin duplicarlo.",
+      "Si cambiás la fecha del próximo contacto, anotás el motivo y la fecha anterior queda en el historial.",
+      "Si no le interesa, se cierra el interés como “No se dio” en el mismo paso, sin agendar nada.",
+      "Personas separadas de la empresa: cada ficha tiene su pestaña Personas (cargo, teléfono, email, quién decide la compra). Las que estaban escritas en las notas ya pasaron a Personas.",
+      "Nueva consulta: nombre de la persona y empresa o proyecto por separado, localidad y provincia, y más orígenes (Instagram, Prospección, Otro).",
+      "Si el teléfono o el email ya están cargados, el sistema avisa y elegís si es el mismo contacto o es otra persona: nunca se unen solos.",
+      "Mi día: “Sin próximo paso” muestra las operaciones abiertas sin fecha de próximo contacto; cada fila dice la acción pendiente y, para dirección, de quién es.",
+      "Cada operación queda marcada como Equipos, Consumibles o Repuestos (base para los próximos apartados).",
+    ],
+  },
+  {
     version: "1.2.0",
     fecha: "2026-09-28",
     titulo: "Tareas y agenda del equipo, con avisos al celular",

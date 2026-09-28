@@ -67,11 +67,11 @@ export function herramientasAsistente(
       parametros: { type: "object", properties: { cliente_id: { type: "string" } }, required: ["cliente_id"] },
       ejecutar: async (a) => {
         const id = texto(a.cliente_id);
-        const [{ data: c }, { data: opps }, { data: equipos }, { data: casos }, { data: facturas }, { data: movs }, { data: usuarios }] = await Promise.all([
+        const [{ data: c }, { data: opps }, { data: equipos }, { data: casos }, { data: facturas }, { data: movs }, { data: usuarios }, { data: personas }] = await Promise.all([
           supabase.from("clientes").select("id, nombre_comercial, razon_social, cuit, rubro, telefono, email, estado, comercial_id, notas").eq("id", id).maybeSingle(),
           supabase
             .from("oportunidades")
-            .select("id, etapa, pedido_estado, monto_estimado, moneda, proximo_contacto, proximo_nota, mensaje_inicial, forma_pago, created_at, closed_at, producto:productos(nombre)")
+            .select("id, etapa, linea, pedido_estado, monto_estimado, moneda, proximo_contacto, proximo_nota, proxima_accion, mensaje_inicial, forma_pago, created_at, closed_at, producto:productos(nombre)")
             .eq("cliente_id", id)
             .is("deleted_at", null)
             .order("created_at", { ascending: false })
@@ -79,8 +79,9 @@ export function herramientasAsistente(
           supabase.from("equipos").select("numero_serie, garantia_hasta, fecha_instalacion, marca_modelo_libre, producto:productos(nombre)").eq("cliente_id", id).is("deleted_at", null).limit(10),
           supabase.from("casos").select("numero, prioridad, descripcion, estado, created_at").eq("cliente_id", id).neq("estado", "cerrado").limit(5),
           supabase.from("facturas").select("numero, tipo, monto, moneda, vencimiento, cobro_estado").eq("cliente_id", id).neq("cobro_estado", "cobrado").limit(10),
-          supabase.from("actividades").select("contenido, created_at, created_by").eq("cliente_id", id).order("created_at", { ascending: false }).limit(12),
+          supabase.from("actividades").select("contenido, medio, resultado, created_at, created_by").eq("cliente_id", id).order("created_at", { ascending: false }).limit(12),
           supabase.from("usuarios").select("id, nombre"),
+          supabase.from("contactos").select("nombre, cargo, telefono, email, es_decisor").eq("cliente_id", id).is("deleted_at", null).limit(10),
         ]);
         if (!c) return { error: "No se encontró el contacto o no lo podés ver." };
         const nombre = new Map(((usuarios ?? []) as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]));
@@ -88,6 +89,7 @@ export function herramientasAsistente(
         const lista = (opps ?? []) as unknown as Opp[];
         return {
           contacto: { ...c, vendedor: c.comercial_id ? nombre.get(c.comercial_id) ?? null : null, link: `/clientes/${c.id}` },
+          personas: personas ?? [],
           intereses_abiertos: lista
             .filter((o) => (ETAPAS_ABIERTAS as readonly string[]).includes(o.etapa))
             .map((o) => ({ que: o.producto?.nombre ?? o.mensaje_inicial, etapa: etapa(o.etapa), monto: o.monto_estimado, moneda: o.moneda, proximo_contacto: o.proximo_contacto, nota: o.proximo_nota, link: `/clientes/${c.id}?interes=${o.id}` })),

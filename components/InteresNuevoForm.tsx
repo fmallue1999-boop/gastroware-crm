@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, Search } from "lucide-react";
 import { buscarClientes, registrarInteres } from "@/lib/actions";
 import { fechaCorta, hoyISO, normalizarTelefono, sumarDias, telefonoProlijo } from "@/lib/format";
-import { CATEGORIAS_PRODUCTO, NIVELES_INTERES, ORIGENES_INTERES, RUBROS, SEGUIMIENTO_RAPIDO } from "@/lib/constants";
+import { CATEGORIAS_PRODUCTO, NIVELES_INTERES, ORIGENES_INTERES, PROVINCIAS_AR, RUBROS, SEGUIMIENTO_RAPIDO } from "@/lib/constants";
 import { textoStock, type InfoStock } from "@/lib/stock";
 import { ZONAS_ENTREGA } from "@/lib/territorios";
 import LeerConsultaIA from "@/components/ia/LeerConsultaIA";
@@ -59,6 +59,9 @@ export default function InteresNuevoForm({
   const [empresa, setEmpresa] = useState("");
   const [rubro, setRubro] = useState("");
   const [ciudad, setCiudad] = useState("");
+  const [provincia, setProvincia] = useState("");
+  /** Posibles duplicados que avisó el servidor (se elige: es el mismo o es otro). */
+  const [duplicados, setDuplicados] = useState<{ id: string; nombre: string; telefono: string | null; por: string }[]>([]);
   const [origen, setOrigen] = useState("");
   const [nota, setNota] = useState(notaInicial);
   const [volverEl, setVolverEl] = useState("");
@@ -159,10 +162,12 @@ export default function InteresNuevoForm({
     else setNombre(t);
   }
 
-  function guardar() {
+  function guardar(crearIgual = false) {
     setError(null);
     startTransition(async () => {
       const res = await registrarInteres({
+        crearIgual,
+        provincia,
         productoIds,
         interesTexto: otro ? interesTexto : "",
         nivel,
@@ -179,8 +184,23 @@ export default function InteresNuevoForm({
         volverEl: volverEl || undefined,
         zonaEntrega: zona && zona !== "?" ? zona : null,
       });
+      if (res && "duplicados" in res && res.duplicados?.length) {
+        setDuplicados(res.duplicados);
+        return;
+      }
       if (res && "error" in res) setError(res.error ?? "No se pudo guardar");
     });
+  }
+
+  /** "Es el mismo": se usa el contacto que ya está en la base. */
+  async function usarExistente(id: string) {
+    const encontrados = await buscarClientes(telefono || email || nombre);
+    const c = encontrados.find((x) => x.id === id);
+    if (c) {
+      setCliente(c);
+      setEsNuevo(false);
+      setDuplicados([]);
+    } else setError("No se pudo abrir ese contacto: buscalo por nombre");
   }
 
   const tile = (activo: boolean) =>
@@ -305,12 +325,19 @@ export default function InteresNuevoForm({
               className={inputCls}
             />
             <input type="email" placeholder="Email (si no tenés teléfono)" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
+            <input
+              type="text"
+              placeholder="Empresa o proyecto (ej: Café Central, o Proyecto cafetería)"
+              value={empresa}
+              onChange={(e) => setEmpresa(e.target.value)}
+              className={inputCls}
+            />
+            <p className="px-1 text-xs text-piedra">La persona y la empresa quedan separadas. Si todavía no tiene nombre, poné “Proyecto …”.</p>
             <details>
               <summary className="cursor-pointer list-none text-[15px] text-azul underline [&::-webkit-details-marker]:hidden">
-                Más datos (opcional): empresa, rubro, ciudad
+                Más datos (opcional): rubro
               </summary>
               <div className="mt-2 space-y-2">
-                <input type="text" placeholder="Empresa o negocio" value={empresa} onChange={(e) => setEmpresa(e.target.value)} className={inputCls} />
                 <select value={rubro} onChange={(e) => setRubro(e.target.value)} className={inputCls}>
                   <option value="">Rubro…</option>
                   {RUBROS.map((r) => (
@@ -319,7 +346,6 @@ export default function InteresNuevoForm({
                     </option>
                   ))}
                 </select>
-                <input type="text" placeholder="Ciudad" value={ciudad} onChange={(e) => setCiudad(e.target.value)} className={inputCls} />
               </div>
             </details>
           </div>
@@ -379,6 +405,19 @@ export default function InteresNuevoForm({
           </button>
         </div>
         <p className="px-1 text-xs text-piedra">Decide qué vendedor la atiende: CABA y AMBA, o Mar del Plata, costa e interior.</p>
+        {esNuevo && (
+          <div className="grid grid-cols-2 gap-2">
+            <input type="text" placeholder="Localidad" value={ciudad} onChange={(e) => setCiudad(e.target.value)} className={inputCls} />
+            <select value={provincia} onChange={(e) => setProvincia(e.target.value)} className={inputCls}>
+              <option value="">Provincia…</option>
+              {PROVINCIAS_AR.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </section>
 
       {/* Por dónde */}
@@ -441,11 +480,41 @@ export default function InteresNuevoForm({
         </div>
       </details>
 
+      {duplicados.length > 0 && (
+        <div className="space-y-2 rounded-2xl border-2 border-ambar bg-ambar-soft p-3.5">
+          <p className="text-[15px] font-extrabold text-ambar">Ojo: puede que ya esté cargado</p>
+          {duplicados.map((d) => (
+            <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
+              <span className="min-w-0">
+                <span className="block truncate text-[15px] font-bold">{d.nombre}</span>
+                <span className="block text-xs text-piedra">
+                  Mismo {d.por}
+                  {d.telefono ? ` · ${telefonoProlijo(d.telefono)}` : ""}
+                </span>
+              </span>
+              <button type="button" onClick={() => usarExistente(d.id)} className="min-h-10 rounded-xl bg-marino px-3 text-[14px] font-bold text-white">
+                Es el mismo: usar este
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              setDuplicados([]);
+              guardar(true);
+            }}
+            className="min-h-10 w-full rounded-xl border border-borde bg-white px-3 text-[14px] font-bold"
+          >
+            Es otra persona (teléfono compartido): cargarla igual
+          </button>
+        </div>
+      )}
       {error && <p className="text-sm text-red-700">{error}</p>}
       <button
         type="button"
         disabled={pending || !listo}
-        onClick={guardar}
+        onClick={() => guardar()}
         className="min-h-13 w-full rounded-2xl bg-verde py-3.5 text-base font-extrabold text-white disabled:opacity-50"
       >
         {pending ? "Guardando…" : "Guardar"}

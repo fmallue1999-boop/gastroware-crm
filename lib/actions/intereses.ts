@@ -13,7 +13,7 @@ import { NIVELES_INTERES, RUBROS } from "@/lib/constants";
 import type { Etapa } from "@/lib/types";
 import { avisar, puestoActual, regla, usuarioActual, usuariosDePuesto } from "./comun";
 import { camposDeRuta, rutearConsulta } from "@/lib/servidor/ruteo";
-import { anotarContacto, buscarClientePorTelefono } from "./contactos";
+import { anotarContacto, buscarDuplicados } from "./contactos";
 
 // =====================================================================
 // Oportunidades y cotizaciones
@@ -503,9 +503,12 @@ export async function registrarInteres(input: {
   origen?: string;
   rubro?: string;
   ciudad?: string;
+  provincia?: string;
   nota?: string;
   volverEl?: string;
   zonaEntrega?: string | null;
+  /** Ya se avisó de posibles duplicados y se eligió cargarlo igual. */
+  crearIgual?: boolean;
 }) {
   const productoIds = (input.productoIds ?? []).filter(Boolean);
   const interes = input.interesTexto?.trim() || null;
@@ -517,9 +520,10 @@ export async function registrarInteres(input: {
 
   let clienteId = input.clienteId;
   const telefono = normalizarTelefono(input.telefono ?? "");
-  if (!clienteId && telefono.length >= 6) {
-    const dup = await buscarClientePorTelefono(telefono);
-    if (dup) clienteId = dup.id;
+  // Posibles duplicados: se avisa y la persona elige (no se une solo)
+  if (!clienteId && !input.crearIgual) {
+    const duplicados = await buscarDuplicados(telefono, input.email);
+    if (duplicados.length) return { duplicados };
   }
 
   if (!clienteId) {
@@ -541,18 +545,26 @@ export async function registrarInteres(input: {
         estado: input.esCliente ? "cliente_activo" : "prospecto",
         // Con lugar de entrega, el dueño lo pone el ruteo (vendedor del territorio)
         comercial_id: input.zonaEntrega ? null : user?.id ?? null,
-        notas: empresa ? `Contacto: ${nombre}` : null,
       })
       .select("id")
       .single();
     if (error || !nuevo)
       return { error: error?.message ?? "No se pudo crear el contacto" };
     clienteId = nuevo.id as string;
-    if (input.ciudad?.trim()) {
+    // La persona, separada de la empresa
+    await supabase.from("contactos").insert({
+      cliente_id: clienteId,
+      nombre,
+      telefono: telefono.length >= 6 ? telefono : null,
+      email,
+      es_decisor: true,
+    });
+    if (input.ciudad?.trim() || input.provincia?.trim()) {
       await supabase.from("sucursales").insert({
         cliente_id: clienteId,
         nombre: "Principal",
-        ciudad: input.ciudad.trim(),
+        ciudad: input.ciudad?.trim() || null,
+        provincia: input.provincia?.trim() || null,
         es_principal: true,
       });
     }
@@ -750,11 +762,13 @@ export async function noRespondio(oportunidadId: string) {
     oportunidad_id: oportunidadId,
     tipo: "nota",
     contenido: `Intento sin respuesta (${previos + 1}°). ${s.nota} el ${fecha.split("-").reverse().join("/")}`,
+    medio: "llamada",
+    resultado: "no_respondio",
     created_by: user?.id ?? null,
   });
   const { error } = await supabase
     .from("oportunidades")
-    .update({ proximo_contacto: fecha, proximo_nota: s.nota.slice(0, 80) })
+    .update({ proximo_contacto: fecha, proximo_nota: s.nota.slice(0, 80), proxima_accion: "llamar" })
     .eq("id", oportunidadId);
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
