@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 const sel =
   "min-h-11 rounded-xl border border-borde bg-white px-3 text-[15px] font-bold text-tinta outline-none focus:border-marino disabled:opacity-60";
 
-/** Período, vendedor y producto del tablero: tres desplegables que cambian la URL. */
+/** Apartado, período, vendedor y producto del tablero: desplegables que cambian la URL. */
 export default function FiltrosTablero({
   periodos,
   vendedores,
@@ -33,6 +33,12 @@ export default function FiltrosTablero({
 
   return (
     <div className="flex flex-wrap gap-2">
+      <select aria-label="Apartado" value={params.get("l") ?? ""} disabled={pending} onChange={(e) => cambiar("l", e.target.value)} className={sel}>
+        <option value="">Consolidado (todo)</option>
+        <option value="equipos">Venta de equipos</option>
+        <option value="consumibles">Consumibles</option>
+        <option value="repuestos">Repuestos</option>
+      </select>
       <select aria-label="Período" value={params.get("p") ?? "mes"} disabled={pending} onChange={(e) => cambiar("p", e.target.value === "mes" ? "" : e.target.value)} className={sel}>
         {periodos.map((p) => (
           <option key={p.key} value={p.key}>

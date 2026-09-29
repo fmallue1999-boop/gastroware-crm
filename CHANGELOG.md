@@ -3,6 +3,14 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.7.0 — 28 de septiembre de 2026
+
+Reportes comerciales por apartado (sin migraciones).
+
+- Tablero: filtro por apartado (OppFila.linea; Filtro.linea en aplicarFiltro) sobre todos los números existentes.
+- lib/reportes.ts (resumirActividad: intentos vs conversaciones por medio y vendedor; resumirControl: sin atender y sin próximo paso) y lib/servidor/reportes.ts (actividad, control, agenda, consumibles, repuestos por período y vendedor).
+- components/tablero/PanelesComerciales.tsx. Asistente: numeros_del_periodo con apartado y los paneles nuevos.
+
 ## v1.6.0 — 28 de septiembre de 2026
 
 Pesos y dólares, catálogo por apartado y cotización con forma de pago y descuento especial. Migración 033.

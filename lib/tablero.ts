@@ -174,6 +174,8 @@ export type OppFila = {
   cliente_id: string;
   comercial_id: string | null;
   producto_id: string | null;
+  /** Apartado: equipos, consumibles o repuestos (migración 030). */
+  linea: string | null;
   etapa: string;
   temperatura: string | null;
   origen: string | null;
@@ -219,7 +221,7 @@ export type DatosTablero = {
   usuarios: Usuario[];
 };
 
-export type Filtro = { vendedor?: string | null; producto?: string | null };
+export type Filtro = { vendedor?: string | null; producto?: string | null; /** equipos · consumibles · repuestos (vacío = consolidado) */ linea?: string | null };
 export const SIN_ASIGNAR = "sin";
 
 // ---------------------------------------------------------------------------
@@ -309,11 +311,12 @@ export function variacion(actual: number, anterior: number): number | null {
   return (actual - anterior) / anterior;
 }
 
-function aplicarFiltro<T extends { comercial_id: string | null; producto_id: string | null }>(filas: T[], f: Filtro): T[] {
+function aplicarFiltro<T extends { comercial_id: string | null; producto_id: string | null; linea?: string | null }>(filas: T[], f: Filtro): T[] {
   return filas.filter(
     (o) =>
       (!f.vendedor || (f.vendedor === SIN_ASIGNAR ? !o.comercial_id : o.comercial_id === f.vendedor)) &&
-      (!f.producto || o.producto_id === f.producto)
+      (!f.producto || o.producto_id === f.producto) &&
+      (!f.linea || (o.linea ?? "equipos") === f.linea)
   );
 }
 
@@ -676,7 +679,7 @@ type FilaCruda = Omit<OppFila, "nombre" | "telefono" | "producto" | "interes"> &
 };
 
 const SELECT_OPP =
-  "id, cliente_id, comercial_id, producto_id, etapa, temperatura, origen, monto_estimado, moneda, motivo_perdida, proximo_contacto, proximo_nota, ultimo_movimiento_at, created_at, closed_at, mensaje_inicial, prod:productos(nombre), cliente:clientes!inner(nombre_comercial, telefono, deleted_at)";
+  "id, cliente_id, comercial_id, producto_id, linea, etapa, temperatura, origen, monto_estimado, moneda, motivo_perdida, proximo_contacto, proximo_nota, ultimo_movimiento_at, created_at, closed_at, mensaje_inicial, prod:productos(nombre), cliente:clientes!inner(nombre_comercial, telefono, deleted_at)";
 
 function aOpp(f: FilaCruda): OppFila {
   return {
@@ -684,6 +687,7 @@ function aOpp(f: FilaCruda): OppFila {
     cliente_id: f.cliente_id,
     comercial_id: f.comercial_id,
     producto_id: f.producto_id,
+    linea: f.linea ?? null,
     etapa: f.etapa,
     temperatura: f.temperatura,
     origen: f.origen,

@@ -423,7 +423,10 @@ export const TAREAS: Tarea[] = [
     titulo: "Mirar el tablero",
     pasos: [
       { texto: "Tablero: vendido, abierto, por vendedor, alertas y la operación (primer contacto, remitos, casos, cobranza, ventas por territorio).", href: "/tablero", boton: "Ir al Tablero" },
-      { texto: "Cada número se toca y muestra la lista. Los lunes llega por email." },
+      { texto: "Arriba elegís el apartado: Consolidado, Venta de equipos, Consumibles o Repuestos. Todos los números se filtran por ese apartado." },
+      { texto: "Control: consultas sin atender y operaciones sin próximo paso, por vendedor. Actividad comercial: intentos de contacto contra conversaciones reales (un “no respondió” es intento, no conversación)." },
+      { texto: "Consumibles (ventas, reposiciones para contactar y próximas) y Repuestos (cuántas hay en cada paso y lo cotizado esperando al cliente)." },
+      { texto: "Los importes siempre van separados en pesos y en dólares, y una cotización abierta nunca cuenta como venta. Cada número se toca y muestra la lista. Los lunes llega por email." },
     ],
   },
   {

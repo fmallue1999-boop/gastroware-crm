@@ -20,6 +20,7 @@ function opp(p: Partial<OppFila> & { id: string }): OppFila {
     cliente_id: `c-${p.id}`,
     comercial_id: null,
     producto_id: null,
+    linea: "equipos",
     etapa: "nueva",
     temperatura: null,
     origen: "WhatsApp",
@@ -105,7 +106,7 @@ describe("calcularTablero", () => {
     ],
     recientes: [
       opp({ id: "v1", comercial_id: "marcelo", etapa: "ganada", closed_at: "2026-09-15T15:00:00Z", created_at: "2026-09-05T15:00:00Z", monto_estimado: 500, moneda: "USD" }),
-      opp({ id: "v2", comercial_id: "clara", etapa: "ganada", origen: "Venta directa", closed_at: "2026-09-12T15:00:00Z", created_at: "2026-09-12T15:00:00Z", monto_estimado: 900000 }),
+      opp({ id: "v2", comercial_id: "clara", linea: "consumibles", etapa: "ganada", origen: "Venta directa", closed_at: "2026-09-12T15:00:00Z", created_at: "2026-09-12T15:00:00Z", monto_estimado: 900000 }),
       opp({ id: "v3", comercial_id: "marcelo", etapa: "ganada", closed_at: "2026-08-10T15:00:00Z", created_at: "2026-08-01T15:00:00Z", monto_estimado: 300, moneda: "USD" }),
       opp({ id: "p1", comercial_id: "clara", etapa: "perdida", motivo_perdida: "Precio", closed_at: "2026-09-18T15:00:00Z" }),
     ],
@@ -125,6 +126,16 @@ describe("calcularTablero", () => {
   };
   const per = rangoPeriodo("mes", HOY);
   const t = calcularTablero(datos, per, {}, HOY, AHORA);
+
+  it("separa por apartado (equipos, consumibles) sin mezclar monedas", () => {
+    const equipos = calcularTablero(datos, per, { linea: "equipos" }, HOY, AHORA);
+    expect(equipos.negocio.vendidos).toBe(1);
+    expect(equipos.negocio.vendido).toEqual({ USD: 500 });
+    const consumibles = calcularTablero(datos, per, { linea: "consumibles" }, HOY, AHORA);
+    expect(consumibles.negocio.vendidos).toBe(1);
+    expect(consumibles.negocio.vendido).toEqual({ ARS: 900000 });
+    expect(consumibles.negocio.abiertos).toBe(0);
+  });
 
   it("resume el negocio por moneda", () => {
     expect(t.negocio.abiertos).toBe(7);
