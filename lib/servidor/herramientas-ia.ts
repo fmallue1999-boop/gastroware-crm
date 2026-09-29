@@ -7,6 +7,7 @@ import { cargarMiDia } from "@/lib/servidor/midia";
 import { atrasadasMias, cargarAgenda } from "@/lib/servidor/agenda";
 import { cargarPlanes } from "@/lib/servidor/consumibles";
 import { cargarSolicitudes } from "@/lib/servidor/repuestos";
+import { cargarReportesComerciales } from "@/lib/servidor/reportes";
 import { nombreEstadoRepuesto } from "@/lib/repuestos";
 import { horario, masDias, nombreTipo } from "@/lib/agenda";
 import { calcularTablero, cargarDatosTablero, rangoPeriodo, type Db } from "@/lib/tablero";
@@ -363,16 +364,28 @@ export function herramientasAsistente(
     lista.push({
       nombre: "numeros_del_periodo",
       etiqueta: "Leyendo el tablero",
-      descripcion: "Números del negocio (tablero de dirección) para un período: vendido, abierto, ponderado, por vendedor, alertas. Solo dirección.",
+      descripcion:
+        "Números del negocio (tablero de dirección) para un período, consolidados o de un apartado (equipos, consumibles, repuestos): vendido, abierto, ponderado, por vendedor, alertas, actividad comercial (intentos contra conversaciones), control (sin atender, sin próximo paso), consumibles y repuestos. Los importes vienen separados por moneda: nunca sumes pesos con dólares. Solo dirección.",
       parametros: {
         type: "object",
-        properties: { periodo: { type: "string", enum: ["mes", "mes_pasado", "trimestre", "anio", "semana_pasada"] } },
+        properties: {
+          periodo: { type: "string", enum: ["mes", "mes_pasado", "trimestre", "anio", "semana_pasada"] },
+          apartado: { type: "string", enum: ["todos", "equipos", "consumibles", "repuestos"] },
+        },
       },
       ejecutar: async (a) => {
         const per = rangoPeriodo((texto(a.periodo) || "mes") as Parameters<typeof rangoPeriodo>[0], hoy);
+        const linea = ["equipos", "consumibles", "repuestos"].includes(texto(a.apartado)) ? texto(a.apartado) : null;
         const datos = await cargarDatosTablero(supabase as unknown as Db, per, ahora);
-        const t = calcularTablero(datos, per, {}, hoy, ahora);
+        const t = calcularTablero(datos, per, { linea }, hoy, ahora);
+        const r = await cargarReportesComerciales(supabase, per, { linea }, hoy, new Map(datos.usuarios.map((u) => [u.id, u.nombre])));
         return {
+          apartado: linea ?? "consolidado",
+          actividad_comercial: r.actividad,
+          control: r.control,
+          agenda: r.agenda,
+          consumibles: r.consumibles,
+          repuestos: r.repuestos,
           periodo: per.etiqueta,
           comparado_con: per.etiquetaAnt,
           negocio: t.negocio,

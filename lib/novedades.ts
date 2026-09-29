@@ -19,6 +19,20 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.7.0",
+    fecha: "2026-09-28",
+    titulo: "Tablero por apartado: equipos, consumibles y repuestos",
+    cambios: [
+      "Tablero: arriba elegís Consolidado, Venta de equipos, Consumibles o Repuestos, y todos los números se filtran por ese apartado.",
+      "Nuevo panel Control: consultas sin atender y operaciones sin próximo paso, por vendedor.",
+      "Nuevo panel Actividad comercial: intentos de contacto contra conversaciones reales, por medio (llamada, WhatsApp…) y por vendedor.",
+      "Tareas de la agenda del período: cuántas se hicieron y cuántas quedaron vencidas.",
+      "Consumibles: ventas del período, reposiciones para contactar y próximas. Repuestos: cuántas hay en cada paso y lo cotizado esperando al cliente.",
+      "Los importes siempre separados en pesos y en dólares; una cotización abierta nunca cuenta como venta.",
+      "El Asistente IA también responde por apartado (“¿cómo vienen los consumibles este mes?”).",
+    ],
+  },
+  {
     version: "1.6.0",
     fecha: "2026-09-28",
     titulo: "Pesos y dólares, cada apartado con sus productos y cotizaciones con descuento especial",

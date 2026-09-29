@@ -25,8 +25,12 @@ import Operacion from "@/components/tablero/Operacion";
 import Barras from "@/components/tablero/Barras";
 import AyudaLink from "@/components/guia/AyudaLink";
 import BotonIA from "@/components/ia/BotonIA";
+import PanelesComerciales from "@/components/tablero/PanelesComerciales";
+import { cargarReportesComerciales } from "@/lib/servidor/reportes";
 
-type Params = { p?: string; v?: string; prod?: string; ver?: string; vv?: string; c?: string; interes?: string };
+type Params = { p?: string; v?: string; prod?: string; l?: string; ver?: string; vv?: string; c?: string; interes?: string };
+
+const LINEAS_TABLERO: Record<string, string> = { equipos: "Venta de equipos", consumibles: "Consumibles", repuestos: "Repuestos" };
 
 const ICONO_ALERTA: Record<Alerta["tipo"], typeof Clock> = {
   atrasados: Clock,
@@ -71,13 +75,15 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
   const ahora = ahoraMs();
   const tipo = (PERIODOS.some((p) => p.key === sp.p) ? sp.p : "mes") as TipoPeriodo;
   const per = rangoPeriodo(tipo, hoy);
-  const filtro = { vendedor: sp.v || null, producto: sp.prod || null };
+  const linea = sp.l && LINEAS_TABLERO[sp.l] ? sp.l : null;
+  const filtro = { vendedor: sp.v || null, producto: sp.prod || null, linea };
 
   const [datos, { data: prods }] = await Promise.all([
     cargarDatosTablero(supabase, per, ahora),
     supabase.from("productos").select("id, nombre").eq("activo", true).order("nombre"),
   ]);
   const t = calcularTablero(datos, per, filtro, hoy, ahora);
+  const reportes = await cargarReportesComerciales(supabase, per, filtro, hoy, new Map(datos.usuarios.map((u) => [u.id, u.nombre])));
   const n = t.negocio;
   const vendedoresSelect = datos.usuarios
     .filter((u) => u.activo && ["comercial", "direccion", "admin"].includes(u.rol))
@@ -85,7 +91,7 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
 
   // URL con los filtros actuales y cambios
   const url = (cambios: Partial<Params>) => {
-    const base: Params = { p: sp.p, v: sp.v, prod: sp.prod, ver: sp.ver, vv: sp.vv, ...cambios };
+    const base: Params = { p: sp.p, v: sp.v, prod: sp.prod, l: sp.l, ver: sp.ver, vv: sp.vv, ...cambios };
     const q = new URLSearchParams();
     for (const [k, val] of Object.entries(base)) if (val) q.set(k, val);
     const s = q.toString();
@@ -110,6 +116,7 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
           Tablero <AyudaLink tarea="tablero" />
         </h1>
           <p className="text-[15px] text-piedra">
+            {linea ? `${LINEAS_TABLERO[linea]} · ` : "Consolidado (equipos, consumibles y repuestos) · "}
             {per.etiqueta} · comparado con {contra}
           </p>
           <div className="mt-2">
@@ -341,6 +348,8 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
             </>
           )}
         </section>
+
+        <PanelesComerciales r={reportes} linea={linea} etiqueta={per.etiqueta} />
 
         <Operacion desde={per.desde} hasta={per.hasta} hoy={hoy} />
 
