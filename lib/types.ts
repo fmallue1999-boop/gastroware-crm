@@ -118,6 +118,9 @@ export interface Producto {
   consumible_de: string | null;
   precio_referencia: number | null;
   moneda: string;
+  /** Migración 033: precio de lista en pesos y en dólares (opcionales). */
+  precio_ars?: number | null;
+  precio_usd?: number | null;
   garantia_meses: number | null;
   activo: boolean;
   descripcion: string | null;
@@ -253,6 +256,10 @@ export interface CotizacionVersion {
   cotizacion_id: string;
   version: number;
   total: number | null;
+  /** Migración 033: descuento especial de la operación. */
+  subtotal?: number | null;
+  descuento_pct?: number | null;
+  descuento_motivo?: string | null;
   moneda: string;
   forma_pago: string | null;
   vigencia_dias: number | null;

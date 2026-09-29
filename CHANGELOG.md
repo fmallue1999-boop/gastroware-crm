@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.6.0 — 28 de septiembre de 2026
+
+Pesos y dólares, catálogo por apartado y cotización con forma de pago y descuento especial. Migración 033.
+
+- productos.precio_ars / precio_usd (backfill desde precio_referencia; trigger mantiene precio_referencia = precio en la moneda principal); lib/precios.ts (precioEn, lineaDeProducto, productosDeLinea).
+- Cotizador: moneda elegida (reprecia al cambiar), forma de pago (FORMAS_PAGO_VENTA + detalle), descuento especial % + motivo (cotizacion_versiones.subtotal/descuento_pct/descuento_motivo; aprobación si supera descuento_libre_pct); evaluarFueraDeLista contra el precio en la moneda de la cotización.
+- Venta directa con moneda (antes siempre ARS) y solo equipos; crearInteres toma la moneda del producto; backfill de moneda en consultas sin monto.
+- Pickers por apartado: /alta, /clientes/nuevo, ficha (+ interés, cambiar producto, cotizador) e IA leer consulta solo equipos; consumibles y repuestos con su catálogo y precio de lista.
+- Catálogo: precio en pesos, en dólares y moneda principal.
+
 ## v1.5.1 — 28 de septiembre de 2026
 
 - Repuestos: la cotización por WhatsApp saluda a la persona principal del cliente (contactos), no a la empresa.

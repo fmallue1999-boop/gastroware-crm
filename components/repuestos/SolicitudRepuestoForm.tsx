@@ -6,6 +6,7 @@ import { Camera, Search } from "lucide-react";
 import { buscarClientes, crearSolicitudRepuesto, equiposYSucursalesDe } from "@/lib/actions";
 import { ACCIONES, type Accion } from "@/lib/actividad";
 import { DISPONIBILIDADES } from "@/lib/repuestos";
+import { precioEn } from "@/lib/precios";
 import { fechaCorta, hoyISO, sumarDias, telefonoProlijo } from "@/lib/format";
 import type { Cliente } from "@/lib/types";
 
@@ -36,6 +37,7 @@ async function comprimir(archivo: File): Promise<string> {
 export default function SolicitudRepuestoForm({
   yo,
   catalogo,
+  productosRepuesto = [],
   personas,
   clienteInicial,
   equiposIniciales = [],
@@ -45,7 +47,9 @@ export default function SolicitudRepuestoForm({
   descripcionInicial = "",
 }: {
   yo: string;
-  catalogo: { id: string; descripcion: string; codigo_interno: string | null; stock: number | null }[];
+  catalogo: { id: string; descripcion: string; codigo_interno: string | null; stock: number | null; precio?: number | null; moneda?: string | null }[];
+  /** Productos del catálogo general que son repuestos. */
+  productosRepuesto?: { id: string; nombre: string; precio_referencia: number | null; moneda: string; precio_ars: number | null; precio_usd: number | null; stock: number | null }[];
   personas: Persona[];
   clienteInicial?: { id: string; nombre: string } | null;
   equiposIniciales?: Equipo[];
@@ -69,6 +73,7 @@ export default function SolicitudRepuestoForm({
   const [modelo, setModelo] = useState("");
   const [serie, setSerie] = useState("");
   const [repuestoId, setRepuestoId] = useState("");
+  const [productoId, setProductoId] = useState("");
   const [descripcion, setDescripcion] = useState(descripcionInicial);
   const [codigo, setCodigo] = useState("");
   const [foto, setFoto] = useState<string | null>(null);
@@ -105,15 +110,37 @@ export default function SolicitudRepuestoForm({
     setEquipoId("");
   }
 
-  function elegirRepuesto(id: string) {
-    setRepuestoId(id);
-    const r = catalogo.find((x) => x.id === id);
-    if (r) {
+  /** Elegido del catálogo de repuestos ("r:id") o de los productos que son repuestos ("p:id"). */
+  function elegirRepuesto(valor: string) {
+    setRepuestoId("");
+    setProductoId("");
+    if (!valor) return;
+    const [tipo, id] = valor.split(":");
+    if (tipo === "r") {
+      const r = catalogo.find((x) => x.id === id);
+      if (!r) return;
+      setRepuestoId(id);
       if (!descripcion.trim()) setDescripcion(r.descripcion);
       if (r.codigo_interno) setCodigo(r.codigo_interno);
       if (r.stock != null && r.stock > 0) setDisp("en_stock");
-      setRequiere(false);
+      if (r.precio != null) {
+        setPrecio(String(r.precio));
+        setMoneda(r.moneda === "USD" ? "USD" : "ARS");
+      }
+    } else {
+      const p = productosRepuesto.find((x) => x.id === id);
+      if (!p) return;
+      setProductoId(id);
+      if (!descripcion.trim()) setDescripcion(p.nombre);
+      if (p.stock != null && p.stock > 0) setDisp("en_stock");
+      const m = precioEn(p, moneda) != null ? moneda : p.moneda === "USD" ? "USD" : "ARS";
+      const pr = precioEn(p, m);
+      if (pr != null) {
+        setPrecio(String(pr));
+        setMoneda(m);
+      }
     }
+    setRequiere(false);
   }
 
   const listo = (Boolean(cliente) || (nuevo && nombreNuevo.trim().length > 0)) && descripcion.trim().length > 0 && Number(cantidad) > 0;
@@ -130,6 +157,7 @@ export default function SolicitudRepuestoForm({
         modeloTexto: equipoId ? equipo?.nombre ?? null : modelo || null,
         numeroSerie: equipoId ? equipo?.serie ?? null : serie || null,
         repuestoId: repuestoId || null,
+        productoId: productoId || null,
         descripcion,
         codigo,
         fotoBase64: foto,
@@ -227,16 +255,33 @@ export default function SolicitudRepuestoForm({
       {/* Pieza */}
       <section className="space-y-2">
         <p className={seccion}>¿Qué repuesto?</p>
-        {catalogo.length > 0 && (
-          <select value={repuestoId} onChange={(e) => elegirRepuesto(e.target.value)} className={cls}>
+        {(catalogo.length > 0 || productosRepuesto.length > 0) && (
+          <select
+            value={repuestoId ? `r:${repuestoId}` : productoId ? `p:${productoId}` : ""}
+            onChange={(e) => elegirRepuesto(e.target.value)}
+            className={cls}
+          >
             <option value="">No sé / no está en el catálogo</option>
-            {catalogo.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.descripcion}
-                {r.codigo_interno ? ` (${r.codigo_interno})` : ""}
-                {r.stock != null ? ` · stock ${r.stock}` : ""}
-              </option>
-            ))}
+            {catalogo.length > 0 && (
+              <optgroup label="Catálogo de repuestos">
+                {catalogo.map((r) => (
+                  <option key={r.id} value={`r:${r.id}`}>
+                    {r.descripcion}
+                    {r.codigo_interno ? ` (${r.codigo_interno})` : ""}
+                    {r.stock != null ? ` · stock ${r.stock}` : ""}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {productosRepuesto.length > 0 && (
+              <optgroup label="Productos que son repuestos">
+                {productosRepuesto.map((p) => (
+                  <option key={p.id} value={`p:${p.id}`}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         )}
         <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={2} placeholder="Qué pieza necesita, con sus palabras (ej: la junta de la tapa del tanque de leche)" className={`${cls} py-2`} />

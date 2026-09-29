@@ -361,6 +361,9 @@ export async function guardarProducto(
     nombre?: string;
     precio_referencia?: number | null;
     moneda?: string;
+    /** Precio de lista en pesos y en dólares (migración 033). */
+    precio_ars?: number | null;
+    precio_usd?: number | null;
     garantia_meses?: number | null;
     activo?: boolean;
     descripcion?: string | null;
@@ -390,6 +393,8 @@ export async function crearProducto(input: {
   categoria: string;
   moneda: string;
   precio_referencia?: number | null;
+  precio_ars?: number | null;
+  precio_usd?: number | null;
   garantia_meses?: number | null;
 }) {
   const rol = await rolActual();
@@ -402,6 +407,8 @@ export async function crearProducto(input: {
     categoria: input.categoria || "otro",
     moneda: input.moneda || "ARS",
     precio_referencia: input.precio_referencia ?? null,
+    precio_ars: input.precio_ars ?? null,
+    precio_usd: input.precio_usd ?? null,
     garantia_meses: input.garantia_meses ?? null,
     // Los consumibles se marcan como tales (reposición en el apartado Consumibles)
     es_consumible: input.categoria === "consumible",

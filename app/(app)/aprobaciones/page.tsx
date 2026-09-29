@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { precioEn } from "@/lib/precios";
 import { createClient } from "@/lib/supabase/server";
 import { dinero, fechaCorta } from "@/lib/format";
 import { esGestor } from "@/lib/puestos";
@@ -21,7 +22,7 @@ type Pendiente = {
     numero: number;
     oportunidad: { id: string; cliente_id: string; cliente: { nombre_comercial: string } | null } | null;
   } | null;
-  items: { descripcion: string; cantidad: number; precio_unit: number; producto: { precio_referencia: number | null; moneda: string } | null }[];
+  items: { descripcion: string; cantidad: number; precio_unit: number; producto: { precio_referencia: number | null; moneda: string; precio_ars: number | null; precio_usd: number | null } | null }[];
 };
 
 /**
@@ -37,7 +38,7 @@ export default async function AprobacionesPage() {
     supabase
       .from("cotizacion_versiones")
       .select(
-        "id, version, total, moneda, forma_pago, condiciones, aprobacion_motivo, created_at, creado_por, cotizacion:cotizaciones(id, numero, oportunidad:oportunidades(id, cliente_id, cliente:clientes(nombre_comercial))), items:cotizacion_items(descripcion, cantidad, precio_unit, producto:productos(precio_referencia, moneda))"
+        "id, version, total, moneda, forma_pago, condiciones, aprobacion_motivo, created_at, creado_por, cotizacion:cotizaciones(id, numero, oportunidad:oportunidades(id, cliente_id, cliente:clientes(nombre_comercial))), items:cotizacion_items(descripcion, cantidad, precio_unit, producto:productos(precio_referencia, moneda, precio_ars, precio_usd))"
       )
       .eq("aprobacion", "pendiente")
       .order("created_at"),
@@ -103,8 +104,8 @@ export default async function AprobacionesPage() {
                       </span>
                       <span className="shrink-0">
                         {dinero(it.precio_unit, p.moneda)}
-                        {it.producto?.precio_referencia && it.producto.moneda === p.moneda && it.precio_unit < it.producto.precio_referencia ? (
-                          <span className="text-piedra"> (lista {dinero(it.producto.precio_referencia, p.moneda)})</span>
+                        {precioEn(it.producto, p.moneda) != null && it.precio_unit < precioEn(it.producto, p.moneda)! ? (
+                          <span className="text-piedra"> (lista {dinero(precioEn(it.producto, p.moneda)!, p.moneda)})</span>
                         ) : null}
                       </span>
                     </li>

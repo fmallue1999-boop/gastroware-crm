@@ -5,10 +5,19 @@ import { useRouter } from "next/navigation";
 import { Check, Search } from "lucide-react";
 import { buscarClientes, registrarVentaConsumibles, sucursalesDe } from "@/lib/actions";
 import { ANTICIPACION_POR_DEFECTO, fechaContacto, UNIDADES } from "@/lib/consumibles";
-import { fechaCorta, telefonoProlijo } from "@/lib/format";
+import { dinero, fechaCorta, telefonoProlijo } from "@/lib/format";
+import { precioEn } from "@/lib/precios";
 import type { Cliente } from "@/lib/types";
 
-export type ProductoConsumible = { id: string; nombre: string; frecuencia_recompra_dias: number | null };
+export type ProductoConsumible = {
+  id: string;
+  nombre: string;
+  frecuencia_recompra_dias: number | null;
+  precio_referencia?: number | null;
+  moneda?: string | null;
+  precio_ars?: number | null;
+  precio_usd?: number | null;
+};
 export type PlanExistente = { producto_id: string; sucursal_id: string | null; frecuencia_dias: number | null; anticipacion_dias: number; responsable_id: string | null };
 type Sucursal = { id: string; nombre: string; ciudad: string | null };
 type Item = { cantidad: string; unidad: string; frecuencia: string; anticipacion: string; sinTiempo: boolean; fechaContacto: string };
@@ -108,6 +117,11 @@ export default function VentaConsumiblesForm({
     it.sinTiempo ? it.fechaContacto || "" : fechaContacto(fecha, it.frecuencia ? Number(it.frecuencia) : null, Number(it.anticipacion || 0));
 
   const elegidos = Object.keys(items);
+  // Total de lista en la moneda elegida (si todos tienen precio en esa moneda)
+  const conPrecio = elegidos.map((id) => precioEn(productos.find((p) => p.id === id), moneda));
+  const totalLista = conPrecio.every((x) => x != null)
+    ? elegidos.reduce((s, id, i) => s + (conPrecio[i] ?? 0) * (Number(items[id].cantidad.replace(",", ".")) || 0), 0)
+    : null;
   const listo = Boolean(cliente) && elegidos.length > 0 && elegidos.every((id) => Number(items[id].cantidad) > 0);
 
   function guardar() {
@@ -280,6 +294,20 @@ export default function VentaConsumiblesForm({
           </select>
         </label>
         <input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Nota (opcional)" className={cls} />
+        {elegidos.length > 0 && (
+          <p className="text-[14px] text-piedra">
+            {totalLista != null ? (
+              <>
+                Lista: <span className="font-bold text-tinta">{dinero(totalLista, moneda)}</span>{" "}
+                <button type="button" onClick={() => setMonto(String(Math.round(totalLista * 100) / 100))} className="font-bold text-marino underline">
+                  Usar
+                </button>
+              </>
+            ) : (
+              `Algún producto no tiene precio de lista en ${moneda === "USD" ? "dólares" : "pesos"}: poné el monto a mano.`
+            )}
+          </p>
+        )}
         <p className="text-xs text-piedra">
           La venta sigue el circuito de siempre (facturar, cobrar, entregar). El aviso de reposición no manda nada al cliente: le avisa a quien
           está a cargo cuándo contactarlo.

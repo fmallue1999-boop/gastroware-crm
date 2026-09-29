@@ -28,6 +28,8 @@ export default async function NuevoInteresPage({
       .select("*")
       .eq("activo", true)
       .eq("es_consumible", false)
+      // Solo equipos: consumibles y repuestos tienen su apartado
+      .not("categoria", "in", "(repuesto,refaccion)")
       .order("nombre"),
     infoStockPorProducto(supabase),
   ]);

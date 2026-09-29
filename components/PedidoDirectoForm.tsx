@@ -6,6 +6,7 @@ import { crearPedidoDirecto } from "@/lib/actions";
 import { dinero } from "@/lib/format";
 import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
 import type { Producto } from "@/lib/types";
+import { monedaSugerida, precioEn, textoPrecios } from "@/lib/precios";
 
 const inputCls =
   "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-marino";
@@ -27,17 +28,25 @@ export default function PedidoDirectoForm({
   const [entregaEstimada, setEntregaEstimada] = useState("");
   const [clienteTexto, setClienteTexto] = useState("");
   const [monto, setMonto] = useState("");
+  const [moneda, setMoneda] = useState<"ARS" | "USD">("ARS");
+  const [montoManual, setMontoManual] = useState(false);
+
+  /** Suma de la lista en la moneda elegida (mientras no se escriba el monto a mano). */
+  function sumaLista(ids: string[], m: string) {
+    const total = ids.reduce((s, id) => s + (precioEn(productos.find((x) => x.id === id), m) ?? 0), 0);
+    return total ? String(total) : "";
+  }
   const [nota, setNota] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function agregarProducto(id: string) {
     if (!id || productoIds.includes(id)) return;
-    setProductoIds([...productoIds, id]);
-    const p = productos.find((x) => x.id === id);
-    if (p?.precio_referencia) {
-      const actual = parseFloat(monto.replace(/\./g, "").replace(",", ".")) || 0;
-      setMonto(String(actual + Number(p.precio_referencia)));
-    }
+    const ids = [...productoIds, id];
+    setProductoIds(ids);
+    // El primero define la moneda (la que tenga precio); después se puede cambiar
+    const m = ids.length === 1 ? monedaSugerida(productos.find((x) => x.id === id) ?? {}, moneda) : moneda;
+    if (m !== moneda) setMoneda(m);
+    if (!montoManual) setMonto(sumaLista(ids, m));
   }
 
   const grupos = Object.entries(CATEGORIAS_PRODUCTO)
@@ -56,6 +65,7 @@ export default function PedidoDirectoForm({
         clienteTexto: clienteInicial ? undefined : clienteTexto,
         productoIds,
         monto: parseFloat(monto.replace(/\./g, "").replace(",", ".")) || null,
+        moneda,
         nota,
         entregaEstimada: entregaEstimada || undefined,
         volverA: clienteInicial ? `/clientes/${clienteInicial.id}` : undefined,
@@ -87,7 +97,11 @@ export default function PedidoDirectoForm({
                   {p?.nombre ?? "Producto"}
                   <button
                     type="button"
-                    onClick={() => setProductoIds(productoIds.filter((x) => x !== id))}
+                    onClick={() => {
+                      const ids = productoIds.filter((x) => x !== id);
+                      setProductoIds(ids);
+                      if (!montoManual) setMonto(sumaLista(ids, moneda));
+                    }}
                     aria-label="Quitar"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -106,9 +120,7 @@ export default function PedidoDirectoForm({
               {g.items.map((p) => (
                 <option key={p.id} value={p.id} disabled={productoIds.includes(p.id)}>
                   {p.nombre}
-                  {p.precio_referencia
-                    ? ` — ${dinero(Number(p.precio_referencia), p.moneda)}`
-                    : ""}
+                  {textoPrecios(p, dinero) ? ` — ${textoPrecios(p, dinero)}` : ""}
                 </option>
               ))}
             </optgroup>
@@ -151,17 +163,36 @@ export default function PedidoDirectoForm({
 
       <details>
         <summary className="cursor-pointer text-sm text-azul underline list-none [&::-webkit-details-marker]:hidden">
-          Monto y fecha de entrega (opcional)
+          Monto, moneda y fecha de entrega (opcional)
         </summary>
         <div className="mt-2 space-y-2">
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="Monto total"
-            value={monto}
-            onChange={(e) => setMonto(e.target.value)}
-            className={inputCls}
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Monto total"
+              value={monto}
+              onChange={(e) => {
+                setMonto(e.target.value);
+                setMontoManual(true);
+              }}
+              className={inputCls}
+            />
+            <select
+              value={moneda}
+              onChange={(e) => {
+                const m = e.target.value as "ARS" | "USD";
+                setMoneda(m);
+                if (!montoManual) setMonto(sumaLista(productoIds, m));
+              }}
+              className={`${inputCls} w-36`}
+              aria-label="Moneda"
+            >
+              <option value="ARS">Pesos</option>
+              <option value="USD">Dólares</option>
+            </select>
+          </div>
+          <p className="text-xs text-piedra">El monto sale de la lista en la moneda elegida; lo podés cambiar.</p>
           <label className="block text-xs text-piedra">
             Entrega estimada
             <input

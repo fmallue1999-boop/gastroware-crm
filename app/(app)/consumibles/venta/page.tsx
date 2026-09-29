@@ -26,7 +26,7 @@ export default async function VentaConsumiblesPage({
     planesRes,
   ] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("productos").select("id, nombre, frecuencia_recompra_dias").eq("activo", true).eq("es_consumible", true).order("nombre"),
+    supabase.from("productos").select("id, nombre, frecuencia_recompra_dias, precio_referencia, moneda, precio_ars, precio_usd").eq("activo", true).eq("es_consumible", true).order("nombre"),
     supabase.from("usuarios").select("id, nombre, rol").eq("activo", true).order("nombre"),
     clienteId ? supabase.from("clientes").select("id, nombre_comercial").eq("id", clienteId).maybeSingle() : Promise.resolve({ data: null }),
     clienteId

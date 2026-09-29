@@ -12,6 +12,7 @@ export default async function NuevoContactoPage() {
       .select("*")
       .eq("activo", true)
       .eq("es_consumible", false)
+      .not("categoria", "in", "(repuesto,refaccion)")
       .order("nombre"),
     infoStockPorProducto(supabase),
   ]);

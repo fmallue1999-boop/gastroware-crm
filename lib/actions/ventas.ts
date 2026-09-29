@@ -29,6 +29,8 @@ export async function crearPedidoDirecto(input: {
   clienteId?: string;
   productoIds: string[];
   monto?: number | null;
+  /** Pesos o dólares (por defecto, la moneda del producto). */
+  moneda?: "ARS" | "USD";
   nota?: string;
   /** Fecha estimada de entrega (YYYY-MM-DD), opcional. */
   entregaEstimada?: string;
@@ -77,6 +79,7 @@ export async function crearPedidoDirecto(input: {
       comercial_id: user?.id ?? null,
       origen: "Venta directa",
       monto_estimado: input.monto || null,
+      moneda: input.moneda === "USD" ? "USD" : "ARS",
       mensaje_inicial: input.nota?.trim() || null,
       entrega_estimada: input.entregaEstimada || null,
     })

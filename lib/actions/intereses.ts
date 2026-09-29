@@ -136,7 +136,12 @@ export async function registrarCotizacion(input: {
   vigenciaDias?: number | null;
   /** Plazo, financiación o bonificación fuera de lo normal: la aprueba dirección. */
   condicionEspecial?: boolean;
+  /** Descuento especial pedido para la operación (% sobre el total) y su motivo. */
+  descuentoPct?: number | null;
+  descuentoMotivo?: string | null;
 }) {
+  const descuento = input.descuentoPct && input.descuentoPct > 0 ? Math.min(99, input.descuentoPct) : 0;
+  if (descuento && !input.descuentoMotivo?.trim()) return { error: "Contá por qué pide el descuento especial" };
   const supabase = await createClient();
   const user = await usuarioActual();
   const rol = await puestoActual(supabase);
@@ -170,17 +175,24 @@ export async function registrarCotizacion(input: {
   const items = (input.items ?? []).filter(
     (i) => i.descripcion.trim() && i.cantidad > 0
   );
-  const total = items.length
+  const subtotal = items.length
     ? items.reduce((s, i) => s + i.cantidad * i.precioUnit, 0)
     : input.monto;
+  const total = subtotal != null && descuento ? Math.round(subtotal * (1 - descuento / 100) * 100) / 100 : subtotal;
 
   // Fuera de lista → esperando aprobación de dirección (dirección no se aprueba a sí misma)
   const idsLista = items.map((i) => i.productoId).filter(Boolean) as string[];
   const { data: lista } = idsLista.length
-    ? await supabase.from("productos").select("id, nombre, precio_referencia, moneda").in("id", idsLista)
+    ? await supabase.from("productos").select("id, nombre, precio_referencia, moneda, precio_ars, precio_usd").in("id", idsLista)
     : { data: [] };
   const pctLibre = Number((await regla(supabase, "descuento_libre_pct")) ?? "0") || 0;
-  const fuera = evaluarFueraDeLista(items, (lista ?? []) as PrecioLista[], input.moneda, pctLibre, !!input.condicionEspecial);
+  // Cada línea se compara con la lista al precio que queda después del descuento especial
+  const efectivos = items.map((i) => ({ ...i, precioUnit: i.precioUnit * (1 - descuento / 100) }));
+  const fuera = evaluarFueraDeLista(efectivos, (lista ?? []) as PrecioLista[], input.moneda, pctLibre, !!input.condicionEspecial);
+  if (descuento > pctLibre) {
+    fuera.requiere = true;
+    fuera.motivos.unshift(`Descuento especial ${descuento}%: ${input.descuentoMotivo?.trim()}`);
+  }
   const aprobacion = fuera.requiere && rol !== "direccion" ? "pendiente" : "no_requiere";
 
   const { data: ver, error: errV } = await supabase
@@ -189,6 +201,9 @@ export async function registrarCotizacion(input: {
       cotizacion_id: cotizacionId,
       version,
       total,
+      subtotal: descuento ? subtotal : null,
+      descuento_pct: descuento || null,
+      descuento_motivo: descuento ? input.descuentoMotivo?.trim() || null : null,
       moneda: input.moneda,
       forma_pago: input.forma_pago || null,
       vigencia_dias: input.vigenciaDias ?? null,
@@ -210,6 +225,7 @@ export async function registrarCotizacion(input: {
         descripcion: i.descripcion.trim(),
         cantidad: i.cantidad,
         precio_unit: i.precioUnit,
+        descuento_pct: descuento || 0,
       }))
     );
     if (errI) return { error: errI.message };
@@ -428,9 +444,10 @@ export async function crearInteres(input: {
     ? input.nivel
     : null;
   const { data: prods } = productoIds.length
-    ? await supabase.from("productos").select("id, nombre").in("id", productoIds)
+    ? await supabase.from("productos").select("id, nombre, moneda").in("id", productoIds)
     : { data: [] };
   const nombres = (prods ?? []).map((p) => p.nombre).join(", ");
+  const monedaProducto = (prods ?? []).find((p) => p.id === productoIds[0])?.moneda === "USD" ? "USD" : "ARS";
   const ruta = await rutearConsulta(supabase, { zona: input.zonaEntrega, creadorId: user?.id ?? null });
   const { data: nuevo, error } = await supabase
     .from("oportunidades")
@@ -444,6 +461,7 @@ export async function crearInteres(input: {
       etapa: input.enEspera ? "espera" : "nueva",
       temperatura: nivel,
       mensaje_inicial: texto,
+      moneda: monedaProducto,
     })
     .select("id")
     .single();

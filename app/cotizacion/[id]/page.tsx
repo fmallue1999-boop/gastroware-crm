@@ -138,6 +138,22 @@ export default async function CotizacionPrintPage({
             ))}
           </tbody>
           <tfoot>
+            {Number(version.descuento_pct ?? 0) > 0 && (
+              <>
+                <tr>
+                  <td className="pt-2" colSpan={3}>
+                    Subtotal
+                  </td>
+                  <td className="pt-2 text-right">{dinero(Number(version.subtotal ?? 0), version.moneda)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={3}>Descuento especial ({Number(version.descuento_pct)}%)</td>
+                  <td className="text-right">
+                    −{dinero(Number(version.subtotal ?? 0) - Number(version.total ?? 0), version.moneda)}
+                  </td>
+                </tr>
+              </>
+            )}
             <tr className="font-bold">
               <td className="py-2" colSpan={3}>
                 Total

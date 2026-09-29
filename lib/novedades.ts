@@ -19,6 +19,20 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.6.0",
+    fecha: "2026-09-28",
+    titulo: "Pesos y dólares, cada apartado con sus productos y cotizaciones con descuento especial",
+    cambios: [
+      "Cada producto puede tener precio de lista en pesos y en dólares (Administración → Catálogo), con su moneda principal.",
+      "Al cotizar elegís Pesos o Dólares y los precios salen de la lista en esa moneda; si cambiás de moneda, las líneas se actualizan solas.",
+      "Venta directa, venta de consumibles y repuestos también se hacen en pesos o en dólares, con el precio de lista a mano.",
+      "Cotización: forma de pago (transferencia, anticipo y saldo, cheque, tarjeta, Mercado Pago, cuenta corriente) con su detalle.",
+      "Cotización: descuento especial para la operación, con el % y el motivo. Muestra subtotal, descuento y total; si pasa lo que el vendedor puede dar solo, espera la aprobación de dirección.",
+      "Cada formulario muestra solo lo suyo: Nueva consulta y “Otro interés” con equipos, Consumibles con consumibles y Repuestos con repuestos.",
+      "Arreglo: las consultas de equipos en dólares ya no quedan guardadas en pesos.",
+    ],
+  },
+  {
     version: "1.5.1",
     fecha: "2026-09-28",
     titulo: "Arreglo: la cotización de repuestos saluda a la persona",
