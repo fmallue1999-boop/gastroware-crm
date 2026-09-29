@@ -139,7 +139,14 @@ export async function registrarCotizacion(input: {
   /** Descuento especial pedido para la operación (% sobre el total) y su motivo. */
   descuentoPct?: number | null;
   descuentoMotivo?: string | null;
+  /** v1.8: IVA que se suma en el PDF (10,5 / 21; 0 = no se discrimina), entrega y tipo de cambio. */
+  ivaPct?: number | null;
+  plazoEntrega?: string | null;
+  condicionEntrega?: string | null;
+  tipoCambio?: number | null;
 }) {
+  if (input.ivaPct != null && !(input.ivaPct >= 0 && input.ivaPct <= 27)) return { error: "El IVA no es válido" };
+  if (input.tipoCambio != null && !(input.tipoCambio > 0)) return { error: "El tipo de cambio tiene que ser mayor a cero" };
   const descuento = input.descuentoPct && input.descuentoPct > 0 ? Math.min(99, input.descuentoPct) : 0;
   if (descuento && !input.descuentoMotivo?.trim()) return { error: "Contá por qué pide el descuento especial" };
   const supabase = await createClient();
@@ -183,7 +190,7 @@ export async function registrarCotizacion(input: {
   // Fuera de lista → esperando aprobación de dirección (dirección no se aprueba a sí misma)
   const idsLista = items.map((i) => i.productoId).filter(Boolean) as string[];
   const { data: lista } = idsLista.length
-    ? await supabase.from("productos").select("id, nombre, precio_referencia, moneda, precio_ars, precio_usd").in("id", idsLista)
+    ? await supabase.from("productos").select("id, nombre, precio_referencia, moneda, precio_ars, precio_usd, codigo, detalle_tecnico").in("id", idsLista)
     : { data: [] };
   const pctLibre = Number((await regla(supabase, "descuento_libre_pct")) ?? "0") || 0;
   // Cada línea se compara con la lista al precio que queda después del descuento especial
@@ -209,6 +216,10 @@ export async function registrarCotizacion(input: {
       vigencia_dias: input.vigenciaDias ?? null,
       archivo_path: input.archivoPath ?? null,
       condiciones: input.notas?.trim() || null,
+      iva_pct: input.ivaPct ?? null,
+      plazo_entrega: input.plazoEntrega?.trim() || null,
+      condicion_entrega: input.condicionEntrega?.trim() || null,
+      tipo_cambio: input.moneda === "USD" ? input.tipoCambio ?? null : null,
       creado_por: user?.id ?? null,
       aprobacion,
       aprobacion_motivo: fuera.requiere ? fuera.motivos.join(" · ") : null,
@@ -218,10 +229,14 @@ export async function registrarCotizacion(input: {
   if (errV || !ver) return { error: errV?.message ?? "No se pudo crear la versión" };
 
   if (items.length) {
+    // Código y detalle técnico del catálogo, como estaban al cotizar
+    const delCatalogo = new Map(((lista ?? []) as { id: string; codigo?: string | null; detalle_tecnico?: string | null }[]).map((p) => [p.id, p]));
     const { error: errI } = await supabase.from("cotizacion_items").insert(
       items.map((i) => ({
         version_id: ver.id,
         producto_id: i.productoId,
+        codigo: (i.productoId && delCatalogo.get(i.productoId)?.codigo) || null,
+        detalle: (i.productoId && delCatalogo.get(i.productoId)?.detalle_tecnico) || null,
         descripcion: i.descripcion.trim(),
         cantidad: i.cantidad,
         precio_unit: i.precioUnit,
@@ -248,7 +263,7 @@ export async function registrarCotizacion(input: {
       oportunidad_id: input.oportunidadId,
       tipo: "cotizacion",
       contenido: `Cotización N° ${numeroCot ?? "?"}${version > 1 ? ` v${version}` : ""} armada${
-        total != null ? ` · ${dinero(total, input.moneda)}` : ""
+        total != null ? ` · ${dinero(total, input.moneda)}${input.ivaPct ? " + IVA" : ""}` : ""
       }${aprobacion === "pendiente" ? ` · fuera de lista, esperando aprobación de dirección (${fuera.motivos.join("; ")})` : ""}`,
       created_by: user?.id ?? null,
     });
@@ -267,13 +282,17 @@ export async function registrarCotizacion(input: {
     );
   }
 
+  // Lo que necesita el formulario para ofrecer el PDF al toque
+  const hecha = { ok: true as const, cotizacionId: cotizacionId as string, numero: numeroCot, version, pendiente: aprobacion === "pendiente" };
   // Una venta ya cerrada (ganada/perdida) no vuelve a "cotizada": solo
   // queda registrada la nueva versión.
   if (actual && ["ganada", "perdida"].includes(actual.etapa)) {
     revalidatePath("/", "layout");
-    return { ok: true };
+    return hecha;
   }
-  return cambiarEtapa(input.oportunidadId, "cotizada");
+  const etapa = await cambiarEtapa(input.oportunidadId, "cotizada");
+  if (etapa && "error" in etapa && etapa.error) return { error: etapa.error };
+  return hecha;
 }
 
 export async function setObjecion(oportunidadId: string, objecion: string) {

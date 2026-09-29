@@ -532,7 +532,8 @@ export async function buscarClientes(q: string): Promise<Cliente[]> {
 // =====================================================================
 
 export async function registrarDocumento(input: {
-  entidad: "cliente" | "equipo" | "orden" | "oportunidad" | "repuesto";
+  /** producto: fichas (tipo "ficha") que se anexan al PDF de la cotización. */
+  entidad: "cliente" | "equipo" | "orden" | "oportunidad" | "repuesto" | "producto";
   entidadId: string;
   tipo: string;
   nombre: string;

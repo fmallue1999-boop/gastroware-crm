@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.8.0 — 28 de septiembre de 2026
+
+Cotización en PDF (migración 034_cotizacion_pdf.sql).
+
+- Migración 034: datos de la empresa y de la cotización en config (empresa_*, cotizacion_punto_venta, cotizacion_leyenda_usd); productos.codigo y detalle_tecnico; cotizacion_items.codigo y detalle; cotizacion_versiones.iva_pct, plazo_entrega, condicion_entrega y tipo_cambio (el total sigue siendo el neto sin IVA); documentos acepta entidad 'producto' y tipo 'ficha' (visibles para todo el equipo); fn_proximo_numero_cotizacion (solo gestores) para fijar desde qué número siguen.
+- PDF con @react-pdf/renderer (lib/pdf/CotizacionPdf.tsx: Manrope desde lib/pdf/fuentes, logo en vectores) y fichas anexadas con pdf-lib (lib/servidor/cotizacion-pdf.tsx). Ruta /cotizacion/[id]/pdf (?v=, ?descargar=1) con la sesión del usuario; la página /cotizacion/[id] redirige al PDF o explica la aprobación pendiente.
+- lib/cotizacion-pdf.ts: numeroComprobante, calcularTotales (neto, IVA, total), diasEnLetras, leyendaDolar, nombreArchivo, tipoAnexo.
+- CotizacionForm: IVA, plazo y condición de entrega, tipo de cambio; al guardar ofrece Ver PDF y Compartir (Web Share API con el archivo). registrarCotizacion guarda código y detalle del catálogo y devuelve la versión.
+- Catálogo: código, detalle técnico y "Cargar PDF" por producto (FichasCotizacion). Administración → Marca: DatosCotizacion (membrete, punto de venta, nota de dólares, numeración).
+
 ## v1.7.0 — 28 de septiembre de 2026
 
 Reportes comerciales por apartado (sin migraciones).

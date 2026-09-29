@@ -192,10 +192,22 @@ export const TAREAS: Tarea[] = [
       { texto: "Elegí si cotizás en pesos o en dólares: los productos del catálogo vienen con el precio de lista en esa moneda." },
       { texto: "Agregá los productos (o una línea libre), la forma de pago (y el detalle, ej. 50% anticipo + 3 cuotas) y la validez." },
       { texto: "Si el cliente pide un descuento especial, tildalo y poné el % y el motivo: la cotización muestra subtotal, descuento y total." },
+      { texto: "Elegí el IVA (10,5%, 21% o no discriminar): los precios son sin IVA y en el PDF se suma al final. Poné el plazo y la condición de entrega; si es en dólares, el tipo de cambio del día (opcional)." },
       { texto: "Si hay otra condición especial (plazo, financiación), tildala. Guardar." },
-      { texto: "Tocá “Imprimir” en la cotización para mandarla en PDF." },
+      { texto: "Listo el PDF: “Ver PDF” para revisarlo y “Compartir” para mandarlo por WhatsApp o mail desde el celular (en la compu se descarga). Sale con el número de cotización, los datos del cliente y las fichas de los productos al final." },
     ],
-    ojo: "Si el descuento especial o el precio van más allá de lo que podés dar solo, o hay condición especial, queda “esperando aprobación” con el motivo y no se puede imprimir hasta que dirección la apruebe. Te llega el aviso.",
+    ojo: "Si el descuento especial o el precio van más allá de lo que podés dar solo, o hay condición especial, queda “esperando aprobación” con el motivo y no se puede mandar hasta que dirección la apruebe. Te llega el aviso.",
+  },
+  {
+    id: "preparar-cotizacion",
+    titulo: "Preparar el catálogo y los datos de la cotización",
+    pasos: [
+      { texto: "En Administración → Catálogo, en cada producto abrí “Ficha de venta · PDF para cotizar”: cargá el código y el detalle técnico (la segunda línea que sale en la cotización).", href: "/admin/catalogo", boton: "Ir al Catálogo" },
+      { texto: "“Cargar PDF”: la ficha técnica, un folleto o info adicional (PDF, JPG o PNG). Sale sola al final de cada cotización que lleve ese producto." },
+      { texto: "En Administración → Marca, “Cotización en PDF”: los datos de la empresa que salen arriba, el punto de venta y la nota de las cotizaciones en dólares.", href: "/admin/marca", boton: "Ir a Marca" },
+      { texto: "Numeración: ahí mismo elegís desde qué número siguen las cotizaciones (tiene que ser mayor que el último)." },
+    ],
+    ojo: "Los precios del catálogo son sin IVA. Lo cambia dirección.",
   },
   {
     id: "cadencia",
@@ -554,6 +566,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "responder-informes",
       "tablero",
       "aprobar-condicion",
+      "preparar-cotizacion",
       "equipo",
       "asignar-consulta",
       "nueva-consulta",
@@ -651,7 +664,7 @@ export const REGLAS_MANUAL: { regla: string; como: string }[] = [
   },
   {
     regla: "Toda propuesta fuera de lista pasa por dirección antes de presentarse.",
-    como: "Queda “esperando aprobación” y no se puede imprimir hasta que se aprueba.",
+    como: "Queda “esperando aprobación” y el PDF no sale hasta que se aprueba.",
   },
   {
     regla: "Nada se despacha sin factura y cobro acreditado (o condición aprobada).",

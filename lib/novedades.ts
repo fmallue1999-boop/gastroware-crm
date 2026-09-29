@@ -19,6 +19,20 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.8.0",
+    fecha: "2026-09-28",
+    titulo: "Cotización en PDF lista para mandar al cliente",
+    cambios: [
+      "Al guardar una cotización sale el PDF con la estética de GastroWare: arriba los datos de la empresa, el número (ej: 0007 - 00000315) y la fecha; después el cliente, los productos y los totales.",
+      "Botones “Ver PDF” y “Compartir”: desde el celular se manda directo por WhatsApp o mail.",
+      "Las fichas de los productos (PDF o imagen) se anexan solas al final. Se cargan en Administración → Catálogo, con “Cargar PDF”.",
+      "Cada producto puede tener código y detalle técnico, que salen en la línea de la cotización.",
+      "IVA al armar la cotización (10,5%, 21% o no discriminar): los precios son sin IVA y el PDF muestra neto gravado, IVA y total.",
+      "Abajo del PDF: mantenimiento de oferta, forma de pago, plazo y condición de entrega, y en dólares la nota del BNA con el total y el tipo de cambio.",
+      "Administración → Marca: los datos de la empresa, el punto de venta, la nota de dólares y desde qué número siguen las cotizaciones.",
+    ],
+  },
+  {
     version: "1.7.0",
     fecha: "2026-09-28",
     titulo: "Tablero por apartado: equipos, consumibles y repuestos",

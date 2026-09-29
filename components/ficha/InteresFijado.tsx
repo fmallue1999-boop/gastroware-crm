@@ -9,6 +9,7 @@ import { cambiarEtapa, cambiarProductoInteres, setTemperatura } from "@/lib/acti
 import { ETAPAS, MOTIVOS_PERDIDA, NIVELES_INTERES } from "@/lib/constants";
 import { dinero, fechaCorta, diasDesde } from "@/lib/format";
 import CotizacionForm from "@/components/CotizacionForm";
+import BotonesPdfCotizacion from "@/components/BotonesPdfCotizacion";
 import DiagnosticoForm from "@/components/DiagnosticoForm";
 import ObjecionControl from "@/components/ObjecionControl";
 import PlantillaCopiar from "@/components/PlantillaCopiar";
@@ -32,6 +33,8 @@ export type VersionCot = {
   archivoUrl: string | null;
   aprobacion?: string;
   aprobacion_nota?: string | null;
+  /** IVA que se suma en el PDF (el total es sin IVA). */
+  iva_pct?: number | null;
 };
 export type Guion = { id: string; nombre: string; texto: string };
 export type MaterialLite = { id: string; nombre: string; tipo: string; url: string | null };
@@ -223,6 +226,7 @@ export default function InteresFijado({
                       <span className="ml-1.5 rounded-full bg-verde-soft px-2 py-0.5 text-xs font-bold text-verde">vigente</span>
                     )}{" "}
                     · {dinero(v.total ?? 0, v.moneda)}
+                    {Number(v.iva_pct ?? 0) > 0 ? " + IVA" : ""}
                     {v.forma_pago ? ` · ${v.forma_pago}` : ""}
                     <span className="text-piedra"> · {fechaCorta(v.created_at)}</span>
                     {v.aprobacion === "pendiente" && (
@@ -237,13 +241,11 @@ export default function InteresFijado({
                   </span>
                   <span className="flex shrink-0 gap-3">
                     {v.aprobacion !== "pendiente" && v.aprobacion !== "rechazada" && (
-                      <Link href={`/cotizacion/${v.cotizacion_id}?v=${v.version}`} className="text-azul underline">
-                        Imprimir
-                      </Link>
+                      <BotonesPdfCotizacion cotizacionId={v.cotizacion_id} version={v.version} compacto />
                     )}
                     {v.archivoUrl && (
                       <a href={v.archivoUrl} target="_blank" rel="noopener noreferrer" className="text-azul underline">
-                        PDF
+                        PDF propio
                       </a>
                     )}
                   </span>

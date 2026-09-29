@@ -38,6 +38,7 @@ import DatosClienteForm from "@/components/DatosClienteForm";
 import BorrarCliente from "@/components/BorrarCliente";
 import SucursalesCliente from "@/components/SucursalesCliente";
 import DocumentosEntidad from "@/components/DocumentosEntidad";
+import BotonesPdfCotizacion from "@/components/BotonesPdfCotizacion";
 import type {
   Actividad,
   Cliente,
@@ -227,6 +228,7 @@ export default async function FichaChat({
       archivoUrl: urlsVersiones[i],
       aprobacion: v.aprobacion,
       aprobacion_nota: v.aprobacion_nota,
+      iva_pct: v.iva_pct ?? null,
     });
     versionesPor.set(v.oportunidad_id, lista);
   });
@@ -407,15 +409,18 @@ export default async function FichaChat({
           {versionesPlanas.map((v, i) => (
             <p key={v.id} className="text-[15px]">
               Cotización N° {v.numeroCot}
-              {v.version > 1 ? ` v${v.version}` : ""} · {dinero(v.total ?? 0, v.moneda)} · {fechaCorta(v.created_at)} ·{" "}
-              <Link href={`/cotizacion/${v.cotizacion_id}?v=${v.version}`} className="text-azul underline">
-                Imprimir
-              </Link>
+              {v.version > 1 ? ` v${v.version}` : ""} · {dinero(v.total ?? 0, v.moneda)}
+              {Number(v.iva_pct ?? 0) > 0 ? " + IVA" : ""} · {fechaCorta(v.created_at)} ·{" "}
+              {v.aprobacion === "pendiente" || v.aprobacion === "rechazada" ? (
+                <span className="text-piedra">{v.aprobacion === "pendiente" ? "esperando aprobación" : "rechazada"}</span>
+              ) : (
+                <BotonesPdfCotizacion cotizacionId={v.cotizacion_id} version={v.version} compacto />
+              )}
               {urlsVersiones[i] && (
                 <>
                   {" · "}
                   <a href={urlsVersiones[i]!} target="_blank" rel="noopener noreferrer" className="text-azul underline">
-                    PDF
+                    PDF propio
                   </a>
                 </>
               )}

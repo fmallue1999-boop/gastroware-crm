@@ -128,6 +128,9 @@ export interface Producto {
   imagen_url: string | null;
   /** Unidades disponibles ahora (lo mantiene administración). */
   stock: number;
+  /** Migración 034: código y detalle técnico (la segunda línea en la cotización). */
+  codigo?: string | null;
+  detalle_tecnico?: string | null;
 }
 
 export interface CotizacionItem {
@@ -138,6 +141,9 @@ export interface CotizacionItem {
   cantidad: number;
   precio_unit: number;
   descuento_pct: number;
+  /** Migración 034: código y detalle del producto al cotizar. */
+  codigo?: string | null;
+  detalle?: string | null;
 }
 
 export interface Repuesto {
@@ -273,6 +279,11 @@ export interface CotizacionVersion {
   aprobado_por?: string | null;
   aprobado_at?: string | null;
   aprobacion_nota?: string | null;
+  /** Migración 034: IVA que se suma en el PDF (total es sin IVA), entrega y tipo de cambio. */
+  iva_pct?: number | null;
+  plazo_entrega?: string | null;
+  condicion_entrega?: string | null;
+  tipo_cambio?: number | null;
 }
 
 export interface Plantilla {
