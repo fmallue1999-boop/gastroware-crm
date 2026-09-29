@@ -585,7 +585,7 @@ export default async function FichaChat({
     ...(esTecnico ? [] : [{ key: "operaciones", label: "Operaciones", badge: abiertasCount, contenido: operaciones }]),
     { key: "historial", label: "Historial", contenido: historial },
     ...(esTecnico ? [] : [{ key: "cotizaciones", label: "Cotizaciones", badge: versionesPlanas.length, contenido: cotizaciones }]),
-    { key: "equipos", label: "Equipos y services", badge: equipos.length + ots.length, contenido: equiposYServices },
+    { key: "equipos", label: "Equipos", badge: equipos.length + ots.length, contenido: equiposYServices },
     { key: "personas", label: "Personas", badge: personas.length, contenido: <PersonasCliente clienteId={c.id} personas={personas} /> },
     { key: "datos", label: "Datos", alerta: !esTecnico && faltanFiscales.length > 0, contenido: datosTab },
   ];

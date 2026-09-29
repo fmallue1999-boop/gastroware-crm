@@ -20,8 +20,8 @@ export default function ConPanel({
     <div className={c ? "lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:items-start lg:gap-4 xl:grid-cols-[minmax(0,1fr)_500px]" : ""}>
       <div className="min-w-0">{children}</div>
       {c && (
-        <aside className="hidden lg:block">
-          <div className="sticky top-6 h-[calc(100dvh-3rem)] overflow-hidden rounded-2xl border border-borde bg-white shadow-xl">
+        <aside className="hidden lg:sticky lg:top-6 lg:block lg:self-start">
+          <div className="h-[calc(100dvh-3rem)] overflow-hidden rounded-2xl border border-borde bg-white shadow-xl">
             <FichaChat clienteId={c} modo="panel" interesAbierto={interes ?? null} cerrarHref={cerrarHref} />
           </div>
         </aside>

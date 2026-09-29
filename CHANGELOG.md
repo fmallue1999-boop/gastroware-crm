@@ -3,6 +3,11 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.9.1 — 28 de septiembre de 2026
+
+- ConPanel: el sticky pasa al aside (antes el div interno no podía quedar fijo porque medía lo mismo que su contenedor).
+- Pestaña "Equipos" (antes "Equipos y services", se cortaba en el panel).
+
 ## v1.9.0 — 28 de septiembre de 2026
 
 Ficha del cliente por pestañas y cotizar en pantalla propia (sin migraciones).
