@@ -9,6 +9,7 @@ import { consultarIA } from "@/lib/core/ia";
 import { dinero, normalizarTelefono, diasDesde, hoyISO, sumarDias } from "@/lib/format";
 import { sugerenciaSinRespuesta } from "@/lib/cadencia";
 import { evaluarFueraDeLista, type PrecioLista } from "@/lib/propuestas";
+import { datosFiscalesDe, faltanParaCotizar } from "@/lib/datos-cotizar";
 import { NIVELES_INTERES, RUBROS } from "@/lib/constants";
 import type { Etapa } from "@/lib/types";
 import { avisar, puestoActual, regla, usuarioActual, usuariosDePuesto } from "./comun";
@@ -152,6 +153,17 @@ export async function registrarCotizacion(input: {
   const supabase = await createClient();
   const user = await usuarioActual();
   const rol = await puestoActual(supabase);
+
+  // v1.9: siempre se cotiza a un cliente con razón social, CUIT, dirección y email
+  const { data: oppCli } = await supabase
+    .from("oportunidades")
+    .select("cliente:clientes(razon_social, cuit, email, sucursales(direccion, ciudad, es_principal))")
+    .eq("id", input.oportunidadId)
+    .maybeSingle();
+  const cli = (oppCli?.cliente ?? null) as unknown as Parameters<typeof datosFiscalesDe>[0] | null;
+  if (!cli) return { error: "No se encontró el interés" };
+  const faltan = faltanParaCotizar(datosFiscalesDe(cli));
+  if (faltan.length) return { error: `Para cotizar faltan datos del cliente: ${faltan.join(", ")}` };
 
   const { data: existente } = await supabase
     .from("cotizaciones")

@@ -11,16 +11,16 @@ export default async function ContactoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ interes?: string }>;
+  searchParams: Promise<{ interes?: string; tab?: string }>;
 }) {
   const { id } = await params;
-  const { interes } = await searchParams;
+  const { interes, tab } = await searchParams;
   return (
     <>
       <Suspense fallback={null}>
         <AvisoFlash />
       </Suspense>
-      <FichaChat clienteId={id} modo="pagina" interesAbierto={interes ?? null} />
+      <FichaChat clienteId={id} modo="pagina" interesAbierto={interes ?? null} pestana={tab ?? null} />
     </>
   );
 }

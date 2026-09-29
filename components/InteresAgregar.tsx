@@ -81,14 +81,20 @@ export default function InteresAgregar({
   clienteId,
   productos,
   stockInfo = {},
+  abiertoInicial = false,
+  onCerrar,
 }: {
   clienteId: string;
   productos: Producto[];
   stockInfo?: Record<string, InfoStock>;
+  /** Abre directo el formulario (desde "Nueva operación"). */
+  abiertoInicial?: boolean;
+  /** Al guardar o cancelar (para cerrar el menú que lo abrió). */
+  onCerrar?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(abiertoInicial);
   const [ids, setIds] = useState<string[]>([]);
   const [texto, setTexto] = useState("");
   const [nivel, setNivel] = useState("");
@@ -120,6 +126,7 @@ export default function InteresAgregar({
       setEnEspera(false);
       setAviso(enEspera && sinStock ? "Pasó a lista de espera" : "Interés cargado");
       setTimeout(() => setAviso(null), 2000);
+      onCerrar?.();
       router.refresh();
     });
   }
@@ -206,6 +213,7 @@ export default function InteresAgregar({
           onClick={() => {
             setAbierto(false);
             setError(null);
+            onCerrar?.();
           }}
           className="min-h-11 rounded-2xl border border-borde px-4 text-[15px] text-piedra"
         >

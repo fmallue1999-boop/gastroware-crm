@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Search } from "lucide-react";
+import { Camera, Plus, Search } from "lucide-react";
 import { buscarClientes, crearSolicitudRepuesto, equiposYSucursalesDe } from "@/lib/actions";
 import { ACCIONES, type Accion } from "@/lib/actividad";
 import { DISPONIBILIDADES } from "@/lib/repuestos";
@@ -223,8 +223,8 @@ export default function SolicitudRepuestoForm({
                 </span>
               </button>
             ))}
-            <button type="button" onClick={() => setNuevo(true)} className="flex min-h-12 w-full items-center rounded-2xl border border-dashed border-borde bg-white px-4 text-[15px] font-bold underline">
-              Es alguien nuevo, cargarlo
+            <button type="button" onClick={() => setNuevo(true)} className="flex min-h-12 w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-marino/40 bg-white px-4 text-[15px] font-bold text-marino">
+              <Plus className="h-4 w-4" /> Cliente nuevo: cargarlo acá
             </button>
           </>
         )}
