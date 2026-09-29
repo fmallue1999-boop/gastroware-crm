@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import ProductoFila from "@/components/admin/ProductoFila";
 import FichaProducto from "@/components/admin/FichaProducto";
 import AltaProducto from "@/components/admin/AltaProducto";
+import { firmarUrls } from "@/lib/core/storage";
+import type { FichaLite } from "@/components/admin/FichasCotizacion";
 import type { Producto } from "@/lib/types";
 
 export default async function AdminCatalogoPage() {
@@ -13,6 +15,21 @@ export default async function AdminCatalogoPage() {
     .order("nombre");
 
   const productos = (data ?? []) as Producto[];
+
+  // PDF que se anexan a la cotización, por producto
+  const { data: docs } = await supabase
+    .from("documentos")
+    .select("id, entidad_id, nombre, path")
+    .eq("entidad", "producto")
+    .eq("tipo", "ficha")
+    .order("created_at");
+  const urls = await firmarUrls("documentos", (docs ?? []).map((d) => d.path as string));
+  const fichasDe = new Map<string, FichaLite[]>();
+  (docs ?? []).forEach((d, i) => {
+    const lista = fichasDe.get(d.entidad_id as string) ?? [];
+    lista.push({ id: d.id as string, nombre: d.nombre as string, url: urls[i] });
+    fichasDe.set(d.entidad_id as string, lista);
+  });
   const categorias = Array.from(new Set(productos.map((p) => p.categoria)));
 
   return (
@@ -21,7 +38,9 @@ export default async function AdminCatalogoPage() {
         <p className="max-w-xl text-sm text-piedra">
           Precio, garantía y ficha de venta de cada producto. La ficha
           (descripción, argumentos, imagen) alimenta el cotizador, la IA y el
-          catálogo público para la web.
+          catálogo público para la web. El código, el detalle técnico y el PDF
+          cargado salen en la cotización (el PDF, anexado al final). Los precios
+          son sin IVA.
         </p>
         <AltaProducto />
       </div>
@@ -36,7 +55,7 @@ export default async function AdminCatalogoPage() {
               .map((p) => (
                 <div key={p.id}>
                   <ProductoFila producto={p} />
-                  <FichaProducto producto={p} />
+                  <FichaProducto producto={p} fichas={fichasDe.get(p.id) ?? []} />
                 </div>
               ))}
           </div>

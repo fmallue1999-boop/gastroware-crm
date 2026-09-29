@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { esGestor } from "@/lib/puestos";
 import { CLAVES_MARCA, TEMAS, type TemaId } from "@/lib/marca";
+import { CAMPOS_COTIZACION, type ClaveCotizacion } from "@/lib/cotizacion-pdf";
 import { puestoActual } from "./comun";
 
 const logoValido = (u: string) => u === "" || /^https:\/\/[^\s"'<>]+$/.test(u) || /^\/marca\/[\w.-]+$/.test(u);
@@ -40,6 +41,32 @@ export async function guardarMarca(input: {
     { clave: CLAVES_MARCA.logoClaro, valor: logoClaro },
   ];
   const { error } = await supabase.from("config").upsert(filas, { onConflict: "clave" });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Datos del membrete de la cotización en PDF (v1.8). Solo claves conocidas. */
+export async function guardarDatosCotizacion(valores: Partial<Record<ClaveCotizacion, string>>) {
+  const supabase = await createClient();
+  if (!esGestor(await puestoActual(supabase))) return { error: "Los datos de la empresa los define dirección" };
+  const filas = CAMPOS_COTIZACION.filter((c) => c.clave in valores).map((c) => ({ clave: c.clave, valor: (valores[c.clave] ?? "").trim() }));
+  const pv = filas.find((f) => f.clave === "cotizacion_punto_venta");
+  if (pv && !/^\d{1,4}$/.test(pv.valor)) return { error: "El punto de venta son hasta 4 números (ej: 0007)" };
+  if (pv) pv.valor = pv.valor.padStart(4, "0");
+  if (filas.some((f) => f.valor.length > 1000)) return { error: "Hay un texto demasiado largo" };
+  const { error } = await supabase.from("config").upsert(filas, { onConflict: "clave" });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Desde qué número siguen las cotizaciones (tiene que ser mayor que el último). */
+export async function fijarProximoNumeroCotizacion(numero: number) {
+  if (!Number.isInteger(numero) || numero < 1 || numero > 99_999_999) return { error: "Poné un número entero" };
+  const supabase = await createClient();
+  if (!esGestor(await puestoActual(supabase))) return { error: "La numeración la define dirección" };
+  const { error } = await supabase.rpc("fn_proximo_numero_cotizacion", { p_numero: numero });
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
   return { ok: true as const };

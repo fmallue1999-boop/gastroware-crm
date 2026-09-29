@@ -8,11 +8,17 @@ import { dinero } from "@/lib/format";
 import type { Producto } from "@/lib/types";
 import { precioEn, textoPrecios } from "@/lib/precios";
 import { FORMAS_PAGO_VENTA } from "@/lib/constants";
+import { OPCIONES_IVA, porcentaje } from "@/lib/cotizacion-pdf";
+import BotonesPdfCotizacion from "@/components/BotonesPdfCotizacion";
 
 const inputCls =
   "w-full rounded-2xl border border-borde bg-white shadow-sm px-3 py-2.5 text-sm outline-none focus:border-marino";
 
 type Linea = ItemCotizacion & { clave: number };
+type Hecha = { cotizacionId: string; numero: number | null; version: number; pendiente: boolean };
+
+const PLAZOS = ["Inmediata", "A revisar", "7 días", "15 días", "30 días", "A convenir"];
+const CONDICIONES_ENTREGA = ["A cargo del cliente", "Retira en nuestro local", "Envío incluido", "A convenir"];
 
 export default function CotizacionForm({
   oportunidadId,
@@ -39,11 +45,18 @@ export default function CotizacionForm({
   const [notas, setNotas] = useState("");
   const [archivo, setArchivo] = useState<File | null>(null);
   const [condicionEspecial, setCondicionEspecial] = useState(false);
+  const [iva, setIva] = useState<number>(OPCIONES_IVA[0].value);
+  const [plazoEntrega, setPlazoEntrega] = useState("");
+  const [condicionEntrega, setCondicionEntrega] = useState("");
+  const [tipoCambio, setTipoCambio] = useState("");
+  const [hecha, setHecha] = useState<Hecha | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const subtotal = lineas.reduce((s, l) => s + l.cantidad * l.precioUnit, 0);
   const pctDescuento = conDescuento ? Math.min(99, Math.max(0, Number(descuento.replace(",", ".")) || 0)) : 0;
   const total = Math.round(subtotal * (1 - pctDescuento / 100) * 100) / 100;
+  const conIva = Math.round(total * (1 + iva / 100) * 100) / 100;
+  const cambio = Number(tipoCambio.replace(/./g, "").replace(",", ".")) || null;
   const bajoLista = lineas.some((l) => {
     const lista = precioEn(productos.find((x) => x.id === l.productoId), moneda);
     return lista != null && l.precioUnit < lista - 0.5;
@@ -128,6 +141,10 @@ export default function CotizacionForm({
         notas,
         vigenciaDias: vigencia ? Number(vigencia) : null,
         condicionEspecial,
+        ivaPct: iva,
+        plazoEntrega,
+        condicionEntrega,
+        tipoCambio: moneda === "USD" ? cambio : null,
         items: lineas.map((l) => ({
           productoId: l.productoId,
           descripcion: l.descripcion,
@@ -139,6 +156,7 @@ export default function CotizacionForm({
         setError(res.error);
         return;
       }
+      if (res && "cotizacionId" in res) setHecha({ cotizacionId: res.cotizacionId, numero: res.numero, version: res.version, pendiente: res.pendiente });
       setAbierto(false);
       setLineas([]);
       setArchivo(null);
@@ -147,7 +165,25 @@ export default function CotizacionForm({
 
   if (!abierto) {
     return (
-      <div>
+      <div className="space-y-2">
+        {hecha && (
+          <div className="space-y-2 rounded-2xl border border-verde/40 bg-verde-soft p-3">
+            <p className="text-[15px] font-bold text-verde">
+              Cotización N° {hecha.numero ?? "?"}
+              {hecha.version > 1 ? ` v${hecha.version}` : ""} guardada
+            </p>
+            {hecha.pendiente ? (
+              <p className="text-sm text-tinta">
+                Queda esperando la aprobación de dirección. Cuando la aprueben te llega el aviso y la podés mandar.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-tinta">El PDF ya está listo, con las fichas de los productos al final.</p>
+                <BotonesPdfCotizacion cotizacionId={hecha.cotizacionId} version={hecha.version} />
+              </>
+            )}
+          </div>
+        )}
         {advertencia && (
           <p className="mb-2 rounded-lg bg-ambar-soft border border-ambar-soft px-3 py-2 text-sm text-ambar">
             {advertencia}
@@ -155,7 +191,10 @@ export default function CotizacionForm({
         )}
         <button
           type="button"
-          onClick={() => setAbierto(true)}
+          onClick={() => {
+            setHecha(null);
+            setAbierto(true);
+          }}
           className="w-full rounded-2xl border border-dashed border-borde py-2.5 text-sm text-piedra"
         >
           + Armar cotización (elegís del catálogo y sale prolija)
@@ -254,15 +293,36 @@ export default function CotizacionForm({
               {pctDescuento ? (
                 <>
                   <span className="font-normal text-piedra">Subtotal {dinero(subtotal, moneda)} · −{pctDescuento}% · </span>
-                  Total: {dinero(total, moneda)}
+                  {iva > 0 ? "Neto" : "Total"}: {dinero(total, moneda)}
                 </>
               ) : (
-                <>Total: {dinero(total, moneda)}</>
+                <>{iva > 0 ? "Neto" : "Total"}: {dinero(total, moneda)}</>
               )}
             </p>
           </div>
+          {iva > 0 && (
+            <p className="text-right text-sm">
+              <span className="text-piedra">+ IVA {porcentaje(iva)}% · </span>
+              <span className="font-bold">Total con IVA: {dinero(conIva, moneda)}</span>
+            </p>
+          )}
         </div>
       )}
+
+      {/* IVA: los precios del catálogo son sin IVA; en el PDF se suma al final */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-sm font-semibold">IVA</span>
+        {OPCIONES_IVA.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => setIva(o.value)}
+            className={`min-h-9 rounded-full px-3 text-sm font-semibold ${iva === o.value ? "bg-marino text-white" : "border border-borde bg-white text-piedra"}`}
+          >
+            {o.value ? `${porcentaje(o.value)}%` : "No discriminar"}
+          </button>
+        ))}
+      </div>
 
       {sinPrecio.length > 0 && (
         <p className="rounded-xl bg-ambar-soft px-3 py-2 text-sm text-ambar">
@@ -326,6 +386,56 @@ export default function CotizacionForm({
         />
       </div>
 
+      {/* Entrega (sale en el PDF, abajo) */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="block text-sm font-semibold">
+          Plazo de entrega
+          <input
+            type="text"
+            list="plazos-entrega"
+            placeholder="Ej: Inmediata, 15 días, A revisar"
+            value={plazoEntrega}
+            onChange={(e) => setPlazoEntrega(e.target.value)}
+            className={`${inputCls} mt-1 font-normal`}
+          />
+        </label>
+        <label className="block text-sm font-semibold">
+          Condición de entrega
+          <input
+            type="text"
+            list="condiciones-entrega"
+            placeholder="Ej: A cargo del cliente"
+            value={condicionEntrega}
+            onChange={(e) => setCondicionEntrega(e.target.value)}
+            className={`${inputCls} mt-1 font-normal`}
+          />
+        </label>
+        <datalist id="plazos-entrega">
+          {PLAZOS.map((p) => (
+            <option key={p} value={p} />
+          ))}
+        </datalist>
+        <datalist id="condiciones-entrega">
+          {CONDICIONES_ENTREGA.map((p) => (
+            <option key={p} value={p} />
+          ))}
+        </datalist>
+      </div>
+
+      {moneda === "USD" && (
+        <label className="flex flex-wrap items-center gap-2 text-sm text-piedra">
+          Tipo de cambio del día (opcional): US$ 1 = $
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder="1405"
+            value={tipoCambio}
+            onChange={(e) => setTipoCambio(e.target.value)}
+            className="w-28 rounded-xl border border-borde px-2 py-2 text-right text-sm text-tinta"
+          />
+        </label>
+      )}
+
       <div className="grid grid-cols-2 gap-2">
         <label className="flex items-center gap-2 text-sm text-piedra">
           Válida por
@@ -341,7 +451,7 @@ export default function CotizacionForm({
       </div>
 
       <textarea
-        placeholder="Condiciones o aclaraciones (opcional: entrega, instalación, IVA…)"
+        placeholder="Observaciones para el cliente (opcional: instalación, garantía…)"
         value={notas}
         onChange={(e) => setNotas(e.target.value)}
         rows={2}
@@ -388,8 +498,8 @@ export default function CotizacionForm({
         </button>
       </div>
       <p className="text-[11px] text-piedra">
-        Al guardar queda la versión con sus ítems y podés abrir la cotización
-        imprimible para mandarla al cliente.
+        Al guardar se arma el PDF con el número de cotización y las fichas de
+        los productos al final, listo para mandar al cliente.
       </p>
     </form>
   );

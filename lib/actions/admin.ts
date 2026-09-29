@@ -371,6 +371,9 @@ export async function guardarProducto(
     imagen_url?: string | null;
     /** Consumibles: cada cuántos días repone un cliente típico (se reinicia con cada compra). */
     frecuencia_recompra_dias?: number | null;
+    /** Código y detalle técnico: salen en la línea del PDF de la cotización. */
+    codigo?: string | null;
+    detalle_tecnico?: string | null;
   }
 ) {
   if (patch.frecuencia_recompra_dias != null && (!Number.isInteger(patch.frecuencia_recompra_dias) || patch.frecuencia_recompra_dias < 1 || patch.frecuencia_recompra_dias > 730))

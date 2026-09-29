@@ -3,15 +3,20 @@ import { cargarMarca } from "@/lib/servidor/marca";
 import { esGestor } from "@/lib/puestos";
 import MarcaAdmin from "@/components/admin/MarcaAdmin";
 import SubirLogo from "@/components/admin/SubirLogo";
+import DatosCotizacion from "@/components/admin/DatosCotizacion";
+import { CAMPOS_COTIZACION, type ClaveCotizacion } from "@/lib/cotizacion-pdf";
 
-/** Administración → Marca: nombre, colores y logos del sistema; logo de los impresos. */
+/** Administración → Marca: nombre, colores y logos del sistema; logo de los impresos; datos de la cotización en PDF. */
 export default async function AdminMarcaPage() {
   const supabase = await createClient();
-  const [{ data: rol }, marca, { data: logoImpresos }] = await Promise.all([
+  const [{ data: rol }, marca, { data: logoImpresos }, { data: datosCot }, { data: ultima }] = await Promise.all([
     supabase.rpc("fn_rol"),
     cargarMarca(supabase),
     supabase.from("config").select("valor").eq("clave", "logo_url").maybeSingle(),
+    supabase.from("config").select("clave, valor").in("clave", CAMPOS_COTIZACION.map((c) => c.clave)),
+    supabase.from("cotizaciones").select("numero").order("numero", { ascending: false }).limit(1),
   ]);
+  const inicialCot = Object.fromEntries((datosCot ?? []).map((c) => [c.clave, (c.valor as string | null) ?? ""])) as Partial<Record<ClaveCotizacion, string>>;
   return (
     <div className="space-y-8">
       <div>
@@ -22,6 +27,7 @@ export default async function AdminMarcaPage() {
       </div>
       <MarcaAdmin inicial={marca} puedeEditar={esGestor(rol as string)} />
       <SubirLogo logoActual={logoImpresos?.valor?.trim() || null} />
+      <DatosCotizacion inicial={inicialCot} ultimoNumero={Number(ultima?.[0]?.numero ?? 0)} puedeEditar={esGestor(rol as string)} />
     </div>
   );
 }

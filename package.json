@@ -1,6 +1,6 @@
 {
   "name": "gastroware-crm",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,10 +13,12 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
+    "@react-pdf/renderer": "^4.3.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
     "lucide-react": "^1.28.0",
     "next": "16.2.10",
+    "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
