@@ -19,6 +19,15 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.9.1",
+    fecha: "2026-09-28",
+    titulo: "Ajustes de la ficha al costado",
+    cambios: [
+      "En la compu, la ficha abierta al costado queda fija mientras bajás por la lista de contactos.",
+      "La pestaña “Equipos y services” ahora se llama “Equipos” para que entren todas a la vista (adentro siguen los services).",
+    ],
+  },
+  {
     version: "1.9.0",
     fecha: "2026-09-28",
     titulo: "Ficha del cliente ordenada y cotizar más cómodo",
