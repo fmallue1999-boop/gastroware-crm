@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { productosDeLinea } from "@/lib/precios";
-import { Bell, CalendarPlus, ChevronLeft, Cog, Droplets, Mail, MessageCircle, Phone, Wrench, X } from "lucide-react";
+import { Bell, ChevronLeft, FileText, Mail, Maximize2, MessageCircle, Phone, Wrench, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl, firmarUrls } from "@/lib/core/storage";
 import { iaConfigurada } from "@/lib/core/ia";
@@ -17,6 +17,7 @@ import {
   telefonoProlijo,
 } from "@/lib/format";
 import { ESTADOS_OT, ETAPAS_ABIERTAS } from "@/lib/constants";
+import { datosFiscalesDe, faltanParaCotizar } from "@/lib/datos-cotizar";
 import Compositor from "@/components/ficha/Compositor";
 import PersonasCliente, { type Persona } from "@/components/ficha/PersonasCliente";
 import TarjetaRepuesto from "@/components/repuestos/TarjetaRepuesto";
@@ -24,10 +25,9 @@ import { cargarSolicitudes } from "@/lib/servidor/repuestos";
 import { nombreLinea, notasSinContacto, textoActividad } from "@/lib/actividad";
 import { cantidadTexto, reposicionEstimada } from "@/lib/consumibles";
 import InteresFijado, { type Guion, type MaterialLite, type VersionCot } from "@/components/ficha/InteresFijado";
-import PanelesFicha from "@/components/ficha/PanelesFicha";
-import InteresAgregar from "@/components/InteresAgregar";
+import FichaTabs, { IrAPestana, type Pestana } from "@/components/ficha/FichaTabs";
+import NuevaOperacion from "@/components/ficha/NuevaOperacion";
 import AsignarVendedor from "@/components/AsignarVendedor";
-import IAResumenCliente from "@/components/IAResumenCliente";
 import VentaPaso, { type FacturaDatos } from "@/components/VentaPaso";
 import CasoTarjeta from "@/components/casos/CasoTarjeta";
 import BotonIA from "@/components/ia/BotonIA";
@@ -77,22 +77,26 @@ const ahora = () => Date.now();
 const DE_PERSONA = new Set(["nota", "feria"]);
 
 /**
- * La ficha del contacto como un chat (rediseño aprobado por Franco):
- * cabecera con WhatsApp / Llamar / Email y desplegables (Equipos, Services,
- * Cotizaciones, Datos); arriba, fijos, los intereses abiertos y las ventas
- * en curso; después todo lo que pasó, en orden; abajo, la caja para anotar.
- * Se usa como página completa (celular) y como panel al costado (PC).
+ * La ficha del contacto (v1.9): cabecera corta (quién es, quién lo atiende,
+ * WhatsApp / Llamar / Email) y pestañas: Operaciones (lo abierto y "Nueva
+ * operación"), Historial (todo lo que pasó, como un chat), Cotizaciones,
+ * Equipos y services, Personas y Datos. Abajo, fija, la caja para anotar.
+ * Se usa como página completa y como panel al costado (PC); en el panel
+ * todo desplaza junto para que se vea.
  */
 export default async function FichaChat({
   clienteId,
   modo = "pagina",
   interesAbierto,
   cerrarHref,
+  pestana,
 }: {
   clienteId: string;
   modo?: "pagina" | "panel";
   interesAbierto?: string | null;
   cerrarHref?: string;
+  /** Pestaña con la que abre (?tab=). */
+  pestana?: string | null;
 }) {
   const id = clienteId;
   const hoy = hoyISO();
@@ -298,230 +302,92 @@ export default async function FichaChat({
     );
   };
 
+
   const botonContacto = "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-[15px] font-bold";
+  const titulo = "mb-2 text-xs font-bold uppercase tracking-wide text-piedra";
+  const tareaHref = `/tareas/nueva?titulo=${encodeURIComponent(`Seguimiento: ${c.nombre_comercial}`)}&link=${encodeURIComponent(
+    `${(process.env.NEXT_PUBLIC_APP_URL || "https://gastroware-crm.vercel.app").replace(/\/$/, "")}/clientes/${c.id}`
+  )}`;
+  const faltanFiscales = faltanParaCotizar(datosFiscalesDe({ ...c, sucursales }));
+  const repuestosAbiertos = solicitudesRep.filter((s) => !["ganada", "perdida"].includes(s.estado));
+  const interesesVenta = abiertas.filter((o) => !solicitudesRep.some((s) => s.oportunidad_id === o.id));
+  const nombreDeOpp = new Map(oportunidades.map((o) => [o.id, nombreProductos(o)]));
 
-  const paneles = [
-    {
-      key: "personas",
-      label: "Personas",
-      badge: personas.length,
-      contenido: <PersonasCliente clienteId={c.id} personas={personas} />,
-    },
-    {
-      key: "equipos",
-      label: recurrencias.length ? "Equipos y consumibles" : "Equipos",
-      badge: equipos.length + recurrencias.length,
-      contenido: (
-        <div className="space-y-2">
-          {equipos.map((e) => {
-            const vigente = e.garantia_hasta && e.garantia_hasta >= hoy;
-            const ultimo = ultimoServicePorEquipo.get(e.id);
-            return (
-              <Link key={e.id} href={`/equipos/${e.id}`} className="block text-[15px]">
-                <p className="font-semibold hover:underline">
-                  {e.producto?.nombre ?? e.marca_modelo_libre}
-                  {e.origen === "externo" && (
-                    <span className="ml-1.5 rounded-full border border-borde px-2 py-0.5 text-xs font-normal text-piedra">otra marca</span>
-                  )}
-                </p>
-                <p className="text-xs text-piedra">
-                  {e.numero_serie ? `Serie ${e.numero_serie}` : "Sin número de serie"}
-                  {e.garantia_hasta && (
-                    <span className={vigente ? "text-verde" : "text-piedra"}>
-                      {" "}· garantía {vigente ? "vigente" : "vencida"} ({fechaCorta(e.garantia_hasta)})
-                    </span>
-                  )}
-                  {ultimo ? ` · último service ${fechaCorta(ultimo.cerrada_tecnico_at ?? ultimo.fecha_programada ?? ultimo.created_at)}` : " · sin services"}
-                </p>
-              </Link>
-            );
-          })}
-          {recurrencias.map((r) => {
-            const repone = reposicionEstimada(r.ultima_compra, r.frecuencia_dias);
-            return (
-              <p key={r.id} className="text-sm text-verde">
-                <Bell className="mr-1 -mt-0.5 inline h-3.5 w-3.5" />
-                <span className="font-semibold">{r.producto?.nombre}</span>
-                {r.ultima_compra ? ` · última compra ${fechaCorta(r.ultima_compra)}${r.ultima_cantidad ? ` (${cantidadTexto(r.ultima_cantidad, r.unidad)})` : ""}, hace ${diasDesde(r.ultima_compra)} días` : ""}
-                {r.frecuencia_dias ? ` · repone cada ${r.frecuencia_dias} días${repone ? ` (~${fechaCorta(repone)})` : ""}` : " · tiempo sin definir"}
-                {` · contactar ${fechaCorta(r.proxima_alerta)}`}
-              </p>
-            );
-          })}
-          {recurrencias.length > 0 && (
-            <Link href="/consumibles?ver=todos" className="text-sm font-bold text-marino underline">
-              Ver y ajustar en Consumibles
-            </Link>
-          )}
-          {equipos.length === 0 && recurrencias.length === 0 && <p className="text-[15px] text-piedra">Ningún equipo cargado todavía.</p>}
-          <details className="pt-1">
-            <summary className="cursor-pointer list-none text-sm text-azul underline [&::-webkit-details-marker]:hidden">+ Agregar un equipo que tiene</summary>
-            <div className="mt-2">
-              <EquipoForm clienteId={c.id} productos={productos} />
-            </div>
-          </details>
+  // --- Operaciones: lo que está abierto con este cliente y "Nueva operación"
+  const operaciones = (
+    <div className="space-y-3">
+      {casosAbiertos.map((k) => (
+        <CasoTarjeta key={k.id} caso={k} iaOn={iaConfigurada()} />
+      ))}
+      {repuestosAbiertos.map((s) => (
+        <TarjetaRepuesto key={s.oportunidad_id} s={s} hoy={hoy} yo={miId} puedeValidar={["tecnico", "servicio", "direccion", "admin"].includes((rol as string) ?? "")} />
+      ))}
+      {interesesVenta.map((o) => (
+        <InteresFijado
+          key={o.id}
+          interes={o}
+          nombre={nombreProductos(o)}
+          productos={productosDeLinea(productos, o.linea)}
+          stockTexto={o.producto_id && stockInfo[o.producto_id] ? textoStock(stockInfo[o.producto_id], fechaCorta) : null}
+          versiones={versionesPor.get(o.id) ?? []}
+          guiones={guionesDe(o)}
+          materiales={materialesDe(o)}
+          telefono={c.telefono}
+          iaOn={iaConfigurada()}
+          abierta={o.id === interesAbierto}
+          hoy={hoy}
+          rol={(rol as string) ?? "comercial"}
+          miId={miId}
+          responsableNombre={o.comercial_id ? nombres.get(o.comercial_id) ?? null : null}
+          ahoraMs={ahoraMs}
+        />
+      ))}
+      {ventasEnCurso.map((o) => (
+        <div key={o.id} className="rounded-2xl border border-verde/30 bg-verde-soft p-3.5">
+          <p className="text-[16px] font-extrabold">Venta: {nombreProductos(o)}</p>
+          <p className="mb-2 text-xs text-piedra">
+            {o.monto_estimado ? `${dinero(o.monto_estimado, o.moneda)} · ` : ""}
+            vendido {fechaCorta(o.closed_at ?? o.created_at)}
+            {o.nro_factura ? ` · factura ${o.nro_factura}` : ""}
+          </p>
+          <VentaPaso
+            venta={o}
+            rol={(rol as string) ?? "comercial"}
+            hoy={hoy}
+            factura={facturaDe.get(o.id) ?? null}
+            pedirSerie={serieFaltante.has(o.id)}
+            videoUrl={o.producto?.video_url ?? null}
+            sucursales={sucursales}
+            direccionSugerida={[principal?.direccion, principal?.ciudad].filter(Boolean).join(", ")}
+            compacto
+          />
         </div>
-      ),
-    },
-    {
-      key: "services",
-      label: "Services",
-      badge: ots.length,
-      contenido: (
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/casos/nuevo?cliente=${c.id}`} className="inline-flex min-h-11 items-center rounded-xl bg-ambar px-4 text-[15px] font-bold text-white">
-              Abrir caso (reclamo)
-            </Link>
-            {(esTecnico || esGestor) && (
-              <Link href={`/servicio/cargar?cliente=${c.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-marino px-4 text-[15px] font-bold text-white">
-                <Wrench className="h-4 w-4" /> Cargar service hecho
-              </Link>
-            )}
-            <Link href={`/servicio/nueva?cliente=${c.id}`} className="inline-flex min-h-11 items-center rounded-xl border border-borde bg-white px-4 text-[15px] font-bold">
-              Programar service
-            </Link>
+      ))}
+      {casosAbiertos.length + repuestosAbiertos.length + interesesVenta.length + ventasEnCurso.length === 0 && (
+        <p className="rounded-2xl bg-white px-4 py-5 text-center text-[15px] text-piedra shadow-sm">No hay operaciones abiertas con este cliente.</p>
+      )}
+      <NuevaOperacion clienteId={c.id} productosEquipos={productosDeLinea(productos, "equipos")} stockInfo={stockInfo} tareaHref={tareaHref} />
+      {actividades.length > 0 && (
+        <div className="pt-1">
+          <p className={titulo}>Últimos movimientos</p>
+          <div className="flex flex-col gap-2">{recientes.slice(-3).map(burbuja)}</div>
+          <div className="mt-2 text-center">
+            <IrAPestana a="historial">Ver todo el historial ({actividades.length})</IrAPestana>
           </div>
-          {ots.slice(0, 10).map((o) => {
-            const est = ESTADOS_OT.find((e) => e.value === o.estado);
-            return (
-              <Link key={o.id} href={`/servicio/${o.id}`} className="block rounded-xl bg-crema px-3 py-2.5 text-[15px]">
-                <p className="font-semibold">
-                  {TIPO_OT[o.tipo] ?? o.tipo}{" "}
-                  <span className="font-normal text-piedra">
-                    · {fechaCorta(o.cerrada_tecnico_at ?? o.fecha_programada ?? o.created_at)} · {est?.label ?? o.estado}
-                  </span>
-                </p>
-                {o.trabajo_realizado && <p className="truncate text-xs text-piedra">{o.trabajo_realizado}</p>}
-              </Link>
-            );
-          })}
-          {ots.length === 0 && <p className="text-[15px] text-piedra">Sin services todavía.</p>}
-        </div>
-      ),
-    },
-    {
-      key: "cotizaciones",
-      label: "Cotizaciones",
-      badge: versionesPlanas.length,
-      contenido: (
-        <div className="space-y-1.5">
-          {versionesPlanas.map((v, i) => (
-            <p key={v.id} className="text-[15px]">
-              Cotización N° {v.numeroCot}
-              {v.version > 1 ? ` v${v.version}` : ""} · {dinero(v.total ?? 0, v.moneda)}
-              {Number(v.iva_pct ?? 0) > 0 ? " + IVA" : ""} · {fechaCorta(v.created_at)} ·{" "}
-              {v.aprobacion === "pendiente" || v.aprobacion === "rechazada" ? (
-                <span className="text-piedra">{v.aprobacion === "pendiente" ? "esperando aprobación" : "rechazada"}</span>
-              ) : (
-                <BotonesPdfCotizacion cotizacionId={v.cotizacion_id} version={v.version} compacto />
-              )}
-              {urlsVersiones[i] && (
-                <>
-                  {" · "}
-                  <a href={urlsVersiones[i]!} target="_blank" rel="noopener noreferrer" className="text-azul underline">
-                    PDF propio
-                  </a>
-                </>
-              )}
-            </p>
-          ))}
-          {versionesPlanas.length === 0 && (
-            <p className="text-[15px] text-piedra">Todavía no hay cotizaciones. Se arman desde el interés, con “Más”.</p>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "datos",
-      label: "Datos",
-      contenido: (
-        <div className="space-y-3">
-          <DatosClienteForm cliente={c} />
-          <div className="grid gap-3 lg:grid-cols-2">
-            <SucursalesCliente clienteId={c.id} sucursales={sucursales} />
-            <DocumentosEntidad entidad="cliente" entidadId={c.id} documentos={documentos} puedeBorrar />
-          </div>
-          {perdidas.length > 0 && (
-            <div>
-              <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-piedra">Intereses que no se dieron</h3>
-              {perdidas.map((o) => (
-                <p key={o.id} className="text-[15px] text-piedra">
-                  {nombreProductos(o)} · {fechaCorta(o.closed_at ?? o.created_at)}
-                  {o.motivo_perdida ? ` · ${o.motivo_perdida}` : ""}
-                </p>
-              ))}
-            </div>
-          )}
-          <div>
-            <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-piedra">Nota interna</h3>
-            <NotaForm clienteId={c.id} />
-          </div>
-          {esGestor && <BorrarCliente clienteId={c.id} nombre={c.nombre_comercial} />}
-        </div>
-      ),
-    },
-  ];
-
-  const contenido = (
-    <>
-      {!esTecnico && (
-        <div className="space-y-2">
-          {casosAbiertos.map((k) => (
-            <CasoTarjeta key={k.id} caso={k} iaOn={iaConfigurada()} />
-          ))}
-          {solicitudesRep
-            .filter((s) => !["ganada", "perdida"].includes(s.estado))
-            .map((s) => (
-              <TarjetaRepuesto key={s.oportunidad_id} s={s} hoy={hoy} yo={miId} puedeValidar={["tecnico", "servicio", "direccion", "admin"].includes((rol as string) ?? "")} />
-            ))}
-          {abiertas.filter((o) => !solicitudesRep.some((s) => s.oportunidad_id === o.id)).map((o) => (
-            <InteresFijado
-              key={o.id}
-              interes={o}
-              nombre={nombreProductos(o)}
-              productos={productosDeLinea(productos, o.linea)}
-              stockTexto={o.producto_id && stockInfo[o.producto_id] ? textoStock(stockInfo[o.producto_id], fechaCorta) : null}
-              versiones={versionesPor.get(o.id) ?? []}
-              guiones={guionesDe(o)}
-              materiales={materialesDe(o)}
-              telefono={c.telefono}
-              iaOn={iaConfigurada()}
-              abierta={o.id === interesAbierto}
-              hoy={hoy}
-              rol={(rol as string) ?? "comercial"}
-              miId={miId}
-              responsableNombre={o.comercial_id ? nombres.get(o.comercial_id) ?? null : null}
-              ahoraMs={ahoraMs}
-            />
-          ))}
-          {ventasEnCurso.map((o) => (
-            <div key={o.id} className="rounded-2xl bg-verde-soft p-3.5">
-              <p className="text-[16px] font-extrabold">Venta: {nombreProductos(o)}</p>
-              <p className="mb-2 text-xs text-piedra">
-                {o.monto_estimado ? `${dinero(o.monto_estimado, o.moneda)} · ` : ""}
-                vendido {fechaCorta(o.closed_at ?? o.created_at)}
-                {o.nro_factura ? ` · factura ${o.nro_factura}` : ""}
-              </p>
-              <VentaPaso
-                venta={o}
-                rol={(rol as string) ?? "comercial"}
-                hoy={hoy}
-                factura={facturaDe.get(o.id) ?? null}
-                pedirSerie={serieFaltante.has(o.id)}
-                videoUrl={o.producto?.video_url ?? null}
-                sucursales={sucursales}
-                direccionSugerida={[principal?.direccion, principal?.ciudad].filter(Boolean).join(", ")}
-                compacto
-              />
-            </div>
-          ))}
-          <InteresAgregar clienteId={c.id} productos={productosDeLinea(productos, "equipos")} stockInfo={stockInfo} />
         </div>
       )}
+    </div>
+  );
 
-      {iaConfigurada() && !esTecnico && <IAResumenCliente clienteId={c.id} />}
-
+  // --- Historial: todo lo que pasó, como un chat
+  const historial = (
+    <div className="space-y-3">
+      {iaConfigurada() && (
+        <BotonIA
+          pregunta={`Resumime a ${c.nombre_comercial} (qué le interesa, en qué quedamos, qué debe) y decime el próximo paso con un mensaje listo para mandarle`}
+          texto="Resumen y próximo paso con IA"
+        />
+      )}
       <div className="flex flex-col gap-2">
         {anteriores.length > 0 && (
           <details className="group">
@@ -535,8 +401,195 @@ export default async function FichaChat({
         {actividades.length === 0 && <p className="self-center text-[15px] text-piedra">Todavía no pasó nada. Escribí abajo qué hablaron.</p>}
         {actividades.length >= 200 && <p className="self-center text-xs text-piedra">Se muestran los últimos 200 movimientos.</p>}
       </div>
-    </>
+    </div>
   );
+
+  // --- Cotizaciones: todas, con su PDF; y "Cotizar" para cada interés abierto
+  const cotizaciones = (
+    <div className="space-y-3">
+      {interesesVenta.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {interesesVenta.map((o) => (
+            <Link key={o.id} href={`/cotizar/${o.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-marino px-4 text-[15px] font-bold text-white">
+              <FileText className="h-4 w-4" /> {(versionesPor.get(o.id) ?? []).length ? "Nueva versión" : "Cotizar"}: {nombreProductos(o)}
+            </Link>
+          ))}
+        </div>
+      )}
+      <div className="divide-y divide-borde/70 rounded-2xl border border-borde bg-white">
+        {versionesPlanas.map((v, i) => (
+          <div key={v.id} className="space-y-1 px-3.5 py-3">
+            <p className="flex flex-wrap items-center gap-x-2 text-[15px]">
+              <span className="font-bold">
+                N° {v.numeroCot}
+                {v.version > 1 ? ` v${v.version}` : ""}
+              </span>
+              <span>
+                {dinero(v.total ?? 0, v.moneda)}
+                {Number(v.iva_pct ?? 0) > 0 ? " + IVA" : ""}
+              </span>
+              <span className="text-sm text-piedra">· {fechaCorta(v.created_at)}</span>
+              {v.aprobacion === "pendiente" && <span className="rounded-full bg-ambar-soft px-2 py-0.5 text-xs font-bold text-ambar">esperando aprobación</span>}
+              {v.aprobacion === "rechazada" && <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">rechazada</span>}
+            </p>
+            <p className="text-sm text-piedra">{nombreDeOpp.get(v.oportunidad_id) ?? ""}</p>
+            <div className="flex flex-wrap items-center gap-3 text-[15px]">
+              {v.aprobacion !== "pendiente" && v.aprobacion !== "rechazada" && <BotonesPdfCotizacion cotizacionId={v.cotizacion_id} version={v.version} compacto />}
+              {urlsVersiones[i] && (
+                <a href={urlsVersiones[i]!} target="_blank" rel="noopener noreferrer" className="text-azul underline">
+                  PDF propio
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+        {versionesPlanas.length === 0 && <p className="px-4 py-5 text-center text-[15px] text-piedra">Todavía no hay cotizaciones.</p>}
+      </div>
+    </div>
+  );
+
+  // --- Equipos, consumibles que repone y services
+  const equiposYServices = (
+    <div className="space-y-4">
+      <section className="space-y-2 rounded-2xl border border-borde bg-white p-3.5">
+        <p className={titulo}>Equipos</p>
+        {equipos.map((e) => {
+          const vigente = e.garantia_hasta && e.garantia_hasta >= hoy;
+          const ultimo = ultimoServicePorEquipo.get(e.id);
+          return (
+            <Link key={e.id} href={`/equipos/${e.id}`} className="block rounded-xl bg-crema px-3 py-2.5 text-[15px]">
+              <p className="font-semibold hover:underline">
+                {e.producto?.nombre ?? e.marca_modelo_libre}
+                {e.origen === "externo" && <span className="ml-1.5 rounded-full border border-borde px-2 py-0.5 text-xs font-normal text-piedra">otra marca</span>}
+              </p>
+              <p className="text-xs text-piedra">
+                {e.numero_serie ? `Serie ${e.numero_serie}` : "Sin número de serie"}
+                {e.garantia_hasta && (
+                  <span className={vigente ? "text-verde" : "text-piedra"}>
+                    {" "}
+                    · garantía {vigente ? "vigente" : "vencida"} ({fechaCorta(e.garantia_hasta)})
+                  </span>
+                )}
+                {ultimo ? ` · último service ${fechaCorta(ultimo.cerrada_tecnico_at ?? ultimo.fecha_programada ?? ultimo.created_at)}` : " · sin services"}
+              </p>
+            </Link>
+          );
+        })}
+        {equipos.length === 0 && <p className="text-[15px] text-piedra">Ningún equipo cargado todavía.</p>}
+        <details className="pt-1">
+          <summary className="cursor-pointer list-none text-sm font-bold text-marino underline [&::-webkit-details-marker]:hidden">+ Agregar un equipo que tiene</summary>
+          <div className="mt-2">
+            <EquipoForm clienteId={c.id} productos={productos} />
+          </div>
+        </details>
+      </section>
+
+      {recurrencias.length > 0 && (
+        <section className="space-y-2 rounded-2xl border border-borde bg-white p-3.5">
+          <p className={titulo}>Consumibles que repone</p>
+          {recurrencias.map((r) => {
+            const repone = reposicionEstimada(r.ultima_compra, r.frecuencia_dias);
+            return (
+              <p key={r.id} className="text-sm">
+                <Bell className="-mt-0.5 mr-1 inline h-3.5 w-3.5 text-verde" />
+                <span className="font-semibold">{r.producto?.nombre}</span>
+                {r.ultima_compra
+                  ? ` · última compra ${fechaCorta(r.ultima_compra)}${r.ultima_cantidad ? ` (${cantidadTexto(r.ultima_cantidad, r.unidad)})` : ""}, hace ${diasDesde(r.ultima_compra)} días`
+                  : ""}
+                {r.frecuencia_dias ? ` · repone cada ${r.frecuencia_dias} días${repone ? ` (~${fechaCorta(repone)})` : ""}` : " · tiempo sin definir"}
+                {` · contactar ${fechaCorta(r.proxima_alerta)}`}
+              </p>
+            );
+          })}
+          <Link href="/consumibles?ver=todos" className="text-sm font-bold text-marino underline">
+            Ver y ajustar en Consumibles
+          </Link>
+        </section>
+      )}
+
+      <section className="space-y-2 rounded-2xl border border-borde bg-white p-3.5">
+        <p className={titulo}>Services y reclamos</p>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/casos/nuevo?cliente=${c.id}`} className="inline-flex min-h-11 items-center rounded-xl bg-ambar px-4 text-[15px] font-bold text-white">
+            Abrir caso (reclamo)
+          </Link>
+          {(esTecnico || esGestor) && (
+            <Link href={`/servicio/cargar?cliente=${c.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-marino px-4 text-[15px] font-bold text-white">
+              <Wrench className="h-4 w-4" /> Cargar service hecho
+            </Link>
+          )}
+          <Link href={`/servicio/nueva?cliente=${c.id}`} className="inline-flex min-h-11 items-center rounded-xl border border-borde bg-white px-4 text-[15px] font-bold">
+            Programar service
+          </Link>
+        </div>
+        {ots.slice(0, 10).map((o) => {
+          const est = ESTADOS_OT.find((e) => e.value === o.estado);
+          return (
+            <Link key={o.id} href={`/servicio/${o.id}`} className="block rounded-xl bg-crema px-3 py-2.5 text-[15px]">
+              <p className="font-semibold">
+                {TIPO_OT[o.tipo] ?? o.tipo}{" "}
+                <span className="font-normal text-piedra">
+                  · {fechaCorta(o.cerrada_tecnico_at ?? o.fecha_programada ?? o.created_at)} · {est?.label ?? o.estado}
+                </span>
+              </p>
+              {o.trabajo_realizado && <p className="truncate text-xs text-piedra">{o.trabajo_realizado}</p>}
+            </Link>
+          );
+        })}
+        {ots.length === 0 && <p className="text-[15px] text-piedra">Sin services todavía.</p>}
+      </section>
+    </div>
+  );
+
+  // --- Datos: fiscales, sucursales, documentos, notas
+  const notasCliente = personas.length ? notasSinContacto(c.notas) : c.notas;
+  const datosTab = (
+    <div className="space-y-3">
+      {faltanFiscales.length > 0 && (
+        <p className="rounded-xl bg-ambar-soft px-3 py-2.5 text-sm font-semibold text-ambar">
+          Para cotizar faltan: {faltanFiscales.join(", ")}. Completalos acá o al cotizar.
+        </p>
+      )}
+      <DatosClienteForm cliente={c} />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <SucursalesCliente clienteId={c.id} sucursales={sucursales} />
+        <DocumentosEntidad entidad="cliente" entidadId={c.id} documentos={documentos} puedeBorrar />
+      </div>
+      {notasCliente && (
+        <div className="rounded-2xl border border-borde bg-white p-3.5">
+          <p className={titulo}>Notas del cliente</p>
+          <p className="whitespace-pre-wrap text-[15px] text-tinta/80">{notasCliente}</p>
+        </div>
+      )}
+      {perdidas.length > 0 && (
+        <div className="rounded-2xl border border-borde bg-white p-3.5">
+          <p className={titulo}>Intereses que no se dieron</p>
+          {perdidas.map((o) => (
+            <p key={o.id} className="text-[15px] text-piedra">
+              {nombreProductos(o)} · {fechaCorta(o.closed_at ?? o.created_at)}
+              {o.motivo_perdida ? ` · ${o.motivo_perdida}` : ""}
+            </p>
+          ))}
+        </div>
+      )}
+      <div className="rounded-2xl border border-borde bg-white p-3.5">
+        <p className={titulo}>Nota interna</p>
+        <NotaForm clienteId={c.id} />
+      </div>
+      {esGestor && <BorrarCliente clienteId={c.id} nombre={c.nombre_comercial} />}
+    </div>
+  );
+
+  const abiertasCount = casosAbiertos.length + repuestosAbiertos.length + interesesVenta.length + ventasEnCurso.length;
+  const pestanas: Pestana[] = [
+    ...(esTecnico ? [] : [{ key: "operaciones", label: "Operaciones", badge: abiertasCount, contenido: operaciones }]),
+    { key: "historial", label: "Historial", contenido: historial },
+    ...(esTecnico ? [] : [{ key: "cotizaciones", label: "Cotizaciones", badge: versionesPlanas.length, contenido: cotizaciones }]),
+    { key: "equipos", label: "Equipos y services", badge: equipos.length + ots.length, contenido: equiposYServices },
+    { key: "personas", label: "Personas", badge: personas.length, contenido: <PersonasCliente clienteId={c.id} personas={personas} /> },
+    { key: "datos", label: "Datos", alerta: !esTecnico && faltanFiscales.length > 0, contenido: datosTab },
+  ];
+  const inicial = pestana && pestanas.some((p) => p.key === pestana) ? pestana : esTecnico ? "equipos" : "operaciones";
 
   const cabecera = (
     <header className="space-y-2.5">
@@ -548,23 +601,25 @@ export default async function FichaChat({
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-extrabold tracking-tight">{c.nombre_comercial}</h1>
+            <h1 className="text-xl font-extrabold leading-tight tracking-tight">{c.nombre_comercial}</h1>
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${esCliente ? "bg-verde-soft text-verde" : "bg-azul-soft text-azul"}`}>
               {esCliente ? "Cliente" : "Interesado"}
             </span>
           </div>
-          {principalPersona && principalPersona.nombre.trim().toLowerCase() !== c.nombre_comercial.trim().toLowerCase() && (
-            <p className="text-[15px] font-semibold text-tinta/80">
-              {principalPersona.nombre}
-              {principalPersona.cargo ? ` (${principalPersona.cargo})` : ""}
-              {personas.length > 1 ? ` · y ${personas.length - 1} más` : ""}
-            </p>
-          )}
           <p className="text-sm text-piedra">
-            {[empresa, c.rubro !== "Otro" ? c.rubro : null, c.ciudad, c.telefono ? telefonoProlijo(c.telefono) : null].filter(Boolean).join(" · ") ||
-              "Sin más datos por ahora"}
+            {[
+              principalPersona && principalPersona.nombre.trim().toLowerCase() !== c.nombre_comercial.trim().toLowerCase()
+                ? `${principalPersona.nombre}${principalPersona.cargo ? ` (${principalPersona.cargo})` : ""}`
+                : null,
+              empresa,
+              c.rubro !== "Otro" ? c.rubro : null,
+              c.ciudad,
+              c.telefono ? telefonoProlijo(c.telefono) : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "Sin más datos por ahora"}
           </p>
-          <div className="mt-0.5">
+          <div className="mt-1">
             {esGestor ? (
               <AsignarVendedor clienteId={c.id} actual={c.comercial_id} vendedores={vendedores} />
             ) : atiende ? (
@@ -572,15 +627,24 @@ export default async function FichaChat({
             ) : null}
           </div>
         </div>
-        {modo === "panel" && cerrarHref ? (
-          <Link href={cerrarHref} scroll={false} aria-label="Cerrar" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-borde bg-white">
-            <X className="h-5 w-5" />
-          </Link>
+        {modo === "panel" ? (
+          <div className="flex shrink-0 gap-1.5">
+            <Link
+              href={`/clientes/${c.id}`}
+              aria-label="Abrir la ficha completa"
+              title="Abrir la ficha completa"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-borde bg-white"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Link>
+            {cerrarHref ? (
+              <Link href={cerrarHref} scroll={false} aria-label="Cerrar" className="flex h-10 w-10 items-center justify-center rounded-full border border-borde bg-white">
+                <X className="h-5 w-5" />
+              </Link>
+            ) : null}
+          </div>
         ) : null}
       </div>
-      {(personas.length ? notasSinContacto(c.notas) : c.notas) && (
-        <p className="text-[15px] text-tinta/70">{personas.length ? notasSinContacto(c.notas) : c.notas}</p>
-      )}
       <div className="flex gap-2">
         {c.telefono ? (
           <>
@@ -592,7 +656,9 @@ export default async function FichaChat({
             </a>
           </>
         ) : (
-          <p className="flex-1 text-[15px] text-ambar">Sin teléfono: cargalo en Datos.</p>
+          <IrAPestana a="datos" className={`${botonContacto} border border-dashed border-ambar/60 bg-ambar-soft text-ambar`}>
+            <Phone className="h-4 w-4" /> Cargar teléfono
+          </IrAPestana>
         )}
         {c.email ? (
           <a href={`mailto:${c.email}`} className={`${botonContacto} border border-borde bg-white`}>
@@ -600,28 +666,6 @@ export default async function FichaChat({
           </a>
         ) : null}
       </div>
-      {!esTecnico && (
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/consumibles/venta?cliente=${c.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold">
-            <Droplets className="h-4 w-4 text-verde" /> Venta de consumibles
-          </Link>
-          <Link href={`/repuestos/nueva?cliente=${c.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold">
-            <Cog className="h-4 w-4 text-violeta" /> Pedido de repuesto
-          </Link>
-          <Link
-            href={`/tareas/nueva?titulo=${encodeURIComponent(`Seguimiento: ${c.nombre_comercial}`)}&link=${encodeURIComponent(`${(process.env.NEXT_PUBLIC_APP_URL || "https://gastroware-crm.vercel.app").replace(/\/$/, "")}/clientes/${c.id}`)}`}
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold"
-          >
-            <CalendarPlus className="h-4 w-4 text-azul" /> Tarea
-          </Link>
-        </div>
-      )}
-      {iaConfigurada() && (
-        <div>
-          <BotonIA pregunta={`Resumime a ${c.nombre_comercial} (qué le interesa, en qué quedamos, qué debe) y decime el próximo paso con un mensaje listo para mandarle`} texto="Resumen y próximo paso con IA" />
-        </div>
-      )}
-      <PanelesFicha paneles={paneles} />
     </header>
   );
 
@@ -637,8 +681,9 @@ export default async function FichaChat({
   if (modo === "panel") {
     return (
       <div className="flex h-full flex-col">
-        <div className="shrink-0 border-b border-borde bg-white px-4 py-3">{cabecera}</div>
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">{contenido}</div>
+        <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
+          <FichaTabs key={c.id} cabecera={cabecera} pestanas={pestanas} inicial={inicial} enPanel />
+        </div>
         <div className="shrink-0 border-t border-borde bg-white px-4 py-3">{compositor}</div>
       </div>
     );
@@ -646,8 +691,7 @@ export default async function FichaChat({
 
   return (
     <div className="mx-auto max-w-3xl space-y-3">
-      {cabecera}
-      {contenido}
+      <FichaTabs key={c.id} cabecera={cabecera} pestanas={pestanas} inicial={inicial} />
       <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 -mx-4 border-t border-borde bg-crema/95 px-4 py-2.5 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border">
         {compositor}
       </div>

@@ -5,6 +5,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import CotizacionPdf, { type DatosCotizacionPdf } from "@/lib/pdf/CotizacionPdf";
 import { calcularTotales, leyendaDolar, nombreArchivo, numeroComprobante, tipoAnexo } from "@/lib/cotizacion-pdf";
 import { CONDICIONES_FISCALES } from "@/lib/constants";
+import { cuitProlijo } from "@/lib/datos-cotizar";
 import type { SupabaseServidor } from "@/lib/actions/comun";
 import type { CotizacionVersion } from "@/lib/types";
 
@@ -132,7 +133,7 @@ export async function cargarCotizacionPdf(supabase: SupabaseServidor, id: string
     fecha: fechaAR(version.created_at),
     cliente: {
       nombre: nombreCliente,
-      cuit: cliente?.cuit ?? null,
+      cuit: cliente?.cuit ? cuitProlijo(cliente.cuit) : null,
       domicilio: suc?.direccion ?? null,
       localidad: [suc?.ciudad, suc?.provincia].filter(Boolean).join(", ") || null,
       condicionIva: CONDICIONES_FISCALES.find((f) => f.value === cliente?.condicion_fiscal)?.label ?? null,

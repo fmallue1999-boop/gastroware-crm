@@ -160,7 +160,7 @@ export default function GrupoReposicion({
               startTransition(async () => {
                 const r = await cotizarReposicion(ids);
                 if (r && "error" in r && r.error) setMsg({ texto: r.error, error: true });
-                else if (r && "clienteId" in r) router.push(`/clientes/${r.clienteId}?interes=${r.oportunidadId}`);
+                else if (r && "clienteId" in r) router.push(`/cotizar/${r.oportunidadId}`);
               })
             }
             className={boton}

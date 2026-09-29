@@ -10,7 +10,8 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { exigirGestor, rolActual } from "@/lib/auth";
 import { hoyISO, sumarDias, normalizarTelefono, fechaCorta } from "@/lib/format";
-import { ETAPAS_ABIERTAS, RUBROS } from "@/lib/constants";
+import { CONDICIONES_FISCALES, ETAPAS_ABIERTAS, RUBROS } from "@/lib/constants";
+import { faltanParaCotizar } from "@/lib/datos-cotizar";
 import type { Cliente } from "@/lib/types";
 import { usuarioActual, type SupabaseServidor } from "./comun";
 import { crearInteres } from "./intereses";
@@ -896,4 +897,105 @@ export async function guardarPreferenciaPendientes(quien: string) {
   });
   revalidatePath("/", "layout");
   return { ok: true as const };
+}
+
+/**
+ * Datos del cliente para cotizar (v1.9): razón social, CUIT, condición de
+ * IVA, email y la dirección de la sucursal principal (si no tiene, se crea).
+ * Se guardan en la ficha; la cotización no sale sin ellos.
+ */
+export async function guardarDatosParaCotizar(
+  clienteId: string,
+  input: { razonSocial: string; cuit: string; condicionFiscal?: string | null; email: string; direccion: string; ciudad: string; provincia?: string | null }
+) {
+  const datos = {
+    razon_social: input.razonSocial.trim(),
+    cuit: input.cuit.replace(/\D/g, ""),
+    email: input.email.trim().toLowerCase(),
+    direccion: input.direccion.trim(),
+    ciudad: input.ciudad.trim(),
+  };
+  const faltan = faltanParaCotizar(datos);
+  if (faltan.length) return { error: `Falta completar: ${faltan.join(", ")}` };
+  if (input.condicionFiscal && !CONDICIONES_FISCALES.some((c) => c.value === input.condicionFiscal)) return { error: "Condición de IVA inválida" };
+
+  const supabase = await createClient();
+  // El CUIT es único: si ya lo tiene otro cliente, se avisa quién
+  const { data: otro } = await supabase
+    .from("clientes")
+    .select("id, nombre_comercial")
+    .eq("cuit", datos.cuit)
+    .is("deleted_at", null)
+    .neq("id", clienteId)
+    .limit(1)
+    .maybeSingle();
+  if (otro) return { error: `Ese CUIT ya está cargado en otro cliente: ${otro.nombre_comercial}. Revisalo o cotizá desde esa ficha.` };
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({
+      razon_social: datos.razon_social,
+      cuit: datos.cuit,
+      email: datos.email,
+      ...(input.condicionFiscal ? { condicion_fiscal: input.condicionFiscal } : {}),
+    })
+    .eq("id", clienteId);
+  if (error) return { error: error.message };
+
+  const { data: sucursales } = await supabase
+    .from("sucursales")
+    .select("id, es_principal")
+    .eq("cliente_id", clienteId)
+    .order("es_principal", { ascending: false })
+    .limit(1);
+  const principal = sucursales?.[0];
+  const direccion = { direccion: datos.direccion, ciudad: datos.ciudad, ...(input.provincia?.trim() ? { provincia: input.provincia.trim() } : {}) };
+  const { error: errSuc } = principal
+    ? await supabase.from("sucursales").update(direccion).eq("id", principal.id)
+    : await supabase.from("sucursales").insert({ cliente_id: clienteId, nombre: "Principal", es_principal: true, ...direccion });
+  if (errSuc) return { error: errSuc.message };
+
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Cliente nuevo mínimo desde otro formulario (venta de consumibles, v1.9):
+ * persona, empresa, teléfono y localidad. Primero avisa si ya parece estar
+ * cargado (por teléfono); con crearIgual lo crea igual.
+ */
+export async function crearClienteRapido(input: {
+  nombre: string;
+  empresa?: string;
+  telefono?: string;
+  localidad?: string;
+  crearIgual?: boolean;
+}): Promise<{ error: string } | { duplicados: PosibleDuplicado[] } | { ok: true; id: string; nombre: string }> {
+  const nombre = input.nombre.trim();
+  const empresa = input.empresa?.trim() ?? "";
+  if (!nombre && !empresa) return { error: "Poné el nombre de la persona o del negocio" };
+  const tel = normalizarTelefono(input.telefono ?? "");
+  if (!input.crearIgual) {
+    const duplicados = await buscarDuplicados(tel, null);
+    if (duplicados.length) return { duplicados };
+  }
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const nombreComercial = empresa || nombre;
+  const { data, error } = await supabase
+    .from("clientes")
+    .insert({ nombre_comercial: nombreComercial, telefono: tel.length >= 6 ? tel : null, rubro: "Otro", comercial_id: user?.id ?? null })
+    .select("id")
+    .single();
+  if (error || !data) return { error: error?.message ?? "No se pudo crear el cliente" };
+  const id = data.id as string;
+  await Promise.all([
+    nombre && empresa ? supabase.from("contactos").insert({ cliente_id: id, nombre, telefono: tel.length >= 6 ? tel : null, es_decisor: true }) : Promise.resolve(),
+    input.localidad?.trim()
+      ? supabase.from("sucursales").insert({ cliente_id: id, nombre: "Principal", ciudad: input.localidad.trim(), es_principal: true })
+      : Promise.resolve(),
+    supabase.from("actividades").insert({ cliente_id: id, tipo: "nota", contenido: "Cliente cargado", created_by: user?.id ?? null }),
+  ]);
+  revalidatePath("/", "layout");
+  return { ok: true, id, nombre: nombreComercial };
 }

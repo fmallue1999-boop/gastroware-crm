@@ -17,7 +17,7 @@ export default function ConPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className={c ? "lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-4" : ""}>
+    <div className={c ? "lg:grid lg:grid-cols-[minmax(0,1fr)_440px] lg:items-start lg:gap-4 xl:grid-cols-[minmax(0,1fr)_500px]" : ""}>
       <div className="min-w-0">{children}</div>
       {c && (
         <aside className="hidden lg:block">

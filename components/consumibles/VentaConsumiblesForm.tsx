@@ -2,11 +2,12 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Search } from "lucide-react";
+import { Check, Plus, Search } from "lucide-react";
 import { buscarClientes, registrarVentaConsumibles, sucursalesDe } from "@/lib/actions";
 import { ANTICIPACION_POR_DEFECTO, fechaContacto, UNIDADES } from "@/lib/consumibles";
 import { dinero, fechaCorta, telefonoProlijo } from "@/lib/format";
 import { precioEn } from "@/lib/precios";
+import ClienteNuevoRapido from "@/components/ClienteNuevoRapido";
 import type { Cliente } from "@/lib/types";
 
 export type ProductoConsumible = {
@@ -56,6 +57,7 @@ export default function VentaConsumiblesForm({
   const [pending, startTransition] = useTransition();
   const [cliente, setCliente] = useState<{ id: string; nombre: string } | null>(clienteInicial ?? null);
   const [q, setQ] = useState("");
+  const [nuevo, setNuevo] = useState(false);
   const [resultados, setResultados] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>(sucursalesIniciales);
   const [sucursalId, setSucursalId] = useState<string>(sucursalInicial ?? "");
@@ -93,10 +95,11 @@ export default function VentaConsumiblesForm({
     timer.current = setTimeout(async () => setResultados(await buscarClientes(texto)), 250);
   }
 
-  async function elegirCliente(c: Cliente) {
-    setCliente({ id: c.id, nombre: c.nombre_comercial });
+  async function elegirCliente(c: { id: string; nombre: string }) {
+    setCliente(c);
     setResultados([]);
     setQ("");
+    setNuevo(false);
     const s = await sucursalesDe(c.id);
     setSucursales(s);
     setSucursalId("");
@@ -171,6 +174,8 @@ export default function VentaConsumiblesForm({
               </button>
             )}
           </div>
+        ) : nuevo ? (
+          <ClienteNuevoRapido onElegido={elegirCliente} onCancelar={() => setNuevo(false)} />
         ) : (
           <>
             <div className="relative">
@@ -178,13 +183,16 @@ export default function VentaConsumiblesForm({
               <input type="search" value={q} onChange={(e) => buscar(e.target.value)} placeholder="Nombre, empresa o teléfono" className={`${cls} pl-10`} autoFocus />
             </div>
             {resultados.map((c) => (
-              <button key={c.id} type="button" onClick={() => elegirCliente(c)} className="flex min-h-12 w-full items-center rounded-2xl bg-white px-4 text-left shadow-sm">
+              <button key={c.id} type="button" onClick={() => elegirCliente({ id: c.id, nombre: c.nombre_comercial })} className="flex min-h-12 w-full items-center rounded-2xl bg-white px-4 text-left shadow-sm">
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-bold">{c.nombre_comercial}</span>
                   <span className="block text-xs text-piedra">{[c.ciudad, c.telefono ? telefonoProlijo(c.telefono) : null].filter(Boolean).join(" · ")}</span>
                 </span>
               </button>
             ))}
+            <button type="button" onClick={() => setNuevo(true)} className="flex min-h-12 w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-marino/40 bg-white px-4 text-[15px] font-bold text-marino">
+              <Plus className="h-4 w-4" /> Cliente nuevo: cargarlo acá
+            </button>
           </>
         )}
         {cliente && sucursales.length > 1 && (

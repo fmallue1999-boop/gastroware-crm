@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.9.0 — 28 de septiembre de 2026
+
+Ficha del cliente por pestañas y cotizar en pantalla propia (sin migraciones).
+
+- FichaChat: cabecera corta + FichaTabs (Operaciones, Historial, Cotizaciones, Equipos y services, Personas, Datos; IrAPestana para saltar). En el panel del costado todo desplaza junto (antes la cabecera dejaba ~70 px para el contenido) y hay botón para abrir la ficha completa; ConPanel más ancho (440/500 px). ?tab= abre una pestaña.
+- NuevaOperacion: interés en equipos (InteresAgregar con abiertoInicial/onCerrar), venta de consumibles, pedido de repuesto, tarea. Se sacaron los accesos fijos de consumibles/repuestos de la cabecera.
+- InteresFijado: cotización vigente a la vista (Cotizar / Ver PDF / Compartir / Nueva versión), Me compró / No se dio, "Más opciones" en grupos.
+- /cotizar/[id]: CotizacionForm en 5 secciones con total fijo abajo; arranca con los productos del interés o con la última versión. Datos fiscales obligatorios (lib/datos-cotizar.ts: cuitValido con dígito verificador, faltanParaCotizar, datosFiscalesDe, cuitProlijo); guardarDatosParaCotizar los guarda en el cliente y la sucursal principal (CUIT único con aviso); registrarCotizacion los exige.
+- crearClienteRapido + ClienteNuevoRapido (con aviso de duplicados) en la venta de consumibles; botón visible de cliente nuevo en el pedido de repuesto. El PDF muestra el CUIT del cliente con guiones.
+
 ## v1.8.0 — 28 de septiembre de 2026
 
 Cotización en PDF (migración 034_cotizacion_pdf.sql).

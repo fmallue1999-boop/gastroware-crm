@@ -19,6 +19,20 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.9.0",
+    fecha: "2026-09-28",
+    titulo: "Ficha del cliente ordenada y cotizar más cómodo",
+    cambios: [
+      "La ficha del cliente ahora va por pestañas: Operaciones, Historial, Cotizaciones, Equipos y services, Personas y Datos. En la compu, al costado, se ve completa (todo desplaza junto) y con un botón se abre en grande.",
+      "Cada interés muestra su cotización a la vista: “Cotizar”, o “Ver PDF” y “Compartir” si ya está hecha. Me compró / No se dio abajo, y el resto ordenado en “Más opciones”.",
+      "Venta de consumibles, pedido de repuesto y tareas ya no aparecen mezclados arriba: están en “+ Nueva operación”, cada apartado por separado.",
+      "Cotizar tiene su propia pantalla, en pasos: datos del cliente, productos, precio y pago, entrega y validez. El total queda siempre a la vista.",
+      "Para cotizar son obligatorios razón social, CUIT (se controla que sea válido), dirección, localidad y email. Si falta alguno se completa ahí mismo y queda guardado en la ficha.",
+      "“Nueva versión” arranca con todo lo de la cotización anterior.",
+      "En venta de consumibles y en pedido de repuesto se puede cargar un cliente nuevo sin salir (avisa si el teléfono ya está cargado).",
+    ],
+  },
+  {
     version: "1.8.0",
     fecha: "2026-09-28",
     titulo: "Cotización en PDF lista para mandar al cliente",
