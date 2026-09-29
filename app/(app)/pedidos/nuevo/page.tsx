@@ -10,7 +10,8 @@ export default async function NuevaVentaPage({
   const { cliente: clienteId } = await searchParams;
   const supabase = await createClient();
   const [{ data }, clienteRes] = await Promise.all([
-    supabase.from("productos").select("*").eq("activo", true).order("nombre"),
+    // Venta directa de equipos (consumibles y repuestos tienen su apartado)
+    supabase.from("productos").select("*").eq("activo", true).eq("es_consumible", false).not("categoria", "in", "(repuesto,refaccion)").order("nombre"),
     clienteId
       ? supabase
           .from("clientes")
@@ -25,7 +26,7 @@ export default async function NuevaVentaPage({
     <div className="mx-auto max-w-lg">
       <h1 className="mb-1 text-2xl font-bold tracking-tight">Nueva venta</h1>
       <p className="mb-5 text-sm text-piedra">
-        Qué se vendió y a quién. Entra al tablero de ventas como “Vendido”.
+        Qué equipo se vendió y a quién. Entra al tablero de ventas como “Vendido”. Consumibles y repuestos se venden desde su apartado.
       </p>
       <PedidoDirectoForm
         productos={(data ?? []) as Producto[]}

@@ -92,7 +92,14 @@ export async function iaLeerConsulta(input: { texto?: string; imagenBase64?: str
   if (!texto && !input.imagenBase64) return { error: "Pegá el mensaje o subí la captura" };
   const supabase = await createClient();
   const user = await usuarioActual();
-  const { data: productos } = await supabase.from("productos").select("id, nombre, categoria").eq("activo", true).order("nombre");
+  // La nueva consulta es de equipos: la IA solo elige entre equipos
+  const { data: productos } = await supabase
+    .from("productos")
+    .select("id, nombre, categoria")
+    .eq("activo", true)
+    .eq("es_consumible", false)
+    .not("categoria", "in", "(repuesto,refaccion)")
+    .order("nombre");
   const contexto = JSON.stringify({
     mensaje: texto || "(ver la imagen)",
     catalogo: productos ?? [],

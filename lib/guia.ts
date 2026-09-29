@@ -189,11 +189,13 @@ export const TAREAS: Tarea[] = [
     titulo: "Armar y mandar una propuesta",
     pasos: [
       { texto: "En la tarjeta del interés, “Más” → “Cotizar” → “Armar cotización”." },
-      { texto: "Agregá los productos del catálogo (vienen con el precio de lista), forma de pago y validez." },
-      { texto: "Si hay una condición especial (plazo, financiación, bonificación), tildala. Guardar." },
+      { texto: "Elegí si cotizás en pesos o en dólares: los productos del catálogo vienen con el precio de lista en esa moneda." },
+      { texto: "Agregá los productos (o una línea libre), la forma de pago (y el detalle, ej. 50% anticipo + 3 cuotas) y la validez." },
+      { texto: "Si el cliente pide un descuento especial, tildalo y poné el % y el motivo: la cotización muestra subtotal, descuento y total." },
+      { texto: "Si hay otra condición especial (plazo, financiación), tildala. Guardar." },
       { texto: "Tocá “Imprimir” en la cotización para mandarla en PDF." },
     ],
-    ojo: "Si va por debajo de la lista (más allá de lo que podés dar solo) o con condición especial, queda “esperando aprobación” y no se puede imprimir hasta que dirección la apruebe. Te llega el aviso.",
+    ojo: "Si el descuento especial o el precio van más allá de lo que podés dar solo, o hay condición especial, queda “esperando aprobación” con el motivo y no se puede imprimir hasta que dirección la apruebe. Te llega el aviso.",
   },
   {
     id: "cadencia",

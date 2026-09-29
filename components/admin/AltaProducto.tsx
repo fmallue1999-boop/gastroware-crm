@@ -25,6 +25,7 @@ export default function AltaProducto() {
   const [categoria, setCategoria] = useState("otro");
   const [moneda, setMoneda] = useState("ARS");
   const [precio, setPrecio] = useState("");
+  const [precioOtra, setPrecioOtra] = useState("");
   const [garantia, setGarantia] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +38,9 @@ export default function AltaProducto() {
         marca,
         categoria,
         moneda,
-        precio_referencia: precio ? Number(precio) : null,
+        // Precio en la moneda principal y, si se cargó, en la otra
+        precio_ars: moneda === "USD" ? (precioOtra ? Number(precioOtra) : null) : precio ? Number(precio) : null,
+        precio_usd: moneda === "USD" ? (precio ? Number(precio) : null) : precioOtra ? Number(precioOtra) : null,
         garantia_meses: garantia ? Number(garantia) : null,
       });
       if (res && "error" in res && res.error) {
@@ -47,6 +50,7 @@ export default function AltaProducto() {
       setNombre("");
       setMarca("");
       setPrecio("");
+      setPrecioOtra("");
       setGarantia("");
       setAbierto(false);
     });
@@ -104,15 +108,23 @@ export default function AltaProducto() {
           onChange={(e) => setMoneda(e.target.value)}
           className={inputCls}
         >
-          <option value="ARS">ARS</option>
-          <option value="USD">USD</option>
+          <option value="ARS">Principal: pesos</option>
+          <option value="USD">Principal: dólares</option>
         </select>
         <input
           type="number"
           min={0}
-          placeholder="Precio"
+          placeholder={moneda === "USD" ? "Precio USD" : "Precio $"}
           value={precio}
           onChange={(e) => setPrecio(e.target.value)}
+          className={inputCls}
+        />
+        <input
+          type="number"
+          min={0}
+          placeholder={moneda === "USD" ? "Precio $ (opcional)" : "Precio USD (opcional)"}
+          value={precioOtra}
+          onChange={(e) => setPrecioOtra(e.target.value)}
           className={inputCls}
         />
         <input

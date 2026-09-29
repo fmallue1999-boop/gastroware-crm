@@ -44,12 +44,15 @@ export default async function NuevaSolicitudRepuestoPage({
     { data: catalogo },
     { data: personas },
     clienteRes,
+    productosRepRes,
     equiposRes,
   ] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("repuestos").select("id, descripcion, codigo_interno, stock").eq("activo", true).is("deleted_at", null).order("descripcion").limit(1000),
+    supabase.from("repuestos").select("id, descripcion, codigo_interno, stock, precio, moneda").eq("activo", true).is("deleted_at", null).order("descripcion").limit(1000),
     supabase.from("usuarios").select("id, nombre, rol").eq("activo", true).order("nombre"),
     clienteId ? supabase.from("clientes").select("id, nombre_comercial").eq("id", clienteId).maybeSingle() : Promise.resolve({ data: null }),
+    // Productos del catálogo que son repuestos (también se pueden pedir)
+    supabase.from("productos").select("id, nombre, precio_referencia, moneda, precio_ars, precio_usd, stock").eq("activo", true).in("categoria", ["repuesto", "refaccion"]).order("nombre"),
     clienteId
       ? supabase.from("equipos").select("id, numero_serie, marca_modelo_libre, producto:productos(nombre, es_consumible, categoria)").eq("cliente_id", clienteId).is("deleted_at", null)
       : Promise.resolve({ data: [] }),
@@ -71,7 +74,8 @@ export default async function NuevaSolicitudRepuestoPage({
       </div>
       <SolicitudRepuestoForm
         yo={user?.id ?? ""}
-        catalogo={(catalogo ?? []) as { id: string; descripcion: string; codigo_interno: string | null; stock: number | null }[]}
+        catalogo={(catalogo ?? []) as { id: string; descripcion: string; codigo_interno: string | null; stock: number | null; precio: number | null; moneda: string | null }[]}
+        productosRepuesto={(productosRepRes.data ?? []) as { id: string; nombre: string; precio_referencia: number | null; moneda: string; precio_ars: number | null; precio_usd: number | null; stock: number | null }[]}
         personas={(personas ?? []) as { id: string; nombre: string; rol: string }[]}
         clienteInicial={cliente ? { id: cliente.id, nombre: cliente.nombre_comercial } : null}
         equiposIniciales={equipos}

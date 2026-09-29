@@ -36,6 +36,8 @@ export async function crearSolicitudRepuesto(input: {
   modeloTexto?: string | null;
   numeroSerie?: string | null;
   repuestoId?: string | null;
+  /** Producto del catálogo general que es un repuesto (opcional). */
+  productoId?: string | null;
   descripcion: string;
   codigo?: string | null;
   fotoBase64?: string | null;
@@ -90,6 +92,7 @@ export async function crearSolicitudRepuesto(input: {
       cliente_id: clienteId,
       sucursal_id: input.sucursalId || null,
       linea: "repuestos",
+      producto_id: input.productoId || null,
       comercial_id: comercialId,
       origen: input.casoId ? "Caso" : input.otId ? "Service" : "Repuesto",
       pedido: "precio",

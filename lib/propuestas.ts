@@ -1,3 +1,5 @@
+import { precioEn } from "@/lib/precios";
+
 /**
  * Propuestas fuera de lista (manual, reglas generales): toda cotización con
  * descuento sobre la lista (más allá de lo que el vendedor puede dar solo) o
@@ -5,7 +7,14 @@
  */
 
 export type ItemPropuesta = { productoId: string | null; descripcion: string; cantidad: number; precioUnit: number };
-export type PrecioLista = { id: string; nombre: string; precio_referencia: number | null; moneda: string };
+export type PrecioLista = {
+  id: string;
+  nombre: string;
+  precio_referencia: number | null;
+  moneda: string;
+  precio_ars?: number | null;
+  precio_usd?: number | null;
+};
 
 export function evaluarFueraDeLista(
   items: ItemPropuesta[],
@@ -19,10 +28,12 @@ export function evaluarFueraDeLista(
   for (const it of items) {
     if (!it.productoId) continue;
     const p = lista.find((x) => x.id === it.productoId);
-    if (!p?.precio_referencia || p.moneda !== moneda) continue;
-    const minimo = p.precio_referencia * (1 - tope);
+    // Contra el precio de lista en la moneda de la cotización (pesos o dólares)
+    const precioLista = precioEn(p, moneda);
+    if (!p || !precioLista) continue;
+    const minimo = precioLista * (1 - tope);
     if (it.precioUnit < minimo - 0.5) {
-      const pct = Math.round((1 - it.precioUnit / p.precio_referencia) * 1000) / 10;
+      const pct = Math.round((1 - it.precioUnit / precioLista) * 1000) / 10;
       motivos.push(`${p.nombre}: ${pct}% por debajo de lista`);
     }
   }

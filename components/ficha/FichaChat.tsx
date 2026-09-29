@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { productosDeLinea } from "@/lib/precios";
 import { Bell, CalendarPlus, ChevronLeft, Cog, Droplets, Mail, MessageCircle, Phone, Wrench, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl, firmarUrls } from "@/lib/core/storage";
@@ -474,7 +475,7 @@ export default async function FichaChat({
               key={o.id}
               interes={o}
               nombre={nombreProductos(o)}
-              productos={productos}
+              productos={productosDeLinea(productos, o.linea)}
               stockTexto={o.producto_id && stockInfo[o.producto_id] ? textoStock(stockInfo[o.producto_id], fechaCorta) : null}
               versiones={versionesPor.get(o.id) ?? []}
               guiones={guionesDe(o)}
@@ -510,7 +511,7 @@ export default async function FichaChat({
               />
             </div>
           ))}
-          <InteresAgregar clienteId={c.id} productos={productos} stockInfo={stockInfo} />
+          <InteresAgregar clienteId={c.id} productos={productosDeLinea(productos, "equipos")} stockInfo={stockInfo} />
         </div>
       )}
 
