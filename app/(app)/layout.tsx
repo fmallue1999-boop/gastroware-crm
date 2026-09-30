@@ -25,7 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect("/login");
 
   const [{ data: yo }, notifRes, marca] = await Promise.all([
-    supabase.from("usuarios").select("rol, nombre").eq("id", user.id).single(),
+    supabase.from("usuarios").select("rol, nombre, ve_contenidos").eq("id", user.id).single(),
     supabase
       .from("notificaciones")
       .select("id", { count: "exact", head: true })
@@ -60,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[200px_minmax(0,1fr)]">
       <EstiloMarca marca={marca} />
-      <Rail rol={rol} nombre={yo?.nombre} email={user.email} noLeidas={noLeidas} paraHoy={paraHoy} marca={marca} />
+      <Rail rol={rol} nombre={yo?.nombre} email={user.email} noLeidas={noLeidas} paraHoy={paraHoy} marca={marca} veContenidos={Boolean(yo?.ve_contenidos)} />
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-borde bg-crema/90 px-4 py-2.5 backdrop-blur lg:hidden">

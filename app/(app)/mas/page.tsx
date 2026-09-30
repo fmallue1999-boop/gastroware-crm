@@ -29,6 +29,7 @@ import {
   Sparkles,
   Newspaper,
   CalendarCheck,
+  CalendarRange,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -72,7 +73,7 @@ export default async function MasPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: yo } = await supabase.from("usuarios").select("rol, nombre").eq("id", user!.id).single();
+  const { data: yo } = await supabase.from("usuarios").select("rol, nombre, ve_contenidos").eq("id", user!.id).single();
   const rol = yo?.rol ?? "comercial";
   const esAdmin = esGestorPuesto(rol);
   const esTecnico = rol === "tecnico";
@@ -123,6 +124,9 @@ export default async function MasPage() {
         )}
         {esAdmin && (
           <MenuLink href="/informes" icono={ClipboardList} titulo="Informes comerciales" detalle="Los informes de los lunes de cada vendedor, para responder" />
+        )}
+        {(["marketing", "direccion", "admin"].includes(rol) || yo?.ve_contenidos) && (
+          <MenuLink href="/contenidos" icono={CalendarRange} titulo="Calendario de contenidos" detalle="Lo que se publica en redes, por día: historias y feed, con su aprobación" />
         )}
         <MenuLink href="/marketing/pedidos" icono={Palette} titulo="Pedidos de material" detalle="Pedirle a marketing folletos, videos, fichas o posteos" />
         {(esAdmin || rol === "marketing") && (

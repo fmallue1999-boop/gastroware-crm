@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.10.0 — 30 de septiembre de 2026
+
+Calendario de contenidos (migración 035_contenidos.sql).
+
+- Migración 035: tablas contenidos (una ficha = un registro con su estado; fecha como date) y contenido_archivos (cascade), bucket privado "contenidos" (imágenes y videos, 500 MB por archivo; el plan puede limitar menos), usuarios.ve_contenidos (lo cambia solo un gestor), fn_ve_contenidos / fn_carga_contenidos, trigger fn_contenido_guardia (updated_at/by; solo dirección general aprueba, pide re-edición, cancela o escribe la corrección) y auditoría.
+- lib/contenidos.ts (cuentas, tipos, estados y sus colores; rangos de mes y semana desde el lunes; orden natural de archivos y dentro de la celda), tokens de color en globals.css, lib/servidor/contenidos.ts, lib/actions/contenidos.ts (guardar, borrar con sus archivos del almacenamiento, avisos a dirección y a quien cargó).
+- /contenidos (MES | SEMANA, doble entrada días × HISTORIAS/FEED con columna y encabezado fijos, filtros en el link) y /contenidos/fichas (listado). La ficha se abre al costado (?ficha= / ?nueva=1&fecha=&tipo=) sin perder la vista.
+- lib/subir.ts: subida directa o por partes (tus-js-client, 6 MB) con avance. lib/core/storage.ts: firmarLote.
+- Menú "Contenidos" para marketing y dirección, y para quien tenga ve_contenidos (tilde en Administración → Usuarios).
+
 ## v1.9.1 — 28 de septiembre de 2026
 
 - ConPanel: el sticky pasa al aside (antes el div interno no podía quedar fijo porque medía lo mismo que su contenedor).

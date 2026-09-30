@@ -33,6 +33,8 @@ export interface Usuario {
   telefono?: string | null;
   /** Territorio que atiende, si es vendedor. */
   territorio?: string | null;
+  /** Migración 035: ve el calendario de contenidos (marketing y dirección siempre). */
+  ve_contenidos?: boolean;
 }
 
 export interface Distribuidor {
