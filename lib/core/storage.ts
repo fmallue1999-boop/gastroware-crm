@@ -8,8 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 
 const EXPIRACION_SEGUNDOS = 3600;
 
+export type Bucket = "servicio" | "documentos" | "cotizaciones" | "contenidos" | "material";
+
 export async function firmarUrl(
-  bucket: "servicio" | "documentos" | "cotizaciones",
+  bucket: Bucket,
   path: string | null
 ): Promise<string | null> {
   if (!path) return null;
@@ -22,8 +24,17 @@ export async function firmarUrl(
 
 /** Firma varias rutas en paralelo; conserva el orden. */
 export async function firmarUrls(
-  bucket: "servicio" | "documentos" | "cotizaciones",
+  bucket: Bucket,
   paths: (string | null)[]
 ): Promise<(string | null)[]> {
   return Promise.all(paths.map((p) => firmarUrl(bucket, p)));
+}
+
+/** Varias rutas de un bucket en una sola llamada (galerías): path → URL firmada. */
+export async function firmarLote(bucket: Bucket, paths: string[], segundos = EXPIRACION_SEGUNDOS): Promise<Map<string, string>> {
+  const unicos = [...new Set(paths.filter(Boolean))];
+  if (!unicos.length) return new Map();
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from(bucket).createSignedUrls(unicos, segundos);
+  return new Map((data ?? []).filter((d) => d.signedUrl && d.path).map((d) => [d.path as string, d.signedUrl as string]));
 }

@@ -94,6 +94,19 @@ function FilaUsuario({
         className={inputCls}
       />
       {esGestor && (
+        <div className="flex flex-wrap items-center gap-2">
+          {!["marketing", "direccion", "admin"].includes(u.rol) && (
+            <label className="flex min-h-11 items-center gap-2 text-[13px] font-semibold" title="Marketing y dirección lo ven siempre">
+              <input
+                type="checkbox"
+                checked={Boolean(u.ve_contenidos)}
+                disabled={pending}
+                onChange={(e) => cambiar({ ve_contenidos: e.target.checked })}
+                className="h-5 w-5"
+              />
+              Ve el calendario de contenidos
+            </label>
+          )}
         <button
           type="button"
           disabled={pending}
@@ -104,6 +117,7 @@ function FilaUsuario({
         >
           {u.activo ? "Desactivar" : "Reactivar"}
         </button>
+        </div>
       )}
     </div>
   );

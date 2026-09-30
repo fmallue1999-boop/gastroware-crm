@@ -1,6 +1,6 @@
 {
   "name": "gastroware-crm",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -22,6 +22,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "tus-js-client": "^4.3.1",
     "web-push": "^3.6.7",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },

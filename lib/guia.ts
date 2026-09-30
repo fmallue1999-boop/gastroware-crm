@@ -518,6 +518,21 @@ export const TAREAS: Tarea[] = [
       { texto: "Arriba aparecen los modelos que todavía no tienen video. Administración lo manda con cada despacho." },
     ],
   },
+  {
+    id: "contenidos",
+    titulo: "Calendario de contenidos: cargar y aprobar",
+    pasos: [
+      { texto: "Contenidos → “+ Nuevo contenido” (o el “+” de una celda del calendario, que ya trae la fecha y si es historia o feed).", href: "/contenidos", boton: "Ir al calendario" },
+      { texto: "Completá nombre, cuenta (GastroWare, ZUMEX o Colaboración), fecha y tipo. Objetivo y copy son opcionales; el copy conserva los renglones." },
+      { texto: "Agregá las imágenes y videos: se ordenan solos por nombre (01_portada, 02_producto… 10_cierre). Tocá uno para verlo grande o descargarlo." },
+      { texto: "Queda “Pendiente de aprobación” y le llega el aviso a dirección." },
+      { texto: "Dirección abre la ficha y elige Aprobado, Re-edición (con la corrección: qué cambiar) o Cancelado. A quien la cargó le llega el aviso." },
+      { texto: "Si vuelve con re-edición: corregí la ficha y guardá con “mandarlo a aprobar de nuevo” tildado." },
+      { texto: "Vista MES para ver todo el mes (tocá un día para ir a esa semana) y SEMANA para trabajar, con la miniatura de cada contenido. Los filtros de cuenta y estado quedan en el link: se puede compartir la vista filtrada." },
+      { texto: "“Fichas de contenido” es el listado: buscar por nombre, ordenar por fecha y filtrar." },
+    ],
+    ojo: "Cada ficha tiene su propio estado. El borde de color es la cuenta; la pastilla con texto, el estado. Lo ven marketing, dirección y a quien dirección habilite en Administración → Usuarios.",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -565,6 +580,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
     ],
     tareas: [
       "aprobar-propuestas",
+      "contenidos",
       "responder-informes",
       "tablero",
       "aprobar-condicion",
@@ -646,8 +662,8 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
     titulo: "Marketing y contenido",
     resumen: "Contenido, material comercial, videos por modelo y campañas.",
     abreEn: { texto: "Mi día", href: "/hoy" },
-    cadaDia: ["Pedidos de material con fecha.", "Modelos sin video instructivo.", "Consultas del mes por canal."],
-    tareas: ["atender-pedidos", "videos", "nueva-consulta"],
+    cadaDia: ["Calendario de contenidos: lo de la semana y lo que volvió con re-edición.", "Pedidos de material con fecha.", "Modelos sin video instructivo.", "Consultas del mes por canal."],
+    tareas: ["contenidos", "atender-pedidos", "videos", "nueva-consulta"],
   },
   distribuidor: {
     titulo: "Distribuidor",

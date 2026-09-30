@@ -19,6 +19,20 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.10.0",
+    fecha: "2026-09-30",
+    titulo: "Calendario de contenidos para redes",
+    cambios: [
+      "Nueva sección Contenidos: cada publicación es una ficha con nombre, cuenta (GastroWare, ZUMEX o Colaboración), fecha, historia o feed, objetivo, copy e imágenes y videos.",
+      "Calendario por MES (todo el mes de un vistazo; tocás un día y vas a esa semana) y por SEMANA (tarjetas con la miniatura). HISTORIAS y FEED siempre en filas separadas y el día de hoy resaltado.",
+      "Cada ficha tiene su propio estado: Pendiente de aprobación, Aprobado, Re-edición o Cancelado. El borde de color es la cuenta; la pastilla con texto, el estado.",
+      "Marketing carga y dirección aprueba, pide re-edición (con la corrección) o cancela. Los dos reciben el aviso.",
+      "Filtros de cuenta y estado que se combinan y quedan en el link para compartir la vista. Listado “Fichas de contenido” con búsqueda y orden por fecha.",
+      "Los archivos se ordenan solos por nombre (01, 02… 10) y los videos grandes se suben por partes, con el avance a la vista.",
+      "Lo ven marketing y dirección; a cualquier otra persona se la habilita en Administración → Usuarios.",
+    ],
+  },
+  {
     version: "1.9.1",
     fecha: "2026-09-28",
     titulo: "Ajustes de la ficha al costado",

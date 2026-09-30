@@ -335,7 +335,7 @@ export async function crearUsuario(input: {
 
 export async function actualizarUsuario(
   usuarioId: string,
-  patch: { nombre?: string; rol?: string; activo?: boolean; telefono?: string | null; territorio?: string | null }
+  patch: { nombre?: string; rol?: string; activo?: boolean; telefono?: string | null; territorio?: string | null; ve_contenidos?: boolean }
 ) {
   const rol = await rolActual();
   if (!["direccion", "admin"].includes(rol))

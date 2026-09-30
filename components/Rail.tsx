@@ -21,8 +21,10 @@ export default function Rail({
   noLeidas = 0,
   paraHoy = 0,
   marca = MARCA_POR_DEFECTO,
+  veContenidos = false,
 }: {
   rol?: string;
+  veContenidos?: boolean;
   nombre?: string | null;
   email?: string | null;
   noLeidas?: number;
@@ -30,7 +32,7 @@ export default function Rail({
   marca?: Marca;
 }) {
   const pathname = usePathname();
-  const { lateral } = menuDe(rol);
+  const { lateral } = menuDe(rol, { veContenidos });
   const crear = botonCrear(rol);
 
   return (

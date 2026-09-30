@@ -30,6 +30,24 @@
   --color-ambar-soft: #fbeed2;
   --color-naranja: #d9552b;      /* etapa Lista de espera / muy interesado */
   --color-naranja-soft: #fbe4da;
+
+  /* Calendario de contenidos (v1.10): la cuenta va como borde/fondo del
+     ítem y el estado como pastilla con punto y texto (lib/contenidos.ts). */
+  --color-cuenta-gastroware: #2f6fce;
+  --color-cuenta-gastroware-soft: #e4edfb;
+  --color-cuenta-zumex: #ec7a1c;
+  --color-cuenta-zumex-soft: #fdecdc;
+  --color-cuenta-colaboracion: #1f9d5b;
+  --color-cuenta-colaboracion-soft: #e3f5ea;
+  --color-estado-pendiente: #e2b203;
+  --color-estado-pendiente-soft: #fdf5d3;
+  --color-estado-pendiente-texto: #7a5d00;
+  --color-estado-aprobado: #1f9d5b;
+  --color-estado-aprobado-soft: #e3f5ea;
+  --color-estado-reedicion: #d9552b;
+  --color-estado-reedicion-soft: #fbe4da;
+  --color-estado-cancelado: #d63a3a;
+  --color-estado-cancelado-soft: #fbe2e2;
 }
 
 @theme inline {

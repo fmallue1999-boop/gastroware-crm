@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   Droplets,
   Cog,
+  CalendarRange,
   type LucideIcon,
 } from "lucide-react";
 import type { ClaveIcono } from "@/lib/navegacion";
@@ -47,5 +48,6 @@ export const ICONOS_MENU: Record<ClaveIcono, LucideIcon> = {
   tareas: CalendarCheck,
   consumibles: Droplets,
   repuestos: Cog,
+  contenidos: CalendarRange,
   mas: Menu,
 };

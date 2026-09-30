@@ -26,6 +26,7 @@ export type ClaveIcono =
   | "tareas"
   | "consumibles"
   | "repuestos"
+  | "contenidos"
   | "mas";
 
 export type ItemMenu = { href: string; label: string; icono: ClaveIcono; badgeHoy?: boolean };
@@ -53,10 +54,24 @@ const I = {
   tareas: { href: "/tareas", label: "Tareas", icono: "tareas" },
   consumibles: { href: "/consumibles", label: "Consumibles", icono: "consumibles" },
   repuestos: { href: "/repuestos", label: "Repuestos", icono: "repuestos" },
+  contenidos: { href: "/contenidos", label: "Contenidos", icono: "contenidos" },
   mas: { href: "/mas", label: "Más", icono: "mas" },
 } satisfies Record<string, ItemMenu>;
 
-export function menuDe(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] } {
+/**
+ * Menú del puesto. El calendario de contenidos lo ven marketing y dirección
+ * siempre, y cualquier otro puesto si dirección lo habilitó (veContenidos).
+ */
+export function menuDe(rol: string, opciones: { veContenidos?: boolean } = {}): { lateral: ItemMenu[]; celular: ItemMenu[] } {
+  const menu = menuDelPuesto(rol);
+  if (opciones.veContenidos && !menu.lateral.some((i) => i.href === "/contenidos")) {
+    const guia = menu.lateral.findIndex((i) => i.href === "/guia");
+    menu.lateral.splice(guia >= 0 ? guia : menu.lateral.length - 1, 0, I.contenidos);
+  }
+  return menu;
+}
+
+function menuDelPuesto(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] } {
   switch (rol) {
     case "tecnico":
       return {
@@ -75,17 +90,17 @@ export function menuDe(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
       };
     case "admin":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.tablero, I.cobranzas, I.ventas, I.consumibles, I.repuestos, I.services, I.casos, I.contactos, I.stock, I.informes, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.tablero, I.cobranzas, I.ventas, I.consumibles, I.repuestos, I.services, I.casos, I.contactos, I.stock, I.informes, I.contenidos, I.movimientos, I.guia, I.mas],
         celular: [I.midia, I.cobranzas, I.services, I.mas],
       };
     case "marketing":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.pedidos_material, I.videos, I.marketing, I.contactos, I.movimientos, I.guia, I.mas],
-        celular: [I.midia, I.pedidos_material, I.contactos, I.mas],
+        lateral: [I.midia, I.contenidos, I.tareas, I.asistente, I.pedidos_material, I.videos, I.marketing, I.contactos, I.movimientos, I.guia, I.mas],
+        celular: [I.midia, I.contenidos, I.pedidos_material, I.mas],
       };
     case "direccion":
       return {
-        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.tablero, I.aprobaciones, I.informes, I.contactos, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.tablero, I.aprobaciones, I.informes, I.contenidos, I.contactos, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.embudo, I.midia, I.contactos, I.mas],
       };
     case "distribuidor":

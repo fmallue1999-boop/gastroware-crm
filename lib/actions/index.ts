@@ -19,3 +19,4 @@ export * from "./agenda";
 export * from "./personas";
 export * from "./consumibles";
 export * from "./repuestos";
+export * from "./contenidos";
