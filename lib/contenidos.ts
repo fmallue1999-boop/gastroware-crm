@@ -72,7 +72,11 @@ const DIAS_CORTOS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"];
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
 export const diaSemanaCorto = (fecha: string) => DIAS_CORTOS[aDate(fecha).getUTCDay()];
-export const nombreMes = (fecha: string) => `${MESES[Number(fecha.slice(5, 7)) - 1]} ${fecha.slice(0, 4)}`;
+/** "Octubre 2026" */
+export const nombreMes = (fecha: string) => {
+  const m = MESES[Number(fecha.slice(5, 7)) - 1];
+  return `${m[0].toUpperCase()}${m.slice(1)} ${fecha.slice(0, 4)}`;
+};
 
 /** Lunes de la semana de esa fecha (la semana empieza el lunes). */
 export function lunesDe(fecha: string): string {

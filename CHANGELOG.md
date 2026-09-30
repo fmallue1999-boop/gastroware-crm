@@ -3,6 +3,11 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.10.1 — 30 de septiembre de 2026
+
+- IrAHoy: el mes se desplaza hasta la columna de hoy (data-hoy). nombreMes con mayúscula inicial en vez de la clase capitalize (que ponía "Del" y "Al").
+- Probado en producción: crear ficha con imagen, copy con renglones, mover de fecha, aprobar, verla en mes, semana (miniatura) y listado, filtros combinados y borrar (sin rastros en la base ni en el almacenamiento).
+
 ## v1.10.0 — 30 de septiembre de 2026
 
 Calendario de contenidos (migración 035_contenidos.sql).
