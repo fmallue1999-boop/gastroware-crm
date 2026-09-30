@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.10.2 — 30 de septiembre de 2026
+
+- Calendario: la grilla pasa a w-max (antes medía el ancho de la caja y la columna fija se iba con ella al desplazar más allá de ese ancho).
+
 ## v1.10.1 — 30 de septiembre de 2026
 
 - IrAHoy: el mes se desplaza hasta la columna de hoy (data-hoy). nombreMes con mayúscula inicial en vez de la clase capitalize (que ponía "Del" y "Al").

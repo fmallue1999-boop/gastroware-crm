@@ -19,6 +19,12 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.10.2",
+    fecha: "2026-09-30",
+    titulo: "Calendario: la columna HISTORIAS / FEED queda fija",
+    cambios: ["Al desplazar el mes hacia los costados, la columna de HISTORIAS y FEED queda siempre a la vista."],
+  },
+  {
     version: "1.10.1",
     fecha: "2026-09-30",
     titulo: "Calendario: arranca en el día de hoy",
