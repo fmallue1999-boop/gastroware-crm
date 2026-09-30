@@ -19,6 +19,15 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.10.1",
+    fecha: "2026-09-30",
+    titulo: "Calendario: arranca en el día de hoy",
+    cambios: [
+      "En la vista MES, el calendario se desplaza solo hasta el día de hoy.",
+      "Título de la semana más prolijo (“Semana del 28/09 al 04/10/2026”).",
+    ],
+  },
+  {
     version: "1.10.0",
     fecha: "2026-09-30",
     titulo: "Calendario de contenidos para redes",

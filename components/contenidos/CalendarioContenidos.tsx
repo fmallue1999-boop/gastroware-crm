@@ -4,6 +4,7 @@ import { Plus, Video } from "lucide-react";
 import { TIPOS, conParams, cuentaDe, diaSemanaCorto, ordenarEnCelda, tipoDe } from "@/lib/contenidos";
 import type { Contenido } from "@/lib/servidor/contenidos";
 import { EstadoPastilla } from "@/components/contenidos/Indicadores";
+import IrAHoy from "@/components/contenidos/IrAHoy";
 
 /**
  * El calendario como cuadro de doble entrada (v1.10): columnas = días,
@@ -35,7 +36,8 @@ export default function CalendarioContenidos({
   const abrir = (id: string) => conParams(base, params, { ficha: id, nueva: null, fecha: null, tipo: null });
 
   return (
-    <div className="max-h-[calc(100dvh-15rem)] overflow-auto rounded-2xl border border-borde bg-white shadow-sm lg:max-h-[calc(100dvh-13rem)]">
+    <div data-calendario className="max-h-[calc(100dvh-15rem)] overflow-auto rounded-2xl border border-borde bg-white shadow-sm lg:max-h-[calc(100dvh-13rem)]">
+      <IrAHoy clave={`${vista}-${dias[0]}`} />
       <div className="grid" style={{ gridTemplateColumns: `5.5rem repeat(${dias.length}, minmax(${ancho}px, 1fr))` }}>
         {/* Encabezado: esquina + días (fijo arriba) */}
         <div className="sticky left-0 top-0 z-30 border-b border-r border-borde bg-white" />
@@ -49,11 +51,11 @@ export default function CalendarioContenidos({
           );
           const cls = `sticky top-0 z-20 flex flex-col items-center justify-center border-b border-r border-borde px-1 py-2 text-center ${esHoy ? "bg-marino" : "bg-white"}`;
           return vista === "mes" ? (
-            <Link key={d} href={conParams(base, params, { vista: "semana", dia: d, ficha: null, nueva: null })} scroll={false} title="Ver esta semana" className={`${cls} hover:bg-crema ${esHoy ? "hover:bg-marino-2" : ""}`}>
+            <Link key={d} data-hoy={esHoy ? "" : undefined} href={conParams(base, params, { vista: "semana", dia: d, ficha: null, nueva: null })} scroll={false} title="Ver esta semana" className={`${cls} hover:bg-crema ${esHoy ? "hover:bg-marino-2" : ""}`}>
               {contenido}
             </Link>
           ) : (
-            <div key={d} className={cls}>
+            <div key={d} data-hoy={esHoy ? "" : undefined} className={cls}>
               {contenido}
             </div>
           );

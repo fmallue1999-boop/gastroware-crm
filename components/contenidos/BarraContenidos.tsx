@@ -108,7 +108,7 @@ export function NavegacionCalendario({
           <span className="hidden sm:inline">{vista === "mes" ? "Mes siguiente" : "Semana siguiente"}</span> <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
-      <h2 className="min-w-0 flex-1 text-xl font-extrabold capitalize tracking-tight">{titulo}</h2>
+      <h2 className="min-w-0 flex-1 text-xl font-extrabold tracking-tight">{titulo}</h2>
       <div className="flex gap-1 rounded-xl border border-borde bg-white p-1">
         {(["mes", "semana"] as const).map((v) => (
           <Link
