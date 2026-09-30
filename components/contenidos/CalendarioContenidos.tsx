@@ -38,7 +38,8 @@ export default function CalendarioContenidos({
   return (
     <div data-calendario className="max-h-[calc(100dvh-15rem)] overflow-auto rounded-2xl border border-borde bg-white shadow-sm lg:max-h-[calc(100dvh-13rem)]">
       <IrAHoy clave={`${vista}-${dias[0]}`} />
-      <div className="grid" style={{ gridTemplateColumns: `5.5rem repeat(${dias.length}, minmax(${ancho}px, 1fr))` }}>
+      {/* w-max: la grilla mide lo que sus columnas, así la columna de títulos y los días quedan fijos al desplazar */}
+      <div className="grid w-max min-w-full" style={{ gridTemplateColumns: `5.5rem repeat(${dias.length}, minmax(${ancho}px, 1fr))` }}>
         {/* Encabezado: esquina + días (fijo arriba) */}
         <div className="sticky left-0 top-0 z-30 border-b border-r border-borde bg-white" />
         {dias.map((d) => {
