@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.17.2 — 1 de octubre de 2026
+
+- EliminarOperacion: "Eliminar interés (mal cargado)" (antes "mal cargada").
+
 ## v1.17.1 — 1 de octubre de 2026
 
 - eliminarOperacion: el registro en la ficha dice "Interés eliminado" (antes "Interés eliminada").
