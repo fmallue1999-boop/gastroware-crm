@@ -19,6 +19,20 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.11.0",
+    fecha: "2026-09-30",
+    titulo: "Material: la biblioteca comercial",
+    cambios: [
+      "Nueva sección Material: JETINNO, GASTROWARE y ZUMEX, cada una con su identidad (catálogo general, logo, tipografías), sus productos por categoría y sus accesorios.",
+      "Cada producto tiene VIDEOS (cómo usar, configurar, lavar u otro), IMÁGENES y FICHA: verlos en grande, descargarlos y compartirlos por WhatsApp desde el celular.",
+      "Buscador: escribís GX18, Versatile Pro o cafeteras (sin importar tildes ni mayúsculas) y te lleva directo.",
+      "“Material por producto”: la tabla con los videos de cómo usar, configurar y lavar de todos los productos. Si falta uno, marketing lo agrega desde ahí.",
+      "Marketing y dirección agregan, renombran y ordenan categorías y productos desde la pantalla, sin tocar nada técnico.",
+      "La ficha de un producto vinculado al Catálogo se anexa sola al PDF de la cotización: se carga una sola vez.",
+      "La Biblioteca vieja quedó reemplazada por Material.",
+    ],
+  },
+  {
     version: "1.10.2",
     fecha: "2026-09-30",
     titulo: "Calendario: la columna HISTORIAS / FEED queda fija",

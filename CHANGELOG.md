@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.11.0 — 30 de septiembre de 2026
+
+Material, la biblioteca comercial (migración 036_material.sql).
+
+- Migración 036: material_marcas, material_categorias (sección productos/accesorios), material_productos (slug único, producto_id → Catálogo) y material_archivos (dueño marca|producto; espacios catalogo/logo/tipografias y videos con tipo usar/configurar/lavar/otro, imagenes, ficha), trigger que borra las filas de archivos al borrar marca o producto, auditoría, fn_gestiona_material (marketing, dirección, administración), RLS (todo el equipo ve), bucket privado "material" (500 MB), datos iniciales de las 3 marcas vinculados al Catálogo por nombre.
+- lib/material.ts (espacios, tipos de video, buscador sin tildes, slugs, validación), lib/servidor/material.ts, lib/actions/centro-material.ts (archivos, ficha única que reemplaza, estructura con orden).
+- /material (buscador + marcas + acceso a la tabla), /material/[marca] (columnas identidad / productos / accesorios; ?editar=1), /material/[marca]/[producto] (videos, imágenes con .zip, ficha con PDF embebido), /material/por-producto (Cómo usar / configurar / lavar, + Agregar). /biblioteca redirige a /material.
+- VisorMedios compartido (Calendario y Material), AccionesArchivo (descargar con &download= y compartir el archivo).
+- PDF de cotización: anexa también la ficha de Material de los productos vinculados (sin repetir si es la misma).
+
 ## v1.10.2 — 30 de septiembre de 2026
 
 - Calendario: la grilla pasa a w-max (antes medía el ancho de la caja y la columna fija se iba con ella al desplazar más allá de ese ancho).

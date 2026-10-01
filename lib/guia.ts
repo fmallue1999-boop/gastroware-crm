@@ -519,6 +519,28 @@ export const TAREAS: Tarea[] = [
     ],
   },
   {
+    id: "material",
+    titulo: "Material: videos, imágenes y fichas para mandar",
+    pasos: [
+      { texto: "Material → elegí la marca (JETINNO, GASTROWARE o ZUMEX), la categoría y el producto. O escribí en el buscador (ej: GX18, Versatile Pro): te lleva directo.", href: "/material", boton: "Ir a Material" },
+      { texto: "Cada producto tiene VIDEOS (cómo usar, configurar, lavar u otro), IMÁGENES y FICHA. Tocá uno para verlo grande." },
+      { texto: "“Compartir” manda el archivo por WhatsApp o mail desde el celular; “Descargar” lo baja. Las imágenes se bajan todas juntas con “Descargar todas”." },
+      { texto: "“Material por producto” es la tabla con los videos de cómo usar, configurar y lavar de todos los productos.", href: "/material/por-producto", boton: "Ver la tabla" },
+      { texto: "En la página de cada marca está la identidad: catálogo general, logo y tipografías." },
+    ],
+    ojo: "Lo ve todo el equipo. Marketing y dirección suben, borran y ordenan (en la marca, “Editar categorías y productos”). La ficha de un producto vinculado al Catálogo se anexa sola al PDF de la cotización.",
+  },
+  {
+    id: "material-cargar",
+    titulo: "Cargar y ordenar el material (marketing)",
+    pasos: [
+      { texto: "En la página del producto: “Subir video” (antes elegí si es de cómo usar, configurar, lavar u otro), “Subir imágenes” o “Subir ficha (PDF)”. La ficha nueva reemplaza a la anterior." },
+      { texto: "En la tabla “Material por producto”, “+ Agregar” sube el video directo en ese producto y ese tipo." },
+      { texto: "En la página de la marca, “Editar categorías y productos”: agregá, renombrá, subí o bajá y borrá categorías y productos, y vinculá cada producto con el del Catálogo." },
+    ],
+    ojo: "Los archivos se ordenan por nombre (01_, 02_…). Mientras Supabase esté en el plan gratis, el máximo es 50 MB por archivo.",
+  },
+  {
     id: "contenidos",
     titulo: "Calendario de contenidos: cargar y aprobar",
     pasos: [
@@ -551,7 +573,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Postventa del día.",
       "Lunes antes de las 10: tu informe.",
     ],
-    tareas: ["repuestos", "consumibles", 
+    tareas: ["repuestos", "consumibles", "material",
       "nueva-consulta",
       "primer-contacto",
       "no-es-mio",
@@ -663,7 +685,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
     resumen: "Contenido, material comercial, videos por modelo y campañas.",
     abreEn: { texto: "Mi día", href: "/hoy" },
     cadaDia: ["Calendario de contenidos: lo de la semana y lo que volvió con re-edición.", "Pedidos de material con fecha.", "Modelos sin video instructivo.", "Consultas del mes por canal."],
-    tareas: ["contenidos", "atender-pedidos", "videos", "nueva-consulta"],
+    tareas: ["contenidos", "material-cargar", "material", "atender-pedidos", "videos", "nueva-consulta"],
   },
   distribuidor: {
     titulo: "Distribuidor",
