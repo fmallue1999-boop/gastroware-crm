@@ -6,15 +6,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { hoyISO, normalizarTelefono, sumarDias } from "@/lib/format";
+import { hoyISO, sumarDias } from "@/lib/format";
 import { PEDIDO_ESTADOS, RELEVAMIENTO_INSTALACION } from "@/lib/constants";
 import { esGestor, factura as puedeFacturar } from "@/lib/puestos";
 import { atrasoMaximo, diasPostventa } from "@/lib/ventas";
 import type { PedidoEstado } from "@/lib/types";
 import { avisar, puestoActual, regla, usuarioActual, usuariosDePuesto, type SupabaseServidor } from "./comun";
-import { buscarClientePorTelefono } from "./contactos";
 import { cambiarEtapa } from "./intereses";
 import { normalizarPlan, problemaPlan, textoPlan, tipoPlan, type PlanPago } from "@/lib/plan-pago";
+import { cuitValido } from "@/lib/datos-cotizar";
 
 /**
  * Pedido directo: un cliente pide algo (llamada, WhatsApp, mostrador) y se
@@ -23,11 +23,10 @@ import { normalizarPlan, problemaPlan, textoPlan, tipoPlan, type PlanPago } from
  * de facturar) reutilizando cambiarEtapa.
  */
 export async function crearPedidoDirecto(input: {
-  /** Cliente como texto libre: nombre, empresa o teléfono, como se tenga.
-   *  Si parece un teléfono ya cargado, se reutiliza ese cliente; si no, se
-   *  crea uno mínimo que se completa después desde su ficha. */
-  clienteTexto?: string;
-  clienteId?: string;
+  /** v1.19: siempre un cliente de la base (elegido o recién cargado) con razón
+   *  social y CUIT válido; si le faltan, vienen en fiscal y se guardan en su ficha. */
+  clienteId: string;
+  fiscal?: { razonSocial: string; cuit: string };
   productoIds: string[];
   /** v1.16: unidades de cada producto (por defecto 1). */
   cantidades?: Record<string, number>;
@@ -46,33 +45,28 @@ export async function crearPedidoDirecto(input: {
   const supabase = await createClient();
   const user = await usuarioActual();
 
-  let clienteId = input.clienteId;
-  if (!clienteId) {
-    const texto = input.clienteTexto?.trim() ?? "";
-    if (!texto) return { error: "Poné quién lo compró (nombre o teléfono)" };
-    const digitos = normalizarTelefono(texto);
-    if (digitos.length >= 8) {
-      const existente = await buscarClientePorTelefono(digitos);
-      if (existente) clienteId = existente.id;
-    }
-    if (!clienteId) {
-      const { data: nuevo, error: errCli } = await supabase
-        .from("clientes")
-        .insert({
-          nombre_comercial: /^[\d\s+\-().]+$/.test(texto) ? `Cliente ${texto}` : texto,
-          telefono: digitos.length >= 8 ? digitos : null,
-          rubro: "Otro",
-          comercial_id: user?.id ?? null,
-          notas: "Cargado rápido desde una venta — completar datos",
-        })
-        .select("id")
-        .single();
-      if (errCli || !nuevo)
-        return { error: errCli?.message ?? "No se pudo crear el cliente" };
-      clienteId = nuevo.id;
-    }
+  if (!input.clienteId) return { error: "Elegí el cliente o cargá uno nuevo" };
+  const { data: cli } = await supabase.from("clientes").select("id, razon_social, cuit").eq("id", input.clienteId).is("deleted_at", null).maybeSingle();
+  if (!cli) return { error: "No se encontró el cliente" };
+  if (input.fiscal) {
+    const razonSocial = input.fiscal.razonSocial.trim();
+    const cuit = input.fiscal.cuit.replace(/\D/g, "");
+    if (!razonSocial) return { error: "Poné la razón social del cliente" };
+    if (!cuitValido(cuit)) return { error: "Revisá el CUIT: son 11 números y el último tiene que coincidir" };
+    const { data: otro } = await supabase
+      .from("clientes")
+      .select("nombre_comercial")
+      .eq("cuit", cuit)
+      .is("deleted_at", null)
+      .neq("id", input.clienteId)
+      .limit(1)
+      .maybeSingle();
+    if (otro) return { error: `Ese CUIT ya está cargado en otro cliente: ${otro.nombre_comercial}. Elegí ese cliente.` };
+    const { error: errFiscal } = await supabase.from("clientes").update({ razon_social: razonSocial, cuit }).eq("id", input.clienteId);
+    if (errFiscal) return { error: errFiscal.message };
+  } else if (!cli.razon_social?.trim() || !cuitValido(cli.cuit)) {
+    return { error: "Al cliente le faltan la razón social o el CUIT para facturar" };
   }
-  input.clienteId = clienteId;
   const { data: opp, error } = await supabase
     .from("oportunidades")
     .insert({

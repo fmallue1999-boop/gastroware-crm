@@ -5,7 +5,7 @@ import { Check, Search } from "lucide-react";
 import { buscarClientes } from "@/lib/actions";
 import { telefonoProlijo } from "@/lib/format";
 
-export type ClienteElegido = { id: string; nombre_comercial: string; telefono?: string | null };
+export type ClienteElegido = { id: string; nombre_comercial: string; telefono?: string | null; razon_social?: string | null; cuit?: string | null };
 
 /** Buscar y elegir un contacto de la base (nombre, empresa, teléfono, CUIT o serie). */
 export default function ClienteSelector({
