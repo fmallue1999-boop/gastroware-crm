@@ -28,6 +28,8 @@ export async function crearPedidoDirecto(input: {
   clienteTexto?: string;
   clienteId?: string;
   productoIds: string[];
+  /** v1.16: unidades de cada producto (por defecto 1). */
+  cantidades?: Record<string, number>;
   monto?: number | null;
   /** Pesos o dólares (por defecto, la moneda del producto). */
   moneda?: "ARS" | "USD";
@@ -88,6 +90,19 @@ export async function crearPedidoDirecto(input: {
   if (error || !opp)
     return { error: error?.message ?? "No se pudo crear la venta" };
 
+  // Cuántas unidades de cada uno: la base crea un equipo por unidad (con su garantía)
+  const cantidadDe = (id: string) => Math.max(1, Math.min(999, Math.round(Number(input.cantidades?.[id]) || 1)));
+  if (input.productoIds.length) {
+    const { error: errItems } = await supabase
+      .from("oportunidad_items")
+      .insert(input.productoIds.map((id) => ({ oportunidad_id: opp.id, producto_id: id, cantidad: cantidadDe(id) })));
+    if (errItems) return { error: `guardar cantidades: ${errItems.message}` };
+    await supabase
+      .from("oportunidades")
+      .update({ cantidad: input.productoIds.reduce((s, id) => s + cantidadDe(id), 0) })
+      .eq("id", opp.id);
+  }
+
   // Reutiliza todo el circuito de "ganada": cliente activo, equipo con
   // garantía, recompra de consumibles y estado Vendido.
   const res = await cambiarEtapa(opp.id, "ganada");
@@ -115,7 +130,7 @@ export async function setEntregaEstimada(oportunidadId: string, fecha: string) {
 // =====================================================================
 
 const COLS_VENTA =
-  "id, cliente_id, comercial_id, etapa, pedido_estado, producto_id, forma_pago, direccion_entrega, lleva_instalacion, relevamiento, remito_nro, nro_factura, monto_estimado, moneda, entregado_at, vendido_at, cliente:clientes(nombre_comercial), producto:productos(nombre, video_url)";
+  "id, cliente_id, comercial_id, etapa, pedido_estado, producto_id, productos_extra, forma_pago, direccion_entrega, lleva_instalacion, relevamiento, remito_nro, nro_factura, monto_estimado, moneda, entregado_at, vendido_at, cliente:clientes(nombre_comercial), producto:productos(nombre, video_url)";
 
 type VentaFila = {
   id: string;
@@ -124,6 +139,7 @@ type VentaFila = {
   etapa: string;
   pedido_estado: PedidoEstado | null;
   producto_id: string | null;
+  productos_extra?: unknown;
   forma_pago: string | null;
   direccion_entrega: string | null;
   lleva_instalacion: boolean;
@@ -137,6 +153,21 @@ type VentaFila = {
   cliente: { nombre_comercial: string } | null;
   producto: { nombre: string; video_url: string | null } | null;
 };
+
+/**
+ * Unidades de cada producto de la venta (v1.16): el principal y los extra,
+ * con la cantidad cargada (1 si no hay). Para descontar o devolver stock.
+ */
+async function unidadesVendidas(supabase: SupabaseServidor, v: { id: string; producto_id: string | null; productos_extra?: unknown }) {
+  const ids = [v.producto_id, ...((Array.isArray(v.productos_extra) ? v.productos_extra : []) as string[])].filter(Boolean) as string[];
+  if (!ids.length) return [];
+  const { data } = await supabase.from("oportunidad_items").select("producto_id, cantidad").eq("oportunidad_id", v.id);
+  const items = (data ?? []) as { producto_id: string; cantidad: number }[];
+  return [...new Set(ids)].map((id) => ({
+    productoId: id,
+    cantidad: Math.max(1, Math.round(items.filter((i) => i.producto_id === id).reduce((s, i) => s + Number(i.cantidad), 0)) || 1),
+  }));
+}
 
 async function cargarVenta(supabase: SupabaseServidor, id: string): Promise<VentaFila | null> {
   const { data } = await supabase.from("oportunidades").select(COLS_VENTA).eq("id", id).maybeSingle();
@@ -410,9 +441,13 @@ export async function entregarVenta(oportunidadId: string) {
   if (error) return { error: error.message };
 
   let notaStock = "";
-  if (v.producto_id) {
-    const { error: eStock } = await supabase.rpc("fn_ajustar_stock", { p_producto_id: v.producto_id, p_delta: -1 });
-    notaStock = eStock ? " (no se pudo descontar el stock)" : " · stock descontado";
+  const unidades = await unidadesVendidas(supabase, v);
+  if (unidades.length) {
+    const errores = await Promise.all(
+      unidades.map((u) => supabase.rpc("fn_ajustar_stock", { p_producto_id: u.productoId, p_delta: -u.cantidad }).then((r) => r.error))
+    );
+    const total = unidades.reduce((s, u) => s + u.cantidad, 0);
+    notaStock = errores.some(Boolean) ? " (no se pudo descontar todo el stock)" : ` · stock descontado (${total} ${total === 1 ? "unidad" : "unidades"})`;
   }
 
   const responsable = v.comercial_id ?? user?.id ?? null;
@@ -453,8 +488,10 @@ export async function corregirPasoVenta(oportunidadId: string, estado: PedidoEst
   if (estado !== "entregado") update.entregado_at = null;
   const { error } = await supabase.from("oportunidades").update(update).eq("id", oportunidadId);
   if (error) return { error: error.message };
-  if (v.producto_id && v.pedido_estado === "entregado" && estado !== "entregado")
-    await supabase.rpc("fn_ajustar_stock", { p_producto_id: v.producto_id, p_delta: 1 });
+  if (v.pedido_estado === "entregado" && estado !== "entregado") {
+    const unidades = await unidadesVendidas(supabase, v);
+    await Promise.all(unidades.map((u) => supabase.rpc("fn_ajustar_stock", { p_producto_id: u.productoId, p_delta: u.cantidad })));
+  }
   const label = PEDIDO_ESTADOS.find((p) => p.value === estado)?.label ?? estado;
   await movimiento(supabase, v, `Venta corregida por dirección: vuelve a ${label}`, user?.id);
   revalidatePath("/", "layout");

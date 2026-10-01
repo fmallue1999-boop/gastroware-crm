@@ -3,6 +3,15 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.16.0 — 1 de octubre de 2026
+
+Pedido de dirección: "si cargo una venta directa, que me permita añadir más unidades (un cliente que compró 3 Essential)" (migración 042_ventas_con_cantidades.sql).
+
+- PedidoDirectoForm: cada producto elegido con − cantidad + y subtotal; el monto sugerido es precio × unidades. crearPedidoDirecto recibe cantidades, guarda oportunidad_items y oportunidades.cantidad antes de ganar.
+- Migración 042: fn_ganar_venta crea un equipo por unidad de cada producto no consumible de la venta (principal y extras, cantidad de oportunidad_items o 1), con garantía y sucursal_id de la venta; antes creaba uno solo y solo del principal (también afectaba a "Me compró" de intereses con varias unidades o productos).
+- entregarVenta / corregirPasoVenta: descuentan / devuelven stock de todos los productos × unidades (antes 1 del principal).
+- Tablero de ventas: "3 × Producto" con las unidades.
+
 ## v1.15.0 — 1 de octubre de 2026
 
 Pedido de dirección: "que marketing pueda cargar las fichas que salen en las cotizaciones" y "no veo dónde aprobar lo que sube marketing en el calendario" (migración 041_fichas_marketing.sql).

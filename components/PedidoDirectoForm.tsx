@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { X } from "lucide-react";
+import { Minus, Plus, X } from "lucide-react";
 import { crearPedidoDirecto } from "@/lib/actions";
 import { dinero } from "@/lib/format";
 import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
@@ -12,9 +12,9 @@ const inputCls =
   "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-marino";
 
 /**
- * Venta nueva sin trabas: primero qué se vendió, después a quién (un solo
- * campo de texto: el cliente se crea o se encuentra solo). Entra al tablero
- * de ventas en "Vendido".
+ * Venta nueva sin trabas: primero qué se vendió (con cuántas unidades de cada
+ * uno, v1.16), después a quién (un solo campo de texto: el cliente se crea o se
+ * encuentra solo). Entra al tablero de ventas en "Vendido".
  */
 export default function PedidoDirectoForm({
   productos,
@@ -25,16 +25,24 @@ export default function PedidoDirectoForm({
 }) {
   const [pending, startTransition] = useTransition();
   const [productoIds, setProductoIds] = useState<string[]>([]);
+  const [cantidades, setCantidades] = useState<Record<string, number>>({});
+  const cant = (id: string) => cantidades[id] ?? 1;
   const [entregaEstimada, setEntregaEstimada] = useState("");
   const [clienteTexto, setClienteTexto] = useState("");
   const [monto, setMonto] = useState("");
   const [moneda, setMoneda] = useState<"ARS" | "USD">("ARS");
   const [montoManual, setMontoManual] = useState(false);
 
-  /** Suma de la lista en la moneda elegida (mientras no se escriba el monto a mano). */
-  function sumaLista(ids: string[], m: string) {
-    const total = ids.reduce((s, id) => s + (precioEn(productos.find((x) => x.id === id), m) ?? 0), 0);
-    return total ? String(total) : "";
+  /** Suma de la lista (precio × unidades) en la moneda elegida, mientras no se escriba el monto a mano. */
+  function sumaLista(ids: string[], m: string, cants: Record<string, number> = cantidades) {
+    const total = ids.reduce((s, id) => s + (precioEn(productos.find((x) => x.id === id), m) ?? 0) * (cants[id] ?? 1), 0);
+    return total ? String(Math.round(total * 100) / 100) : "";
+  }
+
+  function cambiarCantidad(id: string, n: number) {
+    const nuevas = { ...cantidades, [id]: Math.max(1, Math.min(999, n)) };
+    setCantidades(nuevas);
+    if (!montoManual) setMonto(sumaLista(productoIds, moneda, nuevas));
   }
   const [nota, setNota] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +72,7 @@ export default function PedidoDirectoForm({
         clienteId: clienteInicial?.id,
         clienteTexto: clienteInicial ? undefined : clienteTexto,
         productoIds,
+        cantidades: Object.fromEntries(productoIds.map((id) => [id, cant(id)])),
         monto: parseFloat(monto.replace(/\./g, "").replace(",", ".")) || null,
         moneda,
         nota,
@@ -86,27 +95,61 @@ export default function PedidoDirectoForm({
           1 · ¿Qué se vendió?
         </p>
         {productoIds.length > 0 && (
-          <div className="mb-1.5 flex flex-wrap gap-1.5">
+          <div className="mb-1.5 space-y-1.5">
             {productoIds.map((id) => {
               const p = productos.find((x) => x.id === id);
+              const precio = precioEn(p, moneda);
               return (
-                <span
-                  key={id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-marino px-3 py-1.5 text-sm text-white"
-                >
-                  {p?.nombre ?? "Producto"}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const ids = productoIds.filter((x) => x !== id);
-                      setProductoIds(ids);
-                      if (!montoManual) setMonto(sumaLista(ids, moneda));
-                    }}
-                    aria-label="Quitar"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
+                <div key={id} className="flex items-center gap-2 rounded-2xl border border-borde bg-white p-2 pl-3 shadow-sm">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold">{p?.nombre ?? "Producto"}</span>
+                    {precio != null && (
+                      <span className="block text-xs text-piedra">
+                        {cant(id)} × {dinero(precio, moneda)}
+                        {cant(id) > 1 ? ` = ${dinero(precio * cant(id), moneda)}` : ""}
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => cambiarCantidad(id, cant(id) - 1)}
+                      disabled={cant(id) <= 1}
+                      aria-label="Una unidad menos"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-borde disabled:opacity-40"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={cant(id)}
+                      onChange={(e) => cambiarCantidad(id, parseInt(e.target.value.replace(/\D/g, ""), 10) || 1)}
+                      aria-label={`Unidades de ${p?.nombre ?? "producto"}`}
+                      className="h-10 w-12 rounded-xl border border-borde text-center text-base font-bold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => cambiarCantidad(id, cant(id) + 1)}
+                      aria-label="Una unidad más"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-borde"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ids = productoIds.filter((x) => x !== id);
+                        setProductoIds(ids);
+                        if (!montoManual) setMonto(sumaLista(ids, moneda));
+                      }}
+                      aria-label="Quitar"
+                      className="flex h-10 w-8 items-center justify-center text-piedra"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </span>
+                </div>
               );
             })}
           </div>
