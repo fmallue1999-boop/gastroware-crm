@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.17.1 — 1 de octubre de 2026
+
+- eliminarOperacion: el registro en la ficha dice "Interés eliminado" (antes "Interés eliminada").
+
 ## v1.17.0 — 1 de octubre de 2026
 
 Pedido de dirección: "que a mí me deje eliminar una venta si está mal cargada" (sin migración: oportunidades y equipos ya permiten borrar a dirección por RLS; facturas_write permite a todos).
