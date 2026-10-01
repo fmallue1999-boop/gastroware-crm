@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.12.4 — 30 de septiembre de 2026
+
+- Contactos (/clientes): la lista por defecto salía solo de las últimas actividades; tras la puesta a cero (sin actividades) quedaba vacía aunque decía "5.608 en total". Ahora: "Últimos movimientos" (hasta 20, solo en la página 1) y debajo todos de la A a la Z paginados de a 60 (?pagina=N, con Anteriores/Siguientes). El vendedor sigue viendo solo los suyos; dirección y administración, todos.
+
 ## v1.12.3 — 30 de septiembre de 2026
 
 - El mensaje de error (app/(app)/error.tsx) decía el nombre de una persona: ahora "avisale a dirección". Docs y comentarios sin nombres propios, solo puestos (las migraciones ya aplicadas no se tocan).

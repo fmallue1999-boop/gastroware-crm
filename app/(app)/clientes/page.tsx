@@ -8,6 +8,7 @@ import { PuntoNivel } from "@/components/PuntoNivel";
 import type { Cliente } from "@/lib/types";
 
 const SELECT_CLI = "*, sucursales(ciudad, es_principal)";
+const POR_PAGINA = 60;
 type Fila = Cliente & { sucursales?: { ciudad: string | null; es_principal: boolean }[] };
 
 function aplanar(filas: Fila[]): Cliente[] {
@@ -37,10 +38,11 @@ function unicos(ids: (string | null)[]): string[] {
 export default async function ContactosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; vista?: string; producto?: string; c?: string; interes?: string }>;
+  searchParams: Promise<{ q?: string; vista?: string; producto?: string; c?: string; interes?: string; pagina?: string }>;
 }) {
-  const { q, vista, producto, c, interes } = await searchParams;
+  const { q, vista, producto, c, interes, pagina } = await searchParams;
   const busqueda = q?.trim() ?? "";
+  const nPagina = Math.max(1, Math.floor(Number(pagina)) || 1);
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,6 +55,8 @@ export default async function ContactosPage({
   const { count: total } = await supabase.from("clientes").select("id", { count: "exact", head: true }).is("deleted_at", null);
 
   let clientes: Cliente[] = [];
+  let recientes: Cliente[] = [];
+  let paginas = 1;
   let tituloLista = "Últimos movimientos";
   let productoEspera: string | null = null;
   if (busqueda) {
@@ -94,19 +98,35 @@ export default async function ContactosPage({
     }
     tituloLista = productoEspera ? `Esperan ${productoEspera}` : "En lista de espera";
   } else {
-    const { data: acts } = await supabase.from("actividades").select("cliente_id").order("created_at", { ascending: false }).limit(800);
+    // Arriba, los que tuvieron movimiento hace poco (solo en la primera página);
+    // abajo, todos de la A a la Z, de a POR_PAGINA. Antes la lista salía solo de
+    // los movimientos y, sin movimientos (puesta a cero), quedaba vacía.
+    const todos = () => {
+      let qTodos = supabase.from("clientes").select(SELECT_CLI, { count: "exact" }).is("deleted_at", null);
+      if (rol === "comercial") qTodos = qTodos.eq("comercial_id", userId);
+      return qTodos.order("nombre_comercial").order("id").range((nPagina - 1) * POR_PAGINA, nPagina * POR_PAGINA - 1);
+    };
+    const [{ data: acts }, { data: lista, count }] = await Promise.all([
+      nPagina === 1
+        ? supabase.from("actividades").select("cliente_id").order("created_at", { ascending: false }).limit(800)
+        : Promise.resolve({ data: [] as { cliente_id: string }[] }),
+      todos(),
+    ]);
     const ids = unicos((acts ?? []).map((a) => a.cliente_id)).slice(0, 200);
     if (ids.length) {
       let qCli = supabase.from("clientes").select(SELECT_CLI).in("id", ids).is("deleted_at", null);
       if (rol === "comercial") qCli = qCli.eq("comercial_id", userId);
       const { data } = await qCli;
       const porId = new Map(aplanar((data ?? []) as Fila[]).map((cli) => [cli.id, cli]));
-      clientes = (ids.map((id) => porId.get(id)).filter(Boolean) as Cliente[]).slice(0, 60);
+      recientes = (ids.map((id) => porId.get(id)).filter(Boolean) as Cliente[]).slice(0, 20);
     }
+    clientes = aplanar((lista ?? []) as Fila[]);
+    paginas = Math.max(1, Math.ceil((count ?? 0) / POR_PAGINA));
+    tituloLista = paginas > 1 ? `Todos de la A a la Z · página ${nPagina} de ${paginas}` : "Todos de la A a la Z";
   }
 
   // Qué pasó con cada uno: último movimiento y último interés abierto
-  const ids = clientes.map((cli) => cli.id);
+  const ids = unicos([...recientes, ...clientes].map((cli) => cli.id));
   const [{ data: actsData }, { data: oppsData }] = ids.length
     ? await Promise.all([
         supabase.from("actividades").select("cliente_id, contenido, created_at").in("cliente_id", ids).order("created_at", { ascending: false }).limit(400),
@@ -137,8 +157,64 @@ export default async function ContactosPage({
     interesDe.set(o.cliente_id, { id: o.id, texto, espera: o.etapa === "espera", nivel: o.temperatura, proximo: o.proximo_contacto });
   }
 
+  const hrefPagina = (n: number) => (n > 1 ? `/clientes?pagina=${n}` : "/clientes");
+  const tarjeta = (cli: Cliente) => {
+    const u = ultimo.get(cli.id);
+    const int = interesDe.get(cli.id);
+    const esCliente = cli.estado === "cliente_activo";
+    return (
+      <div key={cli.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
+        <LinkContacto id={cli.id} interes={int?.id} className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5">
+            <span className="truncate text-[16px] font-extrabold">{cli.nombre_comercial}</span>
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                esCliente ? "bg-verde-soft text-verde" : "bg-azul-soft text-azul"
+              }`}
+            >
+              {esCliente ? "Cliente" : "Interesado"}
+            </span>
+          </p>
+          {u ? (
+            <p className="truncate text-[15px] text-tinta/80">
+              <span className="text-piedra">{haceCuanto(u.created_at)} · </span>
+              {u.contenido}
+            </p>
+          ) : (
+            <p className="truncate text-[15px] text-piedra">
+              {[cli.rubro && cli.rubro !== "Otro" ? cli.rubro : null, cli.ciudad, cli.telefono ? telefonoProlijo(cli.telefono) : null]
+                .filter(Boolean)
+                .join(" · ") || "Sin movimientos"}
+            </p>
+          )}
+          {int && (
+            <p className={`flex items-center gap-1.5 truncate text-xs ${int.espera ? "text-naranja" : "text-piedra"}`}>
+              <PuntoNivel nivel={int.nivel} />
+              <span className="truncate">
+                {int.espera ? "Espera " : "Le interesa "}
+                {int.texto}
+                {int.proximo ? ` · ${int.proximo <= hoy ? "contactar hoy" : `volver el ${fechaCorta(int.proximo)}`}` : ""}
+              </span>
+            </p>
+          )}
+        </LinkContacto>
+        {cli.telefono && (
+          <a
+            href={linkWhatsApp(cli.telefono)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="WhatsApp"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-verde text-white"
+          >
+            <MessageCircle className="h-5 w-5" />
+          </a>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <ConPanel c={c} interes={interes} cerrarHref={busqueda ? `/clientes?q=${encodeURIComponent(busqueda)}` : "/clientes"}>
+    <ConPanel c={c} interes={interes} cerrarHref={busqueda ? `/clientes?q=${encodeURIComponent(busqueda)}` : hrefPagina(nPagina)}>
       <div className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-2xl font-extrabold tracking-tight">Contactos</h1>
@@ -154,6 +230,12 @@ export default async function ContactosPage({
             className="min-h-12 w-full rounded-2xl border border-borde bg-white py-3 pl-11 pr-4 text-base shadow-sm outline-none focus:border-marino"
           />
         </form>
+        {recientes.length > 0 && (
+          <>
+            <p className="text-xs font-bold uppercase tracking-wide text-piedra">Últimos movimientos</p>
+            <div className="grid gap-2 lg:grid-cols-2">{recientes.map(tarjeta)}</div>
+          </>
+        )}
         <p className="text-xs font-bold uppercase tracking-wide text-piedra">{tituloLista}</p>
 
         {clientes.length === 0 ? (
@@ -168,66 +250,33 @@ export default async function ContactosPage({
             ) : vista === "espera" ? (
               "Nadie en lista de espera."
             ) : (
-              "Todavía no hay movimientos en tus contactos."
+              "Todavía no tenés contactos."
             )}
           </p>
         ) : (
-          <div className="grid gap-2 lg:grid-cols-2">
-            {clientes.map((cli) => {
-              const u = ultimo.get(cli.id);
-              const int = interesDe.get(cli.id);
-              const esCliente = cli.estado === "cliente_activo";
-              return (
-                <div key={cli.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
-                  <LinkContacto id={cli.id} interes={int?.id} className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5">
-                      <span className="truncate text-[16px] font-extrabold">{cli.nombre_comercial}</span>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                          esCliente ? "bg-verde-soft text-verde" : "bg-azul-soft text-azul"
-                        }`}
-                      >
-                        {esCliente ? "Cliente" : "Interesado"}
-                      </span>
-                    </p>
-                    {u ? (
-                      <p className="truncate text-[15px] text-tinta/80">
-                        <span className="text-piedra">{haceCuanto(u.created_at)} · </span>
-                        {u.contenido}
-                      </p>
-                    ) : (
-                      <p className="truncate text-[15px] text-piedra">
-                        {[cli.rubro && cli.rubro !== "Otro" ? cli.rubro : null, cli.ciudad, cli.telefono ? telefonoProlijo(cli.telefono) : null]
-                          .filter(Boolean)
-                          .join(" · ") || "Sin movimientos"}
-                      </p>
-                    )}
-                    {int && (
-                      <p className={`flex items-center gap-1.5 truncate text-xs ${int.espera ? "text-naranja" : "text-piedra"}`}>
-                        <PuntoNivel nivel={int.nivel} />
-                        <span className="truncate">
-                          {int.espera ? "Espera " : "Le interesa "}
-                          {int.texto}
-                          {int.proximo ? ` · ${int.proximo <= hoy ? "contactar hoy" : `volver el ${fechaCorta(int.proximo)}`}` : ""}
-                        </span>
-                      </p>
-                    )}
-                  </LinkContacto>
-                  {cli.telefono && (
-                    <a
-                      href={linkWhatsApp(cli.telefono)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="WhatsApp"
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-verde text-white"
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                    </a>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <div className="grid gap-2 lg:grid-cols-2">{clientes.map(tarjeta)}</div>
+        )}
+
+        {!busqueda && vista !== "espera" && paginas > 1 && (
+          <nav className="flex items-center justify-between gap-2 pt-1" aria-label="Páginas">
+            {nPagina > 1 ? (
+              <a href={hrefPagina(nPagina - 1)} className="flex min-h-11 items-center rounded-full border border-borde bg-white px-4 text-[15px] font-bold">
+                ← Anteriores
+              </a>
+            ) : (
+              <span />
+            )}
+            <span className="text-sm text-piedra">
+              {nPagina} de {paginas}
+            </span>
+            {nPagina < paginas ? (
+              <a href={hrefPagina(nPagina + 1)} className="flex min-h-11 items-center rounded-full border border-borde bg-white px-4 text-[15px] font-bold">
+                Siguientes →
+              </a>
+            ) : (
+              <span />
+            )}
+          </nav>
         )}
       </div>
     </ConPanel>

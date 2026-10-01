@@ -19,6 +19,14 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.12.4",
+    fecha: "2026-09-30",
+    titulo: "Contactos: todos a la vista",
+    cambios: [
+      "Contactos muestra a todos de la A a la Z, de a 60 por página (antes solo los que tenían movimientos recientes y, con el arranque en cero, salía vacío). Arriba siguen apareciendo los que tuvieron movimiento hace poco.",
+    ],
+  },
+  {
     version: "1.12.3",
     fecha: "2026-09-30",
     titulo: "Sin nombres propios",
