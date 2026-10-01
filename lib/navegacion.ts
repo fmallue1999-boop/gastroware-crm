@@ -27,6 +27,7 @@ export type ClaveIcono =
   | "consumibles"
   | "repuestos"
   | "contenidos"
+  | "material"
   | "mas";
 
 export type ItemMenu = { href: string; label: string; icono: ClaveIcono; badgeHoy?: boolean };
@@ -55,6 +56,7 @@ const I = {
   consumibles: { href: "/consumibles", label: "Consumibles", icono: "consumibles" },
   repuestos: { href: "/repuestos", label: "Repuestos", icono: "repuestos" },
   contenidos: { href: "/contenidos", label: "Contenidos", icono: "contenidos" },
+  material: { href: "/material", label: "Material", icono: "material" },
   mas: { href: "/mas", label: "Más", icono: "mas" },
 } satisfies Record<string, ItemMenu>;
 
@@ -64,6 +66,11 @@ const I = {
  */
 export function menuDe(rol: string, opciones: { veContenidos?: boolean } = {}): { lateral: ItemMenu[]; celular: ItemMenu[] } {
   const menu = menuDelPuesto(rol);
+  // Material lo ve todo el equipo
+  if (!menu.lateral.some((i) => i.href === "/material")) {
+    const guia = menu.lateral.findIndex((i) => i.href === "/guia");
+    menu.lateral.splice(guia >= 0 ? guia : menu.lateral.length - 1, 0, I.material);
+  }
   if (opciones.veContenidos && !menu.lateral.some((i) => i.href === "/contenidos")) {
     const guia = menu.lateral.findIndex((i) => i.href === "/guia");
     menu.lateral.splice(guia >= 0 ? guia : menu.lateral.length - 1, 0, I.contenidos);
@@ -95,8 +102,8 @@ function menuDelPuesto(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
       };
     case "marketing":
       return {
-        lateral: [I.midia, I.contenidos, I.tareas, I.asistente, I.pedidos_material, I.videos, I.marketing, I.contactos, I.movimientos, I.guia, I.mas],
-        celular: [I.midia, I.contenidos, I.pedidos_material, I.mas],
+        lateral: [I.midia, I.contenidos, I.material, I.tareas, I.asistente, I.pedidos_material, I.videos, I.marketing, I.contactos, I.movimientos, I.guia, I.mas],
+        celular: [I.midia, I.contenidos, I.material, I.mas],
       };
     case "direccion":
       return {
@@ -108,7 +115,7 @@ function menuDelPuesto(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
     default:
       // Vendedor de territorio
       return {
-        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.contactos, I.ventas, I.consumibles, I.repuestos, I.casos, I.informe, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.contactos, I.material, I.ventas, I.consumibles, I.repuestos, I.casos, I.informe, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.embudo, I.midia, I.contactos, I.mas],
       };
   }

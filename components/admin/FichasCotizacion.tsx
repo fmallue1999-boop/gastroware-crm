@@ -49,7 +49,7 @@ export default function FichasCotizacion({ productoId, fichas }: { productoId: s
     <div className="space-y-1.5 rounded-xl bg-celeste-soft p-3">
       <p className="text-sm font-bold">PDF que se anexa a la cotización</p>
       <p className="text-xs text-piedra">
-        Ficha técnica, folleto o info adicional. Sale sola al final del PDF de cada cotización que lleve este producto.
+        Ficha técnica, folleto o info adicional. Sale sola al final del PDF de cada cotización que lleve este producto. Si el producto está vinculado en Material, la ficha que se cargue ahí también se anexa.
       </p>
       {fichas.map((f) => (
         <div key={f.id} className="flex items-center gap-2 text-sm">

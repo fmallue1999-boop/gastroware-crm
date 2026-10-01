@@ -20,3 +20,4 @@ export * from "./personas";
 export * from "./consumibles";
 export * from "./repuestos";
 export * from "./contenidos";
+export * from "./centro-material";

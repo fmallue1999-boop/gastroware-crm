@@ -55,11 +55,11 @@ describe("PDF de la cotización", () => {
     const ficha = await PDFDocument.create();
     ficha.addPage();
     ficha.addPage();
-    const conFicha = await armarPdfCotizacion(storage(await ficha.save()), datos, [{ nombre: "ficha.pdf", path: "producto/x/ficha.pdf", producto: "VERSATILE PRO" }]);
+    const conFicha = await armarPdfCotizacion(storage(await ficha.save()), datos, [{ nombre: "ficha.pdf", path: "producto/x/ficha.pdf", producto: "VERSATILE PRO", bucket: "documentos" }]);
     expect((await PDFDocument.load(conFicha)).getPageCount()).toBe(3);
 
     // Una ficha rota se saltea sin romper la cotización
-    const rota = await armarPdfCotizacion(storage(new Uint8Array([1, 2, 3])), datos, [{ nombre: "rota.pdf", path: "producto/x/rota.pdf", producto: "X" }]);
+    const rota = await armarPdfCotizacion(storage(new Uint8Array([1, 2, 3])), datos, [{ nombre: "rota.pdf", path: "producto/x/rota.pdf", producto: "X", bucket: "material" }]);
     expect((await PDFDocument.load(rota)).getPageCount()).toBe(1);
   }, 30_000);
 });

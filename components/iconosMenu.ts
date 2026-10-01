@@ -22,6 +22,7 @@ import {
   Droplets,
   Cog,
   CalendarRange,
+  Library,
   type LucideIcon,
 } from "lucide-react";
 import type { ClaveIcono } from "@/lib/navegacion";
@@ -49,5 +50,6 @@ export const ICONOS_MENU: Record<ClaveIcono, LucideIcon> = {
   consumibles: Droplets,
   repuestos: Cog,
   contenidos: CalendarRange,
+  material: Library,
   mas: Menu,
 };

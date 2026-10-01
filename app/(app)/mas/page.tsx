@@ -30,6 +30,7 @@ import {
   Newspaper,
   CalendarCheck,
   CalendarRange,
+  Library,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -82,6 +83,12 @@ export default async function MasPage() {
     <div className="space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Más</h1>
 
+      <MenuLink
+        href="/material"
+        icono={Library}
+        titulo="Material"
+        detalle="Videos, imágenes y fichas de cada producto, listos para mandar"
+      />
       <MenuLink
         href="/tareas"
         icono={CalendarCheck}
@@ -201,10 +208,10 @@ export default async function MasPage() {
             detalle="Recupero de inversión, lista para mandar al cliente"
           />
           <MenuLink
-            href="/biblioteca"
+            href="/material/por-producto"
             icono={BookOpen}
-            titulo="Biblioteca comercial"
-            detalle="Fichas, videos, comparativas y casos"
+            titulo="Material por producto"
+            detalle="Los videos de cómo usar, configurar y lavar de cada producto"
           />
           <MenuLink
             href="/pipeline"

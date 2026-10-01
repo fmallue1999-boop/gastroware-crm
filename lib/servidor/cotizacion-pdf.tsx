@@ -53,7 +53,8 @@ const CLAVES = [
   "logo_url",
 ] as const;
 
-type Anexo = { nombre: string; path: string; producto: string };
+/** Ficha a anexar: del Catálogo (bucket documentos) o de Material (bucket material, v1.11). */
+type Anexo = { nombre: string; path: string; producto: string; bucket: "documentos" | "material" };
 
 export type ResultadoCargaPdf =
   | { ok: true; datos: DatosCotizacionPdf; anexos: Anexo[]; archivo: string }
@@ -160,21 +161,40 @@ export async function cargarCotizacionPdf(supabase: SupabaseServidor, id: string
 
   // Fichas de los productos cotizados, en el orden de las líneas y sin repetir
   const idsProductos = [...new Set(items.map((i) => i.producto_id).filter(Boolean))] as string[];
-  const { data: docs } = idsProductos.length
+  const [{ data: docs }, { data: vinculados }] = idsProductos.length
+    ? await Promise.all([
+        supabase
+          .from("documentos")
+          .select("entidad_id, nombre, path, created_at")
+          .eq("entidad", "producto")
+          .eq("tipo", "ficha")
+          .in("entidad_id", idsProductos)
+          .order("created_at"),
+        supabase.from("material_productos").select("id, producto_id").in("producto_id", idsProductos),
+      ])
+    : [{ data: [] }, { data: [] }];
+  // La ficha cargada en Material para el producto vinculado también va
+  const materialDe = new Map(((vinculados ?? []) as { id: string; producto_id: string }[]).map((v) => [v.id, v.producto_id]));
+  const { data: fichasMaterial } = materialDe.size
     ? await supabase
-        .from("documentos")
-        .select("entidad_id, nombre, path, created_at")
-        .eq("entidad", "producto")
-        .eq("tipo", "ficha")
-        .in("entidad_id", idsProductos)
-        .order("created_at")
+        .from("material_archivos")
+        .select("dueno_id, nombre, path")
+        .eq("dueno", "producto")
+        .eq("espacio", "ficha")
+        .in("dueno_id", [...materialDe.keys()])
     : { data: [] };
   const nombreProducto = new Map(items.filter((i) => i.producto_id).map((i) => [i.producto_id as string, i.producto?.nombre ?? i.descripcion]));
-  const anexos: Anexo[] = idsProductos.flatMap((pid) =>
-    (docs ?? [])
+  const anexos: Anexo[] = idsProductos.flatMap((pid) => {
+    const delCatalogo = (docs ?? [])
       .filter((d) => d.entidad_id === pid && tipoAnexo(d.path as string))
-      .map((d) => ({ nombre: d.nombre as string, path: d.path as string, producto: nombreProducto.get(pid) ?? "" }))
-  );
+      .map((d) => ({ nombre: d.nombre as string, path: d.path as string, producto: nombreProducto.get(pid) ?? "", bucket: "documentos" as const }));
+    const deMaterial = ((fichasMaterial ?? []) as { dueno_id: string; nombre: string; path: string }[])
+      .filter((f) => materialDe.get(f.dueno_id) === pid && tipoAnexo(f.path))
+      .map((f) => ({ nombre: f.nombre, path: f.path, producto: nombreProducto.get(pid) ?? "", bucket: "material" as const }));
+    // Si la misma ficha está cargada en los dos lados, va una sola vez
+    const nombres = new Set(delCatalogo.map((a) => a.nombre.toLowerCase()));
+    return [...delCatalogo, ...deMaterial.filter((a) => !nombres.has(a.nombre.toLowerCase()))];
+  });
 
   return { ok: true, datos, anexos, archivo: nombreArchivo(numero, nombreCliente, version.version) };
 }
@@ -190,7 +210,7 @@ export async function armarPdfCotizacion(supabase: SupabaseServidor, datos: Dato
   const pdf = await PDFDocument.load(base);
   const bajadas = await Promise.all(
     anexos.map(async (a) => {
-      const { data } = await supabase.storage.from("documentos").download(a.path);
+      const { data } = await supabase.storage.from(a.bucket).download(a.path);
       return data ? new Uint8Array(await data.arrayBuffer()) : null;
     })
   );
