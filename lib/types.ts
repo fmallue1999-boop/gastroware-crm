@@ -82,6 +82,10 @@ export interface Sucursal {
   cuit?: string | null;
   contacto_facturacion?: string | null;
   email_facturacion?: string | null;
+  /** v1.14: quién recibe en ese lugar y horario / indicaciones para entregar. */
+  recibe?: string | null;
+  indicaciones?: string | null;
+  deleted_at?: string | null;
 }
 
 export interface Contacto {
@@ -270,6 +274,8 @@ export interface CotizacionVersion {
   cotizacion_id: string;
   version: number;
   total: number | null;
+  /** v1.14: sucursal / punto de entrega elegido al cotizar (sale en el PDF). */
+  sucursal_id?: string | null;
   /** Migración 033: descuento especial de la operación. */
   subtotal?: number | null;
   descuento_pct?: number | null;

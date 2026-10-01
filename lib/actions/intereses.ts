@@ -148,6 +148,8 @@ export async function registrarCotizacion(input: {
   ivaPct?: number | null;
   plazoEntrega?: string | null;
   condicionEntrega?: string | null;
+  /** v1.14: sucursal / punto de entrega del cliente. */
+  sucursalId?: string | null;
   tipoCambio?: number | null;
 }) {
   if (input.ivaPct != null && !(input.ivaPct >= 0 && input.ivaPct <= 27)) return { error: "El IVA no es válido" };
@@ -161,13 +163,16 @@ export async function registrarCotizacion(input: {
   // v1.9: siempre se cotiza a un cliente con razón social, CUIT, dirección y email
   const { data: oppCli } = await supabase
     .from("oportunidades")
-    .select("cliente:clientes(razon_social, cuit, email, sucursales(direccion, ciudad, es_principal))")
+    .select("cliente:clientes(razon_social, cuit, email, sucursales(id, direccion, ciudad, es_principal, deleted_at))")
     .eq("id", input.oportunidadId)
     .maybeSingle();
   const cli = (oppCli?.cliente ?? null) as unknown as Parameters<typeof datosFiscalesDe>[0] | null;
   if (!cli) return { error: "No se encontró el interés" };
   const faltan = faltanParaCotizar(datosFiscalesDe(cli));
   if (faltan.length) return { error: `Para cotizar faltan datos del cliente: ${faltan.join(", ")}` };
+  // El lugar de entrega tiene que ser una sucursal activa de este cliente
+  const sucursalesCli = ((cli as { sucursales?: { id: string; deleted_at?: string | null }[] | null }).sucursales ?? []).filter((s) => !s.deleted_at);
+  const entrega = input.sucursalId && sucursalesCli.some((s) => s.id === input.sucursalId) ? input.sucursalId : null;
 
   const { data: existente } = await supabase
     .from("cotizaciones")
@@ -261,6 +266,7 @@ export async function registrarCotizacion(input: {
       iva_pct: ivaVersion,
       plazo_entrega: input.plazoEntrega?.trim() || null,
       condicion_entrega: input.condicionEntrega?.trim() || null,
+      sucursal_id: entrega,
       tipo_cambio: input.moneda === "USD" ? input.tipoCambio ?? null : null,
       creado_por: user?.id ?? null,
       aprobacion,
@@ -291,7 +297,7 @@ export async function registrarCotizacion(input: {
 
   const { error: errMonto } = await supabase
     .from("oportunidades")
-    .update({ monto_estimado: total, moneda: input.moneda })
+    .update({ monto_estimado: total, moneda: input.moneda, ...(entrega ? { sucursal_id: entrega } : {}) })
     .eq("id", input.oportunidadId);
   if (errMonto) return { error: `guardar monto: ${errMonto.message}` };
 

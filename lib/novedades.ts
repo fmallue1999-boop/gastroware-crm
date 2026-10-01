@@ -19,6 +19,17 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.14.0",
+    fecha: "2026-10-01",
+    titulo: "Sucursales y puntos de entrega",
+    cambios: [
+      "En la ficha (pestaña Datos), cada razón social puede tener varias sucursales o puntos de entrega: se agregan, se editan, se elige cuál es la principal y se dan de baja.",
+      "Cada sucursal suma quién recibe y el horario o las indicaciones para entregar.",
+      "Al cotizar se elige el lugar de entrega (o se carga uno nuevo ahí mismo) y sale en el PDF.",
+      "Se terminaron de arreglar los nombres con letras rotas de importaciones viejas (tildes, “nan” y emojis).",
+    ],
+  },
+  {
     version: "1.13.0",
     fecha: "2026-10-01",
     titulo: "Reprogramar en un toque",
