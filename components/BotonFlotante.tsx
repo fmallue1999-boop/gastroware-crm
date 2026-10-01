@@ -7,14 +7,20 @@ import { botonCrear } from "@/lib/navegacion";
 
 /**
  * El botón verde que flota en el celular: Nuevo interés (o Cargar service
- * para el técnico). No aparece en las pantallas de carga ni en la ficha,
- * que tiene su propia caja abajo.
+ * para el técnico). No aparece en las pantallas de carga (cotizar, venta,
+ * repuesto, tarea, asistente) ni en la ficha: tienen su propio botón abajo
+ * y el + lo tapaba.
  */
 export default function BotonFlotante({ rol = "comercial" }: { rol?: string }) {
   const pathname = usePathname();
   const crear = botonCrear(rol);
   const ocultar =
     pathname === "/alta" ||
+    pathname === "/asistente" ||
+    pathname === "/consumibles/venta" ||
+    pathname === "/repuestos/nueva" ||
+    pathname === "/tareas/nueva" ||
+    pathname.startsWith("/cotizar/") ||
     pathname.startsWith("/servicio/cargar") ||
     pathname.startsWith("/pedidos/nuevo") ||
     /^\/clientes\/[^/]+$/.test(pathname);
