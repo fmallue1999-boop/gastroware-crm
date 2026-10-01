@@ -2,7 +2,7 @@
 
 > Cockpit de ventas mobile-first para GastroWare Argentina. Foco: seguimiento comercial,
 > venta guiada de GX22/GX18 y Zumex, y cartera de clientes con recompra de consumibles.
-> Basado en `Analisis_CRM_GastroWare_GX22_Zumex.docx` + flujo definido por Franco (jul 2026).
+> Basado en `Analisis_CRM_GastroWare_GX22_Zumex.docx` + flujo definido por dirección (jul 2026).
 
 ---
 
@@ -317,7 +317,7 @@ PDF de propuesta, scoring automático, IA de respuestas, inventario/stock, factu
 
 ---
 
-## 9. Decisiones pendientes (para confirmar con Franco antes o durante la fase 1)
+## 9. Decisiones pendientes (para confirmar con dirección antes o durante la fase 1)
 
 1. Modelos exactos de Zumex a cargar en catálogo y precios de referencia.
 2. ¿Los vendedores externos tienen usuario propio o solo se les asigna nombre?

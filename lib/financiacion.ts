@@ -1,6 +1,6 @@
 /*
  * Motor de financiación bancaria (planes PymeNación / AgroNación del BNA),
- * replicando el simulador oficial que usa Franco (Excel "Simulador"):
+ * replicando el simulador oficial que usa dirección (Excel "Simulador"):
  * - Sistema alemán: cuota de capital fija, interés sobre saldo deudor.
  * - Interés mensual = saldo × TNA × 30 / 36500 (año de 365 días).
  * - IVA sobre intereses: 10,5%.

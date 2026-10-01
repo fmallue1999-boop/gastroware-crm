@@ -66,7 +66,7 @@
   haya datos reales (regla: sin pantallas vacías simuladas).
 
 ## Etapa 5 — Marketing (M) ✅ (adaptada a WhatsApp manual)
-- Campañas WhatsApp ASISTIDAS (decisión de Franco: sin API, sin scraping): el
+- Campañas WhatsApp ASISTIDAS (decisión de dirección: sin API, sin scraping): el
   segmento se arma con filtros dinámicos (estado, rubro, marca de equipo,
   dormidos según config, garantía por vencer 60d, consumibles, ciudad) con
   preview de alcance; el mensaje con {nombre} se manda cliente por cliente
@@ -104,6 +104,6 @@
    push y parte del alta de usuarios/URLs firmadas en prod.
 2. Supabase Pro (USD 25/mes) recomendado al uso diario (free se pausa).
 3. Emails del equipo para crear usuarios reales.
-4. Rotar la contraseña inicial de Franco.
+4. Rotar la contraseña inicial de dirección.
 5. (Etapa 4) Número de WhatsApp + Meta Business. (Etapa 4) DNS para email.
 6. (Etapa 6) API key de Anthropic + presupuesto mensual.

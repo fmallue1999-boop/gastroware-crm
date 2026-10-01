@@ -1,9 +1,9 @@
 # Plan v2 — De CRM de ventas a sistema operativo GastroWare
 
-> Ampliación definida con Franco (20 jul 2026). Se suma a lo ya construido
+> Ampliación definida con dirección (20 jul 2026). Se suma a lo ya construido
 > (ventas, cartera, recompras, marketing básico de plantillas).
 
-## Decisiones tomadas (respuestas de Franco)
+## Decisiones tomadas (respuestas de dirección)
 
 | Tema | Decisión |
 |---|---|
@@ -54,7 +54,7 @@
 - Campañas WhatsApp: elegís segmento + plantilla → lista de "para contactar
   hoy" uno por uno con el mensaje listo (mismo patrón que Hoy).
 - Email masivo con Resend + dominio gastroware.com.ar verificado
-  (requiere agregar registros DNS — paso de Franco).
+  (requiere agregar registros DNS — paso de dirección).
 - Automáticos: reactivación de dormidos y aviso de garantía por vencer
   entran al cron diario existente.
 

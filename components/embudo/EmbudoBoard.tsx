@@ -32,7 +32,7 @@ const COLOR_ARO: Record<ColumnaEmbudo, string> = {
 const TOPE = 25;
 
 /**
- * El embudo (pantalla principal, rediseño aprobado por Franco). En PC, cinco
+ * El embudo (pantalla principal, rediseño aprobado por dirección). En PC, cinco
  * columnas con color: cada tarjeta se despliega ahí mismo para ver lo último
  * que pasó y actuar, y se puede arrastrar de una columna a otra. En celular,
  * las etapas apiladas: una se abre a la vez.

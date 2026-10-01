@@ -19,6 +19,14 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.12.3",
+    fecha: "2026-09-30",
+    titulo: "Sin nombres propios",
+    cambios: [
+      "Si algo falla, el aviso ahora dice “avisale a dirección”.",
+    ],
+  },
+  {
     version: "1.12.2",
     fecha: "2026-09-30",
     titulo: "Mejor en el celular",

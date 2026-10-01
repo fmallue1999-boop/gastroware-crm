@@ -64,7 +64,7 @@ Toda la lógica de negocio vive en `lib/actions.ts` (~900 líneas). Sin ORM.
 | Push matutino + cron recompras | Código completo, MUERTO en prod (faltan 4 env vars en Vercel) |
 | Tarifa de servicio | $0 (sin configurar) |
 | Biblioteca comercial | Sin contenido cargado |
-| Usuarios | Solo Franco (admin); vendedores/técnicos sin crear |
+| Usuarios | Solo dirección (admin); vendedores/técnicos sin crear |
 | `equipos.proximo_service` | Columna sin UI |
 | Admin de productos/plantillas | Solo por SQL, sin UI |
 
