@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { productosDeLinea } from "@/lib/precios";
 import { cuitProlijo, datosFiscalesDe } from "@/lib/datos-cotizar";
 import { nombreLinea } from "@/lib/actividad";
-import CotizacionForm, { type CotizacionPrevia } from "@/components/CotizacionForm";
+import CotizacionForm, { type ConfigCotizar, type CotizacionPrevia } from "@/components/CotizacionForm";
 import type { CotizacionItem, CotizacionVersion, Producto, Sucursal } from "@/lib/types";
 
 /**
@@ -19,7 +19,7 @@ export default async function CotizarPage({ params }: { params: Promise<{ id: st
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const supabase = await createClient();
 
-  const [{ data: opp }, { data: productosData }, { data: cot }] = await Promise.all([
+  const [{ data: opp }, { data: productosData }, { data: cot }, { data: cfg }, { data: rol }, { data: itemsInteres }] = await Promise.all([
     supabase
       .from("oportunidades")
       .select(
@@ -35,7 +35,20 @@ export default async function CotizarPage({ params }: { params: Promise<{ id: st
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase.from("config").select("clave, valor").in("clave", ["cotizacion_moneda", "cotizacion_formas_pago", "cotizacion_plazos_entrega", "cotizacion_condiciones_entrega"]),
+    supabase.rpc("fn_rol"),
+    supabase.from("oportunidad_items").select("producto_id, cantidad").eq("oportunidad_id", id),
   ]);
+  const conf = new Map(((cfg ?? []) as { clave: string; valor: string | null }[]).map((c) => [c.clave, (c.valor ?? "").trim()]));
+  const lista = (k: string) => (conf.get(k) ?? "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  const monedaFija = conf.get("cotizacion_moneda");
+  const config: ConfigCotizar = {
+    monedaFija: monedaFija === "USD" || monedaFija === "ARS" ? monedaFija : null,
+    formasPago: lista("cotizacion_formas_pago"),
+    plazos: lista("cotizacion_plazos_entrega"),
+    condiciones: lista("cotizacion_condiciones_entrega"),
+  };
+  const editaPrecios = ["direccion", "admin"].includes((rol as string) ?? "");
   if (!opp) notFound();
 
   const cliente = opp.cliente as unknown as {
@@ -64,6 +77,7 @@ export default async function CotizarPage({ params }: { params: Promise<{ id: st
         descripcion: i.descripcion,
         cantidad: Number(i.cantidad),
         precioUnit: Number(i.precio_unit),
+        ivaPct: i.iva_pct ?? null,
       })),
       formaPago: ultima.forma_pago,
       ivaPct: ultima.iva_pct ?? null,
@@ -115,7 +129,11 @@ export default async function CotizarPage({ params }: { params: Promise<{ id: st
         }}
         monedaDefault={(opp.moneda as string | null) ?? producto?.moneda ?? "ARS"}
         productos={productos}
-        productosIniciales={[opp.producto_id as string | null, ...((opp.productos_extra as string[] | null) ?? [])].filter((x): x is string => Boolean(x))}
+        productosIniciales={[opp.producto_id as string | null, ...((opp.productos_extra as string[] | null) ?? [])]
+          .filter((x): x is string => Boolean(x))
+          .map((pid) => ({ id: pid, cantidad: Number(((itemsInteres ?? []) as { producto_id: string; cantidad: number }[]).find((i) => i.producto_id === pid)?.cantidad ?? 1) }))}
+        config={config}
+        editaPrecios={editaPrecios}
         previa={previa}
         volverHref={volverHref}
       />

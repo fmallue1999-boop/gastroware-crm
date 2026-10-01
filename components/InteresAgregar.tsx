@@ -96,6 +96,7 @@ export default function InteresAgregar({
   const [pending, startTransition] = useTransition();
   const [abierto, setAbierto] = useState(abiertoInicial);
   const [ids, setIds] = useState<string[]>([]);
+  const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [texto, setTexto] = useState("");
   const [nivel, setNivel] = useState("");
   const [enEspera, setEnEspera] = useState(false);
@@ -111,6 +112,7 @@ export default function InteresAgregar({
       const res = await crearInteres({
         clienteId,
         productoIds: ids,
+        cantidades,
         texto,
         nivel,
         enEspera: enEspera && sinStock,
@@ -157,6 +159,28 @@ export default function InteresAgregar({
           if (nuevos.some((id) => (stockInfo[id]?.stock ?? 1) <= 0)) setEnEspera(true);
         }}
       />
+      {ids.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-sm font-semibold">¿Cuántos?</p>
+          {ids.map((id) => {
+            const n = cantidades[id] ?? 1;
+            return (
+              <div key={id} className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-[15px]">{productos.find((p) => p.id === id)?.nombre}</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={n}
+                  onChange={(e) => setCantidades({ ...cantidades, [id]: Math.max(1, Number(e.target.value) || 1) })}
+                  aria-label="Cantidad"
+                  className="h-10 w-16 rounded-xl border border-borde bg-white text-center text-[16px] font-bold"
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
       {ids.map((id) => {
         const info = stockInfo[id];
         if (!info) return null;

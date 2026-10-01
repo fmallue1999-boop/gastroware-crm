@@ -133,6 +133,8 @@ export interface Producto {
   /** Migración 034: código y detalle técnico (la segunda línea en la cotización). */
   codigo?: string | null;
   detalle_tecnico?: string | null;
+  /** Migración 037: IVA del producto (10,5 equipos; 21 consumibles y repuestos). */
+  iva_pct?: number | null;
 }
 
 export interface CotizacionItem {
@@ -146,6 +148,8 @@ export interface CotizacionItem {
   /** Migración 034: código y detalle del producto al cotizar. */
   codigo?: string | null;
   detalle?: string | null;
+  /** Migración 037: IVA de la línea (el del producto). */
+  iva_pct?: number | null;
 }
 
 export interface Repuesto {

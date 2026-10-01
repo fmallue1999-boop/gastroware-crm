@@ -374,8 +374,11 @@ export async function guardarProducto(
     /** Código y detalle técnico: salen en la línea del PDF de la cotización. */
     codigo?: string | null;
     detalle_tecnico?: string | null;
+    /** IVA del producto (v1.12): lo usa la cotización, no lo elige el vendedor. */
+    iva_pct?: number | null;
   }
 ) {
+  if (patch.iva_pct != null && ![0, 10.5, 21, 27].includes(patch.iva_pct)) return { error: "El IVA va 10,5%, 21%, 27% o exento" };
   if (patch.frecuencia_recompra_dias != null && (!Number.isInteger(patch.frecuencia_recompra_dias) || patch.frecuencia_recompra_dias < 1 || patch.frecuencia_recompra_dias > 730))
     return { error: "El tiempo de reposición va de 1 a 730 días" };
   const supabase = await createClient();

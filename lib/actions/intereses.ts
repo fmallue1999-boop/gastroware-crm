@@ -9,12 +9,13 @@ import { consultarIA } from "@/lib/core/ia";
 import { dinero, normalizarTelefono, diasDesde, hoyISO, sumarDias } from "@/lib/format";
 import { sugerenciaSinRespuesta } from "@/lib/cadencia";
 import { evaluarFueraDeLista, type PrecioLista } from "@/lib/propuestas";
+import { precioEn } from "@/lib/precios";
 import { datosFiscalesDe, faltanParaCotizar } from "@/lib/datos-cotizar";
 import { NIVELES_INTERES, RUBROS } from "@/lib/constants";
 import type { Etapa } from "@/lib/types";
 import { avisar, puestoActual, regla, usuarioActual, usuariosDePuesto } from "./comun";
 import { camposDeRuta, rutearConsulta } from "@/lib/servidor/ruteo";
-import { anotarContacto, buscarDuplicados } from "./contactos";
+import { buscarDuplicados } from "./contactos";
 
 // =====================================================================
 // Oportunidades y cotizaciones
@@ -137,6 +138,8 @@ export async function registrarCotizacion(input: {
   vigenciaDias?: number | null;
   /** Plazo, financiación o bonificación fuera de lo normal: la aprueba dirección. */
   condicionEspecial?: boolean;
+  /** v1.12: qué pide el cliente fuera de lo normal (plazo, financiación…), para la aprobación. */
+  pedidoEspecial?: string | null;
   /** Descuento especial pedido para la operación (% sobre el total) y su motivo. */
   descuentoPct?: number | null;
   descuentoMotivo?: string | null;
@@ -201,13 +204,39 @@ export async function registrarCotizacion(input: {
 
   // Fuera de lista → esperando aprobación de dirección (dirección no se aprueba a sí misma)
   const idsLista = items.map((i) => i.productoId).filter(Boolean) as string[];
-  const { data: lista } = idsLista.length
-    ? await supabase.from("productos").select("id, nombre, precio_referencia, moneda, precio_ars, precio_usd, codigo, detalle_tecnico").in("id", idsLista)
-    : { data: [] };
+  const [{ data: lista }, monedaFija] = await Promise.all([
+    idsLista.length
+      ? supabase.from("productos").select("id, nombre, precio_referencia, moneda, precio_ars, precio_usd, codigo, detalle_tecnico, iva_pct").in("id", idsLista)
+      : Promise.resolve({ data: [] }),
+    regla(supabase, "cotizacion_moneda"),
+  ]);
+
+  // v1.12: la moneda la fija dirección y el vendedor cotiza a precio de catálogo
+  // (los descuentos van por el pedido especial, que aprueba dirección)
+  const editaPrecios = ["direccion", "admin"].includes(rol);
+  if (monedaFija && ["USD", "ARS"].includes(monedaFija) && input.moneda !== monedaFija && !editaPrecios)
+    return { error: `Las cotizaciones van en ${monedaFija === "USD" ? "dólares" : "pesos"}` };
+  if (!editaPrecios) {
+    if (items.some((i) => !i.productoId)) return { error: "Las líneas libres las carga dirección: elegí productos del catálogo" };
+    for (const i of items) {
+      const p = (lista ?? []).find((x) => x.id === i.productoId) as PrecioLista | undefined;
+      const precio = precioEn(p, input.moneda);
+      if (precio == null) return { error: `${p?.nombre ?? "Un producto"} no tiene precio en ${input.moneda === "USD" ? "dólares" : "pesos"}: pedile a dirección que lo cargue` };
+      if (Math.abs(i.precioUnit - precio) > 0.5) return { error: `El precio de ${p?.nombre ?? "un producto"} es el del catálogo` };
+    }
+  }
+  const ivaDe = new Map(((lista ?? []) as { id: string; iva_pct?: number | null }[]).map((p) => [p.id, p.iva_pct ?? 10.5]));
+  const ivaLinea = (i: ItemCotizacion) => (i.productoId ? Number(ivaDe.get(i.productoId) ?? 10.5) : Number(input.ivaPct ?? 10.5));
+  // La más alta, para mostrar "+ IVA" (cada línea guarda la suya)
+  const ivaVersion = items.length ? Math.max(0, ...items.map(ivaLinea)) : input.ivaPct ?? null;
   const pctLibre = Number((await regla(supabase, "descuento_libre_pct")) ?? "0") || 0;
   // Cada línea se compara con la lista al precio que queda después del descuento especial
   const efectivos = items.map((i) => ({ ...i, precioUnit: i.precioUnit * (1 - descuento / 100) }));
-  const fuera = evaluarFueraDeLista(efectivos, (lista ?? []) as PrecioLista[], input.moneda, pctLibre, !!input.condicionEspecial);
+  const fuera = evaluarFueraDeLista(efectivos, (lista ?? []) as PrecioLista[], input.moneda, pctLibre, !!input.condicionEspecial && !input.pedidoEspecial?.trim());
+  if (input.condicionEspecial && input.pedidoEspecial?.trim()) {
+    fuera.requiere = true;
+    fuera.motivos.push(`Pide: ${input.pedidoEspecial.trim()}`);
+  }
   if (descuento > pctLibre) {
     fuera.requiere = true;
     fuera.motivos.unshift(`Descuento especial ${descuento}%: ${input.descuentoMotivo?.trim()}`);
@@ -228,7 +257,7 @@ export async function registrarCotizacion(input: {
       vigencia_dias: input.vigenciaDias ?? null,
       archivo_path: input.archivoPath ?? null,
       condiciones: input.notas?.trim() || null,
-      iva_pct: input.ivaPct ?? null,
+      iva_pct: ivaVersion,
       plazo_entrega: input.plazoEntrega?.trim() || null,
       condicion_entrega: input.condicionEntrega?.trim() || null,
       tipo_cambio: input.moneda === "USD" ? input.tipoCambio ?? null : null,
@@ -253,6 +282,7 @@ export async function registrarCotizacion(input: {
         cantidad: i.cantidad,
         precio_unit: i.precioUnit,
         descuento_pct: descuento || 0,
+        iva_pct: ivaLinea(i),
       }))
     );
     if (errI) return { error: errI.message };
@@ -275,7 +305,7 @@ export async function registrarCotizacion(input: {
       oportunidad_id: input.oportunidadId,
       tipo: "cotizacion",
       contenido: `Cotización N° ${numeroCot ?? "?"}${version > 1 ? ` v${version}` : ""} armada${
-        total != null ? ` · ${dinero(total, input.moneda)}${input.ivaPct ? " + IVA" : ""}` : ""
+        total != null ? ` · ${dinero(total, input.moneda)}${ivaVersion ? " + IVA" : ""}` : ""
       }${aprobacion === "pendiente" ? ` · fuera de lista, esperando aprobación de dirección (${fuera.motivos.join("; ")})` : ""}`,
       created_by: user?.id ?? null,
     });
@@ -304,6 +334,13 @@ export async function registrarCotizacion(input: {
   }
   const etapa = await cambiarEtapa(input.oportunidadId, "cotizada");
   if (etapa && "error" in etapa && etapa.error) return { error: etapa.error };
+  // v1.12: el seguimiento de la propuesta queda agendado solo para el día 1
+  if (aprobacion !== "pendiente")
+    await supabase
+      .from("oportunidades")
+      .update({ proximo_contacto: sumarDias(1), proxima_accion: "llamar", proximo_nota: "Seguimiento de la propuesta (día 1)" })
+      .eq("id", input.oportunidadId);
+  revalidatePath("/", "layout");
   return hecha;
 }
 
@@ -464,11 +501,19 @@ export async function crearInteres(input: {
   enEspera?: boolean;
   /** Lugar de entrega: decide el territorio y el vendedor (manual 1.1 paso 2). */
   zonaEntrega?: string | null;
+  /** v1.12: cuántos de cada producto (ej. 2 licuadoras). */
+  cantidades?: Record<string, number>;
+  /** v1.12: vendedor elegido a mano (si no, el de la zona). */
+  vendedorId?: string | null;
 }) {
   const productoIds = (input.productoIds ?? []).filter(Boolean);
   const texto = input.texto?.trim() || null;
   if (!productoIds.length && !texto)
     return { error: "Elegí un producto o escribí qué le interesa" };
+  const cantidadDe = (id: string) => {
+    const n = Math.round(Number(input.cantidades?.[id] ?? 1));
+    return n >= 1 && n <= 999 ? n : 1;
+  };
   const supabase = await createClient();
   const user = await usuarioActual();
   const nivel = ["caliente", "tibio", "frio"].includes(input.nivel ?? "")
@@ -477,9 +522,23 @@ export async function crearInteres(input: {
   const { data: prods } = productoIds.length
     ? await supabase.from("productos").select("id, nombre, moneda").in("id", productoIds)
     : { data: [] };
-  const nombres = (prods ?? []).map((p) => p.nombre).join(", ");
+  const nombres = productoIds
+    .map((id) => {
+      const p = (prods ?? []).find((x) => x.id === id);
+      return p ? `${cantidadDe(id) > 1 ? `${cantidadDe(id)} × ` : ""}${p.nombre}` : null;
+    })
+    .filter(Boolean)
+    .join(", ");
   const monedaProducto = (prods ?? []).find((p) => p.id === productoIds[0])?.moneda === "USD" ? "USD" : "ARS";
   const ruta = await rutearConsulta(supabase, { zona: input.zonaEntrega, creadorId: user?.id ?? null });
+  // Elegido a mano: manda sobre la zona (tiene que ser alguien que vende y esté activo)
+  if (input.vendedorId && input.vendedorId !== ruta.comercialId) {
+    const { data: v } = await supabase.from("usuarios").select("id, nombre, rol, activo").eq("id", input.vendedorId).maybeSingle();
+    if (!v || !v.activo || !["comercial", "direccion", "distribuidor"].includes(v.rol as string)) return { error: "Ese vendedor no está disponible" };
+    ruta.comercialId = v.id as string;
+    ruta.responsableNombre = v.nombre as string;
+    ruta.derivada = v.id !== user?.id;
+  }
   const { data: nuevo, error } = await supabase
     .from("oportunidades")
     .insert({
@@ -487,6 +546,9 @@ export async function crearInteres(input: {
       producto_id: productoIds[0] ?? null,
       productos_extra: productoIds.slice(1),
       ...camposDeRuta(ruta, hoyISO(), !!input.enEspera),
+      // El primer contacto queda agendado para hoy (no se pide fecha al cargar)
+      ...(input.enEspera || !ruta.comercialId ? {} : { proximo_contacto: hoyISO(), proxima_accion: "llamar", proximo_nota: ruta.derivada ? "Primer contacto (dentro de la hora)" : "Primer contacto" }),
+      cantidad: productoIds.reduce((s, id) => s + cantidadDe(id), 0) || null,
       origen: input.origen || "Otro",
       pedido: "general",
       etapa: input.enEspera ? "espera" : "nueva",
@@ -497,6 +559,9 @@ export async function crearInteres(input: {
     .select("id")
     .single();
   if (error || !nuevo) return { error: error?.message ?? "No se pudo guardar el interés" };
+  // Cuántos de cada uno (los usa la cotización)
+  if (productoIds.length)
+    await supabase.from("oportunidad_items").insert(productoIds.map((id) => ({ oportunidad_id: nuevo.id, producto_id: id, cantidad: cantidadDe(id) })));
   await supabase.from("actividades").insert({
     cliente_id: input.clienteId,
     oportunidad_id: nuevo.id,
@@ -554,8 +619,9 @@ export async function registrarInteres(input: {
   ciudad?: string;
   provincia?: string;
   nota?: string;
-  volverEl?: string;
   zonaEntrega?: string | null;
+  cantidades?: Record<string, number>;
+  vendedorId?: string | null;
   /** Ya se avisó de posibles duplicados y se eligió cargarlo igual. */
   crearIgual?: boolean;
 }) {
@@ -635,18 +701,23 @@ export async function registrarInteres(input: {
     nivel: input.nivel,
     enEspera: input.enEspera,
     zonaEntrega: input.zonaEntrega,
+    cantidades: input.cantidades,
+    vendedorId: input.vendedorId,
   });
   if ("error" in r) return { error: r.error };
 
-  if (input.nota?.trim() || input.volverEl) {
-    const a = await anotarContacto(clienteId, input.nota ?? "", input.volverEl || null, {
-      oportunidadId: r.id,
+  // La nota de la consulta queda en la ficha (no cuenta como primer contacto)
+  if (input.nota?.trim())
+    await supabase.from("actividades").insert({
+      cliente_id: clienteId,
+      oportunidad_id: r.id,
+      tipo: "consulta",
+      contenido: `Consulta: ${input.nota.trim()}`,
+      created_by: user?.id ?? null,
     });
-    if ("error" in a) return { error: a.error };
-  }
 
   revalidatePath("/", "layout");
-  redirect(`/clientes/${clienteId}?aviso=${r.derivada ? "asignada" : "interes"}`);
+  redirect(`/clientes/${clienteId}?interes=${r.id}&aviso=${r.derivada ? "asignada" : "interes"}`);
 }
 
 // =====================================================================

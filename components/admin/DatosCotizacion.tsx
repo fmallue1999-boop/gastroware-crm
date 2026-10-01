@@ -84,6 +84,38 @@ export default function DatosCotizacion({
         {input("empresa_direccion")}
         {input("empresa_localidad")}
         {input("cotizacion_punto_venta", { placeholder: "0007", inputMode: "numeric" })}
+        <div className="space-y-3 rounded-xl bg-crema p-3 sm:col-span-2">
+          <p className="text-[15px] font-extrabold">Cómo cotiza el vendedor</p>
+          <label className="block text-sm font-semibold">
+            {campo("cotizacion_moneda").label}
+            <select
+              value={valores.cotizacion_moneda ?? ""}
+              disabled={!puedeEditar}
+              onChange={(e) => setValores({ ...valores, cotizacion_moneda: e.target.value })}
+              className={inputCls}
+            >
+              <option value="USD">Siempre en dólares</option>
+              <option value="ARS">Siempre en pesos</option>
+              <option value="">El vendedor elige (pesos o dólares)</option>
+            </select>
+            <span className="mt-1 block text-xs font-normal text-piedra">
+              El vendedor cotiza a precio de catálogo en esa moneda y con el IVA de cada producto. Los descuentos van como “pedido especial” y los aprobás vos.
+            </span>
+          </label>
+          {(["cotizacion_formas_pago", "cotizacion_plazos_entrega", "cotizacion_condiciones_entrega"] as const).map((k) => (
+            <label key={k} className="block text-sm font-semibold">
+              {campo(k).label}
+              <span className="block text-xs font-normal text-piedra">Una opción por renglón: es lo que el vendedor elige en el desplegable.</span>
+              <textarea
+                rows={4}
+                value={valores[k] ?? ""}
+                disabled={!puedeEditar}
+                onChange={(e) => setValores({ ...valores, [k]: e.target.value })}
+                className={inputCls}
+              />
+            </label>
+          ))}
+        </div>
         <label className="block text-sm font-semibold sm:col-span-2">
           {campo("cotizacion_leyenda_usd").label}
           <span className="block text-xs font-normal text-piedra">

@@ -7,6 +7,7 @@ import { hoyISO } from "@/lib/format";
 import { filtroQuien } from "@/lib/quien";
 import BottomNav from "@/components/BottomNav";
 import BotonFlotante from "@/components/BotonFlotante";
+import TecladoAbierto from "@/components/TecladoAbierto";
 import Rail from "@/components/Rail";
 import EstiloMarca from "@/components/marca/EstiloMarca";
 import LogoSistema from "@/components/marca/LogoSistema";
@@ -37,9 +38,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const esGestor = ["direccion", "admin"].includes(rol);
   const noLeidas = notifRes.count ?? 0;
 
-  // Quien vende: cuántos hay para contactar hoy (atrasados, de hoy y "llegó stock")
-  let paraHoy = 0;
-  if (["comercial", "direccion", "distribuidor"].includes(rol)) {
+  // Quien vende: cuántos hay para contactar hoy (atrasados, de hoy y "llegó stock"),
+  // más lo de la agenda para hoy (tareas, reuniones, pagos). En paralelo.
+  const contarInteresesHoy = async () => {
+    if (!["comercial", "direccion", "distribuidor"].includes(rol)) return 0;
     const { comercialId } = await filtroQuien(user.id, esGestor);
     let q = supabase
       .from("oportunidades")
@@ -47,10 +49,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .in("etapa", [...ETAPAS_ABIERTAS])
       .lte("proximo_contacto", hoyISO());
     if (comercialId) q = q.eq("comercial_id", comercialId);
-    paraHoy = (await q).count ?? 0;
-  }
-  // Más lo de la agenda para hoy (tareas, reuniones, pagos)
-  paraHoy += await contarAgendaHoy(supabase, user.id, hoyISO());
+    return (await q).count ?? 0;
+  };
+  const [interesesHoy, agendaHoy] = await Promise.all([contarInteresesHoy(), contarAgendaHoy(supabase, user.id, hoyISO())]);
+  const paraHoy = interesesHoy + agendaHoy;
 
   // Avisos creados por la base (consultas web, asignaciones) que falten mandar al celular
   after(async () => {
@@ -86,6 +88,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
 
         <div className="lg:hidden">
+          <TecladoAbierto />
           <BotonFlotante rol={rol} />
           <BottomNav rol={rol} paraHoy={paraHoy} />
         </div>

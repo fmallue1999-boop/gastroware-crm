@@ -13,7 +13,6 @@ import {
   dinero,
   diasDesde,
   hoyISO,
-  rellenarPlantilla,
   telefonoProlijo,
 } from "@/lib/format";
 import { ESTADOS_OT, ETAPAS_ABIERTAS } from "@/lib/constants";
@@ -24,7 +23,7 @@ import TarjetaRepuesto from "@/components/repuestos/TarjetaRepuesto";
 import { cargarSolicitudes } from "@/lib/servidor/repuestos";
 import { nombreLinea, notasSinContacto, textoActividad } from "@/lib/actividad";
 import { cantidadTexto, reposicionEstimada } from "@/lib/consumibles";
-import InteresFijado, { type Guion, type MaterialLite, type VersionCot } from "@/components/ficha/InteresFijado";
+import InteresFijado, { type VersionCot } from "@/components/ficha/InteresFijado";
 import FichaTabs, { IrAPestana, type Pestana } from "@/components/ficha/FichaTabs";
 import NuevaOperacion from "@/components/ficha/NuevaOperacion";
 import AsignarVendedor from "@/components/AsignarVendedor";
@@ -45,7 +44,6 @@ import type {
   Cotizacion,
   Equipo,
   Oportunidad,
-  Plantilla,
   Producto,
   Recurrencia,
   Sucursal,
@@ -133,8 +131,6 @@ export default async function FichaChat({
     otsRes,
     usuariosRes,
     stockInfo,
-    plantillasRes,
-    materialesRes,
     facturasRes,
     casosAbiertos,
     personasRes,
@@ -154,8 +150,6 @@ export default async function FichaChat({
       .limit(30),
     supabase.from("usuarios").select("id, nombre, rol, activo"),
     infoStockPorProducto(supabase),
-    supabase.from("plantillas").select("*"),
-    supabase.from("materiales").select("id, nombre, tipo, url, producto_id").order("nombre"),
     supabase
       .from("facturas")
       .select("id, oportunidad_id, numero, vencimiento, monto, moneda, cobro_estado, promesa_fecha, condicion_aprobada_at")
@@ -180,8 +174,6 @@ export default async function FichaChat({
   const oportunidades = (oportunidadesRes.data ?? []) as unknown as Oportunidad[];
   const actividades = (actividadesRes.data ?? []) as unknown as Actividad[];
   const productos = (productosRes.data ?? []) as Producto[];
-  const plantillas = (plantillasRes.data ?? []) as Plantilla[];
-  const materiales = (materialesRes.data ?? []) as (MaterialLite & { producto_id: string | null })[];
   const usuarios = (usuariosRes.data ?? []) as { id: string; nombre: string; rol: string; activo: boolean }[];
   const nombres = new Map(usuarios.map((u) => [u.id, u.nombre]));
   const vendedores = usuarios
@@ -236,23 +228,6 @@ export default async function FichaChat({
     });
     versionesPor.set(v.oportunidad_id, lista);
   });
-
-  const guionesDe = (o: Oportunidad): Guion[] => {
-    const cat = o.producto?.categoria ?? "otro";
-    const usos = cat === "exprimidora" ? ["diagnostico:zumex", "precio:zumex"] : cat === "licuadora" ? ["diagnostico:gx", "precio:gx"] : [];
-    const vars = {
-      nombre: c.nombre_comercial,
-      producto: o.producto?.nombre ?? "el producto",
-      monto: o.monto_estimado ? dinero(o.monto_estimado, o.moneda) : "$X",
-    };
-    return plantillas
-      .filter((p) => usos.includes(p.uso) || p.uso === "objecion:precio")
-      .map((p) => ({ id: p.id, nombre: p.nombre, texto: rellenarPlantilla(p.contenido, vars) }));
-  };
-  const materialesDe = (o: Oportunidad): MaterialLite[] =>
-    materiales
-      .filter((m) => !m.producto_id || m.producto_id === o.producto_id || (o.productos_extra ?? []).includes(m.producto_id))
-      .map(({ id, nombre, tipo, url }) => ({ id, nombre, tipo, url }));
 
   const docs = (documentosRes.data ?? []) as { id: string; tipo: string; nombre: string; path: string; created_at: string }[];
   const urlsDocs = await firmarUrls("documentos", docs.map((d) => d.path));
@@ -330,8 +305,6 @@ export default async function FichaChat({
           productos={productosDeLinea(productos, o.linea)}
           stockTexto={o.producto_id && stockInfo[o.producto_id] ? textoStock(stockInfo[o.producto_id], fechaCorta) : null}
           versiones={versionesPor.get(o.id) ?? []}
-          guiones={guionesDe(o)}
-          materiales={materialesDe(o)}
           telefono={c.telefono}
           iaOn={iaConfigurada()}
           abierta={o.id === interesAbierto}
@@ -692,7 +665,7 @@ export default async function FichaChat({
   return (
     <div className="mx-auto max-w-3xl space-y-3">
       <FichaTabs key={c.id} cabecera={cabecera} pestanas={pestanas} inicial={inicial} />
-      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 -mx-4 border-t border-borde bg-crema/95 px-4 py-2.5 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border">
+      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 -mx-4 border-t border-borde bg-crema/95 px-4 py-2.5 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border [html[data-teclado]_&]:bottom-0">
         {compositor}
       </div>
     </div>

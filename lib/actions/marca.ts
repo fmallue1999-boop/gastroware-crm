@@ -54,6 +54,16 @@ export async function guardarDatosCotizacion(valores: Partial<Record<ClaveCotiza
   const pv = filas.find((f) => f.clave === "cotizacion_punto_venta");
   if (pv && !/^\d{1,4}$/.test(pv.valor)) return { error: "El punto de venta son hasta 4 números (ej: 0007)" };
   if (pv) pv.valor = pv.valor.padStart(4, "0");
+  const moneda = filas.find((f) => f.clave === "cotizacion_moneda");
+  if (moneda && !["USD", "ARS", ""].includes(moneda.valor)) return { error: "Moneda inválida" };
+  // Las listas: una opción por renglón, sin renglones vacíos
+  for (const f of filas)
+    if (["cotizacion_formas_pago", "cotizacion_plazos_entrega", "cotizacion_condiciones_entrega"].includes(f.clave))
+      f.valor = f.valor
+        .split(/\r?\n/)
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .join("\n");
   if (filas.some((f) => f.valor.length > 1000)) return { error: "Hay un texto demasiado largo" };
   const { error } = await supabase.from("config").upsert(filas, { onConflict: "clave" });
   if (error) return { error: error.message };

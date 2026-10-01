@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
-import { asignarConsulta, noEsDeMiTerritorio } from "@/lib/actions";
+import { anotarContacto, asignarConsulta, noEsDeMiTerritorio } from "@/lib/actions";
+import { hoyISO } from "@/lib/format";
 import { ZONAS_ENTREGA } from "@/lib/territorios";
 import { transcurrido } from "@/lib/habiles";
 import { veTodo } from "@/lib/puestos";
@@ -23,6 +24,7 @@ export default function AsignacionInteres({
 }: {
   interes: {
     id: string;
+    cliente_id?: string;
     zona_entrega?: string | null;
     comercial_id: string | null;
     asignado_at?: string | null;
@@ -40,6 +42,20 @@ export default function AsignacionInteres({
   const [msg, setMsg] = useState<{ texto: string; error?: boolean } | null>(null);
   const esMia = interes.comercial_id === miId;
   const puedeAsignar = veTodo(rol) || !interes.comercial_id;
+
+  /** Primer contacto hecho: queda anotado y el próximo paso es cotizar hoy. */
+  function contactado(medio: string) {
+    if (!interes.cliente_id) return;
+    setMsg(null);
+    startTransition(async () => {
+      const r = await anotarContacto(interes.cliente_id!, "", hoyISO(), { oportunidadId: interes.id, medio, resultado: "conversamos", accion: "cotizar" });
+      if (r && "error" in r && r.error) setMsg({ texto: r.error, error: true });
+      else {
+        setMsg({ texto: "Primer contacto anotado ✓" });
+        router.refresh();
+      }
+    });
+  }
 
   function enviar(accion: "asignar" | "no_es_mio") {
     if (!zona) return;
@@ -106,9 +122,31 @@ export default function AsignacionInteres({
         )}
       </p>
       {sinPrimerContacto && (
-        <p className={`text-[14px] font-bold ${demora > 3600000 ? "text-red-600" : "text-ambar"}`}>
-          Sin primer contacto · asignada {transcurrido(interes.asignado_at!, ahoraMs)}
-        </p>
+        <div className={`mt-1.5 space-y-1.5 rounded-xl px-3 py-2 ${demora > 3600000 ? "bg-red-50" : "bg-ambar-soft"}`}>
+          <p className={`text-[14px] font-bold ${demora > 3600000 ? "text-red-600" : "text-ambar"}`}>
+            Sin primer contacto · asignada {transcurrido(interes.asignado_at!, ahoraMs)}
+          </p>
+          {interes.cliente_id && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[13px] font-semibold">Ya lo contacté por:</span>
+              {[
+                { medio: "whatsapp", texto: "WhatsApp" },
+                { medio: "llamada", texto: "Llamada" },
+                { medio: "email", texto: "Email" },
+              ].map((m) => (
+                <button
+                  key={m.medio}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => contactado(m.medio)}
+                  className="min-h-9 rounded-full border border-borde bg-white px-3 text-[13px] font-bold text-tinta disabled:opacity-50"
+                >
+                  {m.texto}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
       {cambiando && selector(esMia && !veTodo(rol) ? "no_es_mio" : "asignar", esMia && !veTodo(rol) ? "Pasarla" : "Reasignar")}
       {msg && <p className={`mt-1 text-[14px] font-bold ${msg.error ? "text-red-600" : "text-verde"}`}>{msg.texto}</p>}
