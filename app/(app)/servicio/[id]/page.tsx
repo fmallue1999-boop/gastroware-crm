@@ -136,11 +136,11 @@ export default async function OTPage({
   const [{ data: tecnicosData }, { data: aliadosData }, { data: sucursalesData }, { data: facturasOt }] = await Promise.all([
     supabase.from("usuarios").select("id, nombre").eq("rol", "tecnico").eq("activo", true).order("nombre"),
     supabase.from("tecnicos_aliados").select("id, nombre, zona").eq("activo", true).order("nombre"),
-    supabase.from("sucursales").select("id, ciudad, es_principal").eq("cliente_id", ot.cliente_id),
+    supabase.from("sucursales").select("id, ciudad, es_principal, deleted_at").eq("cliente_id", ot.cliente_id),
     supabase.from("facturas").select("id, numero, cobro_estado").eq("ot_id", ot.id).order("created_at"),
   ]);
-  const suc = ((sucursalesData ?? []) as { id: string; ciudad: string | null; es_principal: boolean }[]).find((x) =>
-    ot.sucursal_id ? x.id === ot.sucursal_id : x.es_principal
+  const suc = ((sucursalesData ?? []) as { id: string; ciudad: string | null; es_principal: boolean; deleted_at: string | null }[]).find((x) =>
+    ot.sucursal_id ? x.id === ot.sucursal_id : x.es_principal && !x.deleted_at
   );
   const ciudad = (suc?.ciudad ?? "").toLowerCase();
   const zonaPropia = ciudad

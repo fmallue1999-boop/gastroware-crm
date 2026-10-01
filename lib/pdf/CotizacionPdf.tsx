@@ -34,6 +34,8 @@ export type DatosCotizacionPdf = {
   vigenciaDias: number | null;
   plazoEntrega: string | null;
   condicionEntrega: string | null;
+  /** v1.14: sucursal / punto de entrega elegido (nombre, dirección, quién recibe, horario). */
+  lugarEntrega?: string | null;
   observaciones: string | null;
   leyendaDolar: string | null;
   tipoCambio: number | null;
@@ -269,6 +271,7 @@ export default function CotizacionPdf({ d }: { d: DatosCotizacionPdf }) {
             <Nota etiqueta="Forma de pago" valor={d.formaPago} />
             <Nota etiqueta="Plazo de entrega" valor={d.plazoEntrega} />
             <Nota etiqueta="Condición de entrega" valor={d.condicionEntrega} />
+            <Nota etiqueta="Lugar de entrega" valor={d.lugarEntrega ?? null} />
             <Nota etiqueta="Observaciones" valor={d.observaciones} />
             {d.leyendaDolar ? <Text style={s.leyenda}>{d.leyendaDolar}</Text> : null}
             {d.tipoCambio ? (

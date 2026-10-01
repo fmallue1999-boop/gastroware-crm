@@ -88,6 +88,17 @@ export const BASICOS: Tarea[] = [
     ojo: "Abrir WhatsApp o tocar Llamar no registra nada solo: el resultado lo cargás vos. Las operaciones abiertas sin próximo paso aparecen en Mi día, en “Sin próximo paso”.",
   },
   {
+    id: "sucursales",
+    titulo: "Sucursales y puntos de entrega",
+    pasos: [
+      { texto: "Una razón social puede tener varios locales o lugares de entrega. En la ficha, pestaña “Datos”, tocá “Agregar sucursal o punto de entrega”." },
+      { texto: "Cargá el nombre (Local Palermo, Depósito…), la dirección, quién recibe y el horario o las indicaciones para entregar." },
+      { texto: "La principal es la dirección del cliente (la que va como domicilio en la cotización). Con “Hacer principal” la cambiás; “Dar de baja” la saca de las listas sin borrar lo que ya se hizo ahí." },
+      { texto: "Al cotizar, en “Pago y entrega”, elegí el lugar de entrega (o cargá uno nuevo ahí mismo con “Otro lugar de entrega”): sale en el PDF con quién recibe y el horario." },
+    ],
+    ojo: "Al registrar la venta también elegís la sucursal: los equipos quedan instalados en ese lugar.",
+  },
+  {
     id: "reprogramar",
     titulo: "Pasar un contacto para otro día u hora",
     pasos: [

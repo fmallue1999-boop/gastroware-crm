@@ -91,7 +91,7 @@ export async function cargarCotizacionPdf(supabase: SupabaseServidor, id: string
     supabase.from("cotizacion_items").select("*, producto:productos(*)").eq("version_id", version.id).order("id"),
     supabase.from("config").select("clave, valor").in("clave", [...CLAVES]),
     opp?.cliente_id
-      ? supabase.from("sucursales").select("direccion, ciudad, provincia, es_principal").eq("cliente_id", opp.cliente_id).order("es_principal", { ascending: false }).limit(1)
+      ? supabase.from("sucursales").select("direccion, ciudad, provincia, es_principal").eq("cliente_id", opp.cliente_id).is("deleted_at", null).order("es_principal", { ascending: false }).limit(1)
       : Promise.resolve({ data: [] as { direccion: string | null; ciudad: string | null; provincia: string | null }[] }),
   ]);
   const conf = new Map((cfg ?? []).map((c) => [c.clave as string, ((c.valor as string | null) ?? "").trim()]));
@@ -112,6 +112,19 @@ export async function cargarCotizacionPdf(supabase: SupabaseServidor, id: string
   const moneda = version.moneda === "USD" ? "USD" : "ARS";
   const numero = numeroComprobante(c("cotizacion_punto_venta"), cot.numero as number);
   const suc = sucursales?.[0];
+  // v1.14: lugar de entrega elegido al cotizar (aunque después se haya dado de baja, es donde se cotizó)
+  const { data: lugar } = version.sucursal_id
+    ? await supabase.from("sucursales").select("nombre, direccion, ciudad, provincia, recibe, indicaciones, telefono").eq("id", version.sucursal_id).maybeSingle()
+    : { data: null };
+  const lugarEntrega = lugar
+    ? [
+        [lugar.nombre, [lugar.direccion, lugar.ciudad, lugar.provincia].filter(Boolean).join(", ")].filter(Boolean).join(": "),
+        lugar.recibe ? `Recibe: ${lugar.recibe}${lugar.telefono ? ` (${lugar.telefono})` : ""}` : null,
+        lugar.indicaciones,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
   const cliente = opp?.cliente ?? null;
   const nombreCliente = cliente?.razon_social?.trim() || cliente?.nombre_comercial || "Cliente";
   const logo = c("logo_url");
@@ -155,6 +168,7 @@ export async function cargarCotizacionPdf(supabase: SupabaseServidor, id: string
     vigenciaDias: version.vigencia_dias,
     plazoEntrega: version.plazo_entrega ?? null,
     condicionEntrega: version.condicion_entrega ?? null,
+    lugarEntrega,
     observaciones: version.condiciones,
     leyendaDolar: moneda === "USD" ? leyendaDolar(c("cotizacion_leyenda_usd"), totales.total) || null : null,
     tipoCambio: version.tipo_cambio != null ? Number(version.tipo_cambio) : null,

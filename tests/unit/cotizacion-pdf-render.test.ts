@@ -35,6 +35,7 @@ const datos: DatosCotizacionPdf = {
   vigenciaDias: 7,
   plazoEntrega: "A revisar",
   condicionEntrega: "A cargo del cliente",
+  lugarEntrega: "Local Palermo: Av. Santa Fe 3200, CABA · Recibe: Encargado (11 5555-0000) · De 9 a 13 h",
   observaciones: null,
   leyendaDolar: "El monto de los ítems equivale a US$16.230,90. El cliente podrá abonar los ítems en pesos argentinos.",
   tipoCambio: 1405,

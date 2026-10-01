@@ -2,8 +2,9 @@
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Minus, Pencil, Plus, Trash2 } from "lucide-react";
-import { guardarDatosParaCotizar, registrarCotizacion, type ItemCotizacion } from "@/lib/actions";
+import { crearSucursal, guardarDatosParaCotizar, registrarCotizacion, type ItemCotizacion } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/client";
 import { dinero } from "@/lib/format";
 import type { Producto } from "@/lib/types";
@@ -38,6 +39,8 @@ export type CotizacionPrevia = {
   ivaPct: number | null;
   plazoEntrega: string | null;
   condicionEntrega: string | null;
+  /** v1.14: lugar de entrega (sucursal) de la versión anterior. */
+  sucursalId?: string | null;
   vigenciaDias: number | null;
   condiciones: string | null;
   tipoCambio: number | null;
@@ -108,6 +111,8 @@ export default function CotizacionForm({
   volverHref,
   config,
   editaPrecios,
+  puntosEntrega = [],
+  entregaInicial = null,
 }: {
   oportunidadId: string;
   clienteId: string;
@@ -120,7 +125,11 @@ export default function CotizacionForm({
   config: ConfigCotizar;
   /** Dirección y administración pueden cambiar precios, moneda y agregar líneas libres. */
   editaPrecios: boolean;
+  /** v1.14: sucursales del cliente para elegir dónde se entrega. */
+  puntosEntrega?: { id: string; texto: string }[];
+  entregaInicial?: string | null;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const arriba = useRef<HTMLDivElement>(null);
   const monedaInicial = config.monedaFija ?? previa?.moneda ?? (monedaDefault === "USD" ? "USD" : "ARS");
@@ -156,6 +165,9 @@ export default function CotizacionForm({
   const [formaPago, setFormaPago] = useState(previa?.formaPago ?? "");
   const [plazoEntrega, setPlazoEntrega] = useState(previa?.plazoEntrega ?? "");
   const [condicionEntrega, setCondicionEntrega] = useState(previa?.condicionEntrega ?? "");
+  const [entrega, setEntrega] = useState(previa?.sucursalId ?? entregaInicial ?? "");
+  const [nuevoLugar, setNuevoLugar] = useState<{ nombre: string; direccion: string; ciudad: string } | null>(null);
+  const [guardandoLugar, setGuardandoLugar] = useState(false);
   const [vigencia, setVigencia] = useState(String(previa?.vigenciaDias ?? 7));
   const [tipoCambio, setTipoCambio] = useState(previa?.tipoCambio ? String(previa.tipoCambio) : "");
 
@@ -279,6 +291,7 @@ export default function CotizacionForm({
         ivaPct: IVA_DEFECTO,
         plazoEntrega,
         condicionEntrega,
+        sucursalId: entrega || null,
         tipoCambio: moneda === "USD" ? cambio : null,
         items: lineas.map((l) => ({ productoId: l.productoId, descripcion: l.descripcion, cantidad: l.cantidad, precioUnit: l.precioUnit })),
       });
@@ -521,6 +534,71 @@ export default function CotizacionForm({
           </div>
           <Lista etiqueta="Plazo de entrega" valor={plazoEntrega} opciones={config.plazos} onChange={setPlazoEntrega} placeholder="Elegir plazo…" />
           <Lista etiqueta="Condición de entrega" valor={condicionEntrega} opciones={config.condiciones} onChange={setCondicionEntrega} placeholder="Elegir condición…" />
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="block text-sm font-bold">
+              Lugar de entrega
+              <select
+                value={entrega}
+                onChange={(e) => setEntrega(e.target.value)}
+                className="mt-1 min-h-11 w-full rounded-xl border border-borde bg-white px-3 text-[16px] font-normal outline-none focus:border-marino"
+              >
+                <option value="">Sin indicar</option>
+                {puntosEntrega.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.texto}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {nuevoLugar ? (
+              <div className="space-y-2 rounded-xl bg-crema/60 p-3">
+                <input
+                  value={nuevoLugar.nombre}
+                  onChange={(e) => setNuevoLugar({ ...nuevoLugar, nombre: e.target.value })}
+                  placeholder="Nombre del lugar (ej: Local Palermo, Depósito)"
+                  className="min-h-11 w-full rounded-xl border border-borde bg-white px-3 text-[16px] outline-none focus:border-marino"
+                />
+                <input
+                  value={nuevoLugar.direccion}
+                  onChange={(e) => setNuevoLugar({ ...nuevoLugar, direccion: e.target.value })}
+                  placeholder="Dirección"
+                  className="min-h-11 w-full rounded-xl border border-borde bg-white px-3 text-[16px] outline-none focus:border-marino"
+                />
+                <input
+                  value={nuevoLugar.ciudad}
+                  onChange={(e) => setNuevoLugar({ ...nuevoLugar, ciudad: e.target.value })}
+                  placeholder="Localidad"
+                  className="min-h-11 w-full rounded-xl border border-borde bg-white px-3 text-[16px] outline-none focus:border-marino"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={guardandoLugar || !nuevoLugar.nombre.trim()}
+                    onClick={async () => {
+                      setGuardandoLugar(true);
+                      const r = await crearSucursal({ clienteId, ...nuevoLugar });
+                      setGuardandoLugar(false);
+                      if ("error" in r && r.error) return setError(r.error);
+                      if ("id" in r && r.id) setEntrega(r.id);
+                      setNuevoLugar(null);
+                      router.refresh();
+                    }}
+                    className="min-h-11 flex-1 rounded-xl bg-marino px-4 text-[15px] font-bold text-white disabled:opacity-50"
+                  >
+                    {guardandoLugar ? "Guardando…" : "Agregar y elegir"}
+                  </button>
+                  <button type="button" onClick={() => setNuevoLugar(null)} className="min-h-11 rounded-xl border border-borde bg-white px-4 text-[15px]">
+                    Cancelar
+                  </button>
+                </div>
+                <p className="text-xs text-piedra">Queda en la ficha del cliente (Datos), donde podés sumar quién recibe y el horario.</p>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setNuevoLugar({ nombre: "", direccion: "", ciudad: "" })} className="inline-flex min-h-10 items-center gap-1 text-sm font-bold text-marino underline">
+                <Plus className="h-3.5 w-3.5" /> Otro lugar de entrega
+              </button>
+            )}
+          </div>
           <label className="flex items-center gap-2 text-sm font-bold">
             Válida por
             <select value={vigencia} onChange={(e) => setVigencia(e.target.value)} className="min-h-11 rounded-xl border border-borde bg-white px-2 text-[16px] font-normal">

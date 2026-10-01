@@ -210,26 +210,95 @@ export async function actualizarCliente(
   return { ok: true };
 }
 
-export async function crearSucursal(input: {
-  clienteId: string;
+type DatosSucursal = {
   nombre: string;
   direccion?: string;
   ciudad?: string;
   provincia?: string;
   telefono?: string;
-}) {
+  /** v1.14: quién recibe en ese lugar y horario / indicaciones para entregar. */
+  recibe?: string;
+  indicaciones?: string;
+};
+
+const limpiarSucursal = (d: DatosSucursal) => ({
+  nombre: d.nombre.trim().slice(0, 80) || "Sucursal",
+  direccion: d.direccion?.trim().slice(0, 160) || null,
+  ciudad: d.ciudad?.trim().slice(0, 80) || null,
+  provincia: d.provincia?.trim().slice(0, 60) || null,
+  telefono: d.telefono?.trim().slice(0, 40) || null,
+  recibe: d.recibe?.trim().slice(0, 120) || null,
+  indicaciones: d.indicaciones?.trim().slice(0, 300) || null,
+});
+
+/** Suma una sucursal o punto de entrega. La primera del cliente queda como principal. */
+export async function crearSucursal(input: DatosSucursal & { clienteId: string; principal?: boolean }) {
+  if (!input.nombre?.trim()) return { error: "Poné un nombre (ej: Local Palermo, Depósito)" };
   const supabase = await createClient();
-  const { error } = await supabase.from("sucursales").insert({
-    cliente_id: input.clienteId,
-    nombre: input.nombre.trim() || "Sucursal",
-    direccion: input.direccion?.trim() || null,
-    ciudad: input.ciudad?.trim() || null,
-    provincia: input.provincia?.trim() || null,
-    telefono: input.telefono?.trim() || null,
-  });
+  const { count } = await supabase
+    .from("sucursales")
+    .select("id", { count: "exact", head: true })
+    .eq("cliente_id", input.clienteId)
+    .is("deleted_at", null);
+  const principal = !count || Boolean(input.principal);
+  if (principal && count) {
+    await supabase.from("sucursales").update({ es_principal: false }).eq("cliente_id", input.clienteId).is("deleted_at", null);
+  }
+  const { data, error } = await supabase
+    .from("sucursales")
+    .insert({ cliente_id: input.clienteId, es_principal: principal, ...limpiarSucursal(input) })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
-  return { ok: true };
+  return { ok: true as const, id: data.id as string };
+}
+
+export async function actualizarSucursal(id: string, input: DatosSucursal) {
+  if (!input.nombre?.trim()) return { error: "Poné un nombre" };
+  const supabase = await createClient();
+  const { error } = await supabase.from("sucursales").update(limpiarSucursal(input)).eq("id", id).is("deleted_at", null);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** La principal es la dirección del cliente (la que va como domicilio en la cotización). */
+export async function hacerPrincipalSucursal(id: string) {
+  const supabase = await createClient();
+  const { data: s } = await supabase.from("sucursales").select("cliente_id").eq("id", id).is("deleted_at", null).maybeSingle();
+  if (!s) return { error: "No se encontró la sucursal" };
+  const { error: e1 } = await supabase.from("sucursales").update({ es_principal: false }).eq("cliente_id", s.cliente_id).neq("id", id);
+  if (e1) return { error: e1.message };
+  const { error } = await supabase.from("sucursales").update({ es_principal: true }).eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Da de baja una sucursal (no se borra: equipos, ventas y services que la
+ * nombran la siguen teniendo). Si era la principal, pasa a serlo la que sigue.
+ */
+export async function darDeBajaSucursal(id: string) {
+  const supabase = await createClient();
+  const { data: s } = await supabase.from("sucursales").select("cliente_id, es_principal").eq("id", id).is("deleted_at", null).maybeSingle();
+  if (!s) return { error: "No se encontró la sucursal" };
+  const { error } = await supabase.from("sucursales").update({ deleted_at: new Date().toISOString(), es_principal: false }).eq("id", id);
+  if (error) return { error: error.message };
+  if (s.es_principal) {
+    const { data: otra } = await supabase
+      .from("sucursales")
+      .select("id")
+      .eq("cliente_id", s.cliente_id)
+      .is("deleted_at", null)
+      .order("created_at")
+      .limit(1)
+      .maybeSingle();
+    if (otra) await supabase.from("sucursales").update({ es_principal: true }).eq("id", otra.id);
+  }
+  revalidatePath("/", "layout");
+  return { ok: true as const };
 }
 
 export async function agregarNota(
@@ -946,6 +1015,7 @@ export async function guardarDatosParaCotizar(
     .from("sucursales")
     .select("id, es_principal")
     .eq("cliente_id", clienteId)
+    .is("deleted_at", null)
     .order("es_principal", { ascending: false })
     .limit(1);
   const principal = sucursales?.[0];

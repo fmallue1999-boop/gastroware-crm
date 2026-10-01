@@ -3,6 +3,17 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.14.0 — 1 de octubre de 2026
+
+Sucursales y puntos de entrega (migración 040_sucursales_entrega.sql), pedido de dirección: "una razón social puede tener múltiples sucursales o puntos de entrega".
+
+- Migración 040: sucursales.recibe e indicaciones; cotizacion_versiones.sucursal_id (lugar de entrega); clientes con sucursales sin principal → la más vieja pasa a principal; arreglo del último nombre con letra rota ("Ä"+U+0080 → "Ā").
+- Acciones: crearSucursal (la primera queda principal; opción principal), actualizarSucursal, hacerPrincipalSucursal, darDeBajaSucursal (baja lógica; si era la principal, pasa la siguiente).
+- SucursalesCliente rehecho (tarjetas, editar, hacer principal, dar de baja con confirmación, provincia de lista, quién recibe, horario/indicaciones).
+- Cotizar: "Lugar de entrega" en Pago y entrega (sucursales activas, principal primero) + "Otro lugar de entrega" que la crea ahí mismo; registrarCotizacion valida que sea del cliente, la guarda en la versión y en oportunidades.sucursal_id (la venta la trae elegida). PDF: renglón "Lugar de entrega" (nombre, dirección, quién recibe, horario).
+- Arreglo: el domicilio del PDF, el chequeo de datos para cotizar, guardar datos desde cotizar, la ficha de service y la inspección ignoraban la baja de sucursales (tomaban una dada de baja).
+- Datos (fuera de versión, SQL corrido por dirección): tildes rotas (mojibake) arregladas en nombres, notas y personas; "nan" quitado; emojis de nombres de WhatsApp recuperados; sucursal de Mar del Plata de Esquina 3 dada de baja (vino mal de ZEUS).
+
 ## v1.13.0 — 1 de octubre de 2026
 
 Reprogramar (migración 039_proximo_hora.sql), a partir de un caso real del vendedor de territorio (cliente que prefirió la visita la semana siguiente).

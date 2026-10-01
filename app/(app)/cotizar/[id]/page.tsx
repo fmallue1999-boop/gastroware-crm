@@ -23,7 +23,7 @@ export default async function CotizarPage({ params }: { params: Promise<{ id: st
     supabase
       .from("oportunidades")
       .select(
-        "id, cliente_id, linea, etapa, moneda, producto_id, productos_extra, mensaje_inicial, producto:productos(nombre, moneda), cliente:clientes(id, nombre_comercial, razon_social, cuit, email, condicion_fiscal, sucursales(*))"
+        "id, cliente_id, sucursal_id, linea, etapa, moneda, producto_id, productos_extra, mensaje_inicial, producto:productos(nombre, moneda), cliente:clientes(id, nombre_comercial, razon_social, cuit, email, condicion_fiscal, sucursales(*))"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -83,6 +83,7 @@ export default async function CotizarPage({ params }: { params: Promise<{ id: st
       ivaPct: ultima.iva_pct ?? null,
       plazoEntrega: ultima.plazo_entrega ?? null,
       condicionEntrega: ultima.condicion_entrega ?? null,
+      sucursalId: ultima.sucursal_id ?? null,
       vigenciaDias: ultima.vigencia_dias,
       condiciones: ultima.condiciones,
       tipoCambio: ultima.tipo_cambio != null ? Number(ultima.tipo_cambio) : null,
@@ -92,7 +93,16 @@ export default async function CotizarPage({ params }: { params: Promise<{ id: st
   }
 
   const fiscal = datosFiscalesDe(cliente);
-  const principal = (cliente.sucursales ?? []).find((s) => s.es_principal) ?? (cliente.sucursales ?? [])[0];
+  const activas = (cliente.sucursales ?? []).filter((s) => !s.deleted_at);
+  const principal = activas.find((s) => s.es_principal) ?? activas[0];
+  // v1.14: dónde se entrega (la principal primero)
+  const puntosEntrega = [...activas]
+    .sort((a, b) => Number(b.es_principal) - Number(a.es_principal))
+    .map((s) => ({
+      id: s.id,
+      texto: [s.nombre, [s.direccion, s.ciudad].filter(Boolean).join(", ")].filter(Boolean).join(" — ") + (s.es_principal ? " (principal)" : ""),
+    }));
+  const entregaInicial = (opp.sucursal_id as string | null) && activas.some((s) => s.id === opp.sucursal_id) ? (opp.sucursal_id as string) : null;
   const volverHref = `/clientes/${cliente.id}?interes=${opp.id}`;
   const queCotiza =
     [producto?.nombre, (opp.productos_extra as string[] | null)?.length ? `y ${(opp.productos_extra as string[]).length} más` : null].filter(Boolean).join(" ") ||
@@ -134,6 +144,8 @@ export default async function CotizarPage({ params }: { params: Promise<{ id: st
           .map((pid) => ({ id: pid, cantidad: Number(((itemsInteres ?? []) as { producto_id: string; cantidad: number }[]).find((i) => i.producto_id === pid)?.cantidad ?? 1) }))}
         config={config}
         editaPrecios={editaPrecios}
+        puntosEntrega={puntosEntrega}
+        entregaInicial={entregaInicial}
         previa={previa}
         volverHref={volverHref}
       />

@@ -48,7 +48,7 @@ export default async function InspeccionPage({
   );
   const aImprimir = inspecciones.length > 0 ? inspecciones : listas;
 
-  const sucursales = ot.cliente?.sucursales ?? [];
+  const sucursales = (ot.cliente?.sucursales ?? []).filter((s) => !s.deleted_at);
   const principal =
     sucursales.find((s) => s.es_principal) ?? sucursales[0] ?? null;
   const firmaUrl = await firmarUrl("servicio", ot.firma_path);
