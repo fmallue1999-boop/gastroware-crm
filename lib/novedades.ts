@@ -19,6 +19,16 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.17.0",
+    fecha: "2026-10-01",
+    titulo: "Eliminar una venta o un interés mal cargado",
+    cambios: [
+      "Dirección puede eliminar una venta mal cargada (cargada dos veces, cliente equivocado…) desde el tablero de ventas o la ficha del cliente: “Eliminar venta (mal cargada)”, con el motivo.",
+      "Se borra con sus cotizaciones, los equipos que cargó (los que ya tienen un service quedan) y la factura sin cobro; si ya se había entregado, vuelve el stock. Una venta con la factura cobrada no se puede eliminar.",
+      "Los intereses también se pueden eliminar, desde “Más opciones”. En la ficha del cliente queda anotado qué se eliminó y por qué.",
+    ],
+  },
+  {
     version: "1.16.0",
     fecha: "2026-10-01",
     titulo: "Ventas con varias unidades",
