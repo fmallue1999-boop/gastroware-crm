@@ -41,7 +41,7 @@ export default async function EmbudoPage({
   // Cada puesto abre en lo suyo: quien vende, en el embudo; el resto, en Mi día
   if (!["comercial", "direccion", "distribuidor"].includes(rol)) redirect("/hoy");
 
-  const [sinContacto, casosAbiertos, aprobaciones] = await Promise.all([
+  const [sinContacto, casosAbiertos, aprobaciones, contenidosAprobar] = await Promise.all([
     supabase
       .from("oportunidades")
       .select("id", { count: "exact", head: true })
@@ -53,11 +53,15 @@ export default async function EmbudoPage({
     rol === "direccion"
       ? supabase.from("cotizacion_versiones").select("id", { count: "exact", head: true }).eq("aprobacion", "pendiente")
       : Promise.resolve({ count: 0 }),
+    rol === "direccion"
+      ? supabase.from("contenidos").select("id", { count: "exact", head: true }).eq("estado", "pendiente")
+      : Promise.resolve({ count: 0 }),
   ]);
   const avisos = [
     { n: sinContacto.count ?? 0, texto: "sin primer contacto", href: "/hoy", cls: "bg-red-100 text-red-700" },
     { n: casosAbiertos.count ?? 0, texto: "casos abiertos", href: "/casos", cls: "bg-ambar-soft text-ambar" },
     { n: aprobaciones.count ?? 0, texto: "propuestas para aprobar", href: "/aprobaciones", cls: "bg-violeta-soft text-violeta" },
+    { n: contenidosAprobar.count ?? 0, texto: "contenidos para aprobar", href: "/aprobaciones", cls: "bg-violeta-soft text-violeta" },
   ].filter((a) => a.n > 0);
 
   const { quien, comercialId } = await filtroQuien(userId, esGestor);

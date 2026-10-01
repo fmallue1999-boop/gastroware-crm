@@ -51,7 +51,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (comercialId) q = q.eq("comercial_id", comercialId);
     return (await q).count ?? 0;
   };
-  const [interesesHoy, agendaHoy] = await Promise.all([contarInteresesHoy(), contarAgendaHoy(supabase, user.id, hoyISO())]);
+  // Dirección general: lo que espera su aprobación (propuestas y contenidos del calendario)
+  const contarParaAprobar = async () => {
+    if (rol !== "direccion") return 0;
+    const [p, c] = await Promise.all([
+      supabase.from("cotizacion_versiones").select("id", { count: "exact", head: true }).eq("aprobacion", "pendiente"),
+      supabase.from("contenidos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+    ]);
+    return (p.count ?? 0) + (c.count ?? 0);
+  };
+  const [interesesHoy, agendaHoy, paraAprobar] = await Promise.all([
+    contarInteresesHoy(),
+    contarAgendaHoy(supabase, user.id, hoyISO()),
+    contarParaAprobar(),
+  ]);
   const paraHoy = interesesHoy + agendaHoy;
 
   // Avisos creados por la base (consultas web, asignaciones) que falten mandar al celular
@@ -62,7 +75,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[200px_minmax(0,1fr)]">
       <EstiloMarca marca={marca} />
-      <Rail rol={rol} nombre={yo?.nombre} email={user.email} noLeidas={noLeidas} paraHoy={paraHoy} marca={marca} veContenidos={Boolean(yo?.ve_contenidos)} />
+      <Rail rol={rol} nombre={yo?.nombre} email={user.email} noLeidas={noLeidas} paraHoy={paraHoy} paraAprobar={paraAprobar} marca={marca} veContenidos={Boolean(yo?.ve_contenidos)} />
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-borde bg-crema/90 px-4 py-2.5 backdrop-blur lg:hidden">

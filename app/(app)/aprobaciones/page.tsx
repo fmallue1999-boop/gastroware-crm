@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { dinero, fechaCorta } from "@/lib/format";
 import { esGestor } from "@/lib/puestos";
 import DecidirPropuesta from "@/components/DecidirPropuesta";
+import DecidirContenido from "@/components/contenidos/DecidirContenido";
+import { firmarUrls } from "@/lib/core/storage";
+import { CUENTAS, TIPOS, fechaDMY } from "@/lib/contenidos";
 import AyudaLink from "@/components/guia/AyudaLink";
 
 type Pendiente = {
@@ -28,13 +31,14 @@ type Pendiente = {
 /**
  * Aprobaciones de dirección (manual, reglas generales): propuestas fuera de
  * lista, el mismo día. Un toque para aprobar o rechazar con el motivo.
+ * v1.15: también los contenidos del calendario que carga marketing.
  */
 export default async function AprobacionesPage() {
   const supabase = await createClient();
   const { data: rol } = await supabase.rpc("fn_rol");
   if (!esGestor(rol as string)) redirect("/");
 
-  const [{ data }, { data: usuarios }, { data: resueltasData }] = await Promise.all([
+  const [{ data }, { data: usuarios }, { data: resueltasData }, { data: contenidosData }] = await Promise.all([
     supabase
       .from("cotizacion_versiones")
       .select(
@@ -49,7 +53,28 @@ export default async function AprobacionesPage() {
       .in("aprobacion", ["aprobada", "rechazada"])
       .order("aprobado_at", { ascending: false })
       .limit(15),
+    supabase
+      .from("contenidos")
+      .select("id, nombre, cuenta, fecha, tipo, objetivo, copy, correccion, created_by, archivos:contenido_archivos(path, mime, nombre)")
+      .eq("estado", "pendiente")
+      .order("fecha"),
   ]);
+  type ContenidoPendiente = {
+    id: string;
+    nombre: string;
+    cuenta: string;
+    fecha: string;
+    tipo: string;
+    objetivo: string | null;
+    copy: string | null;
+    correccion: string | null;
+    created_by: string | null;
+    archivos: { path: string; mime: string | null; nombre: string }[];
+  };
+  const contenidos = (contenidosData ?? []) as unknown as ContenidoPendiente[];
+  // La primera imagen de cada uno, para ver de qué se trata sin abrirlo
+  const primeraImagen = contenidos.map((c) => [...c.archivos].sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { numeric: true })).find((a) => (a.mime ?? "").startsWith("image/"))?.path ?? null);
+  const miniaturas = await firmarUrls("contenidos", primeraImagen);
   const pendientes = (data ?? []) as unknown as Pendiente[];
   const nombre = new Map(((usuarios ?? []) as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]));
   const resueltas = (resueltasData ?? []) as unknown as {
@@ -70,10 +95,54 @@ export default async function AprobacionesPage() {
           Aprobaciones <AyudaLink tarea="aprobar-propuestas" />
         </h1>
         <p className="text-[15px] text-piedra">
-          Propuestas fuera de lista: no se pueden imprimir ni mandar hasta que dirección las apruebe.
-          {rol !== "direccion" ? " Las aprueba dirección general." : ""}
+          Propuestas fuera de lista (no se pueden imprimir ni mandar hasta que se aprueben) y contenidos del calendario que carga marketing.
+          {rol !== "direccion" ? " Los aprueba dirección general." : ""}
         </p>
       </div>
+
+      {/* Calendario de contenidos */}
+      <section className="space-y-2">
+        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-piedra">
+          Contenidos para aprobar ({contenidos.length})
+          <Link href="/contenidos" className="normal-case text-marino underline">
+            Ver el calendario
+          </Link>
+        </h2>
+        {contenidos.length === 0 ? (
+          <p className="rounded-2xl bg-white px-4 py-4 text-center text-[15px] font-bold text-verde shadow-sm">No hay contenidos esperando.</p>
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {contenidos.map((ct, k) => (
+              <div key={ct.id} className="rounded-2xl bg-white p-4 shadow-sm">
+                <div className="flex gap-3">
+                  {miniaturas[k] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={miniaturas[k]!} alt="" className="h-24 w-20 shrink-0 rounded-xl object-cover" />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[16px] font-extrabold">{ct.nombre}</p>
+                    <p className="text-[14px] text-piedra">
+                      {fechaDMY(ct.fecha)} · {CUENTAS.find((x) => x.value === ct.cuenta)?.label ?? ct.cuenta} · {TIPOS.find((x) => x.value === ct.tipo)?.label ?? ct.tipo}
+                      {ct.archivos.length ? ` · ${ct.archivos.length} archivo${ct.archivos.length > 1 ? "s" : ""}` : " · sin archivos"}
+                    </p>
+                    {ct.objetivo && <p className="text-[14px] text-tinta/80">Objetivo: {ct.objetivo}</p>}
+                    {ct.copy && <p className="mt-1 line-clamp-3 whitespace-pre-line text-[14px] text-tinta/80">{ct.copy}</p>}
+                    <p className="mt-1 text-xs text-piedra">
+                      Cargó: {ct.created_by ? nombre.get(ct.created_by) ?? "—" : "—"} ·{" "}
+                      <Link href={`/contenidos?ficha=${ct.id}&dia=${ct.fecha}`} className="font-bold text-marino underline">
+                        Ver completo
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+                {rol === "direccion" ? <DecidirContenido contenidoId={ct.id} /> : <p className="mt-2 text-[14px] font-bold text-piedra">Esperando a dirección general.</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <h2 className="text-xs font-bold uppercase tracking-wide text-piedra">Propuestas fuera de lista ({pendientes.length})</h2>
 
       {pendientes.length === 0 ? (
         <p className="rounded-2xl bg-white px-4 py-6 text-center text-lg font-bold text-verde shadow-sm">Nada para aprobar.</p>

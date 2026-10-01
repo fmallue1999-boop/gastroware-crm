@@ -20,6 +20,7 @@ export default function Rail({
   email,
   noLeidas = 0,
   paraHoy = 0,
+  paraAprobar = 0,
   marca = MARCA_POR_DEFECTO,
   veContenidos = false,
 }: {
@@ -29,6 +30,8 @@ export default function Rail({
   email?: string | null;
   noLeidas?: number;
   paraHoy?: number;
+  /** Dirección: propuestas y contenidos esperando aprobación (v1.15). */
+  paraAprobar?: number;
   marca?: Marca;
 }) {
   const pathname = usePathname();
@@ -45,7 +48,7 @@ export default function Rail({
         {lateral.map((item) => {
           const Icono = ICONOS_MENU[item.icono];
           const activo = estaActivo(item.href, pathname);
-          const badge = item.badgeHoy ? paraHoy : 0;
+          const badge = item.badgeHoy ? paraHoy : item.badgeAprobar ? paraAprobar : 0;
           return (
             <Link
               key={item.href}

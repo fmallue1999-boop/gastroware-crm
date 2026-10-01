@@ -3,6 +3,15 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.15.0 — 1 de octubre de 2026
+
+Pedido de dirección: "que marketing pueda cargar las fichas que salen en las cotizaciones" y "no veo dónde aprobar lo que sube marketing en el calendario" (migración 041_fichas_marketing.sql).
+
+- Aprobaciones: sección "Contenidos para aprobar" (estado pendiente, miniatura de la primera imagen firmada, cuenta, tipo, objetivo, copy, quién lo cargó, "Ver completo"). DecidirContenido + acción decidirContenido (solo dirección; reedición exige la corrección; aviso a quien lo cargó). Antes la aprobación solo estaba dentro de la ficha del calendario y los avisos de los 2 pendientes se habían borrado en la puesta a cero.
+- Contador de "Aprobaciones" en el menú lateral para dirección (propuestas + contenidos pendientes: Rail paraAprobar, ItemMenu.badgeAprobar); bandeja "Contenidos para aprobar" en Mi día de dirección; aviso arriba del embudo.
+- /material/fichas: todos los productos activos por marca con FichasCotizacion (cargar/ver/quitar), estado con/sin ficha (cuenta también la ficha de Material vinculada) y filtro "Sin ficha". Acceso marketing, dirección y administración; tarjeta en /material.
+- Migración 041: documentos_delete permite a quien gestiona Material quitar fichas de producto (antes solo gestores o quien la subió).
+
 ## v1.14.1 — 1 de octubre de 2026
 
 - Service con sucursal (sin migración: ordenes_trabajo.sucursal_id ya existía y crearOT lo aceptaba, pero el formulario no lo mandaba). OTForm: "¿Dónde es el service?" con las sucursales activas (sucursalesDe), por defecto la del equipo (listarEquiposCliente devuelve sucursalId) o la principal. Ficha de la OT: renglón "Dónde" (nombre, dirección, quién recibe, indicaciones). Lista de inspección: dirección de la sucursal de la OT.

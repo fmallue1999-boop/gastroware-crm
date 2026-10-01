@@ -182,6 +182,18 @@ export async function cargarMiDia(
       (p) => ({ id: p.id, titulo: p.cotizacion?.oportunidad?.cliente?.nombre_comercial ?? "Propuesta", href: "/aprobaciones" })
     );
     bandejas.push(bandeja({ clave: "aprobaciones", titulo: "Propuestas para aprobar", ayuda: "El mismo día", href: "/aprobaciones", tono: "violeta", lista }));
+    // v1.15: lo que carga marketing en el calendario
+    const { data: conts } = await supabase.from("contenidos").select("id, nombre, fecha").eq("estado", "pendiente").order("fecha").limit(50);
+    bandejas.push(
+      bandeja({
+        clave: "contenidos_aprobar",
+        titulo: "Contenidos para aprobar",
+        ayuda: "Calendario de marketing",
+        href: "/aprobaciones",
+        tono: "violeta",
+        lista: ((conts ?? []) as { id: string; nombre: string; fecha: string }[]).map((c) => ({ id: c.id, titulo: c.nombre, href: "/aprobaciones" })),
+      })
+    );
     bandejas.push(
       bandeja({
         clave: "informes",

@@ -19,6 +19,15 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.15.0",
+    fecha: "2026-10-01",
+    titulo: "Aprobar contenidos a la vista y fichas para marketing",
+    cambios: [
+      "Los contenidos del calendario que carga marketing ahora aparecen en Aprobaciones (con la primera imagen) para aprobar, pedir cambios o cancelar de un toque. El menú muestra cuántos esperan, y también aparecen en Mi día y arriba del embudo.",
+      "Marketing carga las fichas que salen en las cotizaciones desde Material → “Fichas para cotizar”, con todos los productos y el filtro “Sin ficha”.",
+    ],
+  },
+  {
     version: "1.14.1",
     fecha: "2026-10-01",
     titulo: "Sucursales también en el service",
