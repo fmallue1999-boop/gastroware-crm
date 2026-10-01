@@ -19,6 +19,12 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.17.2",
+    fecha: "2026-10-01",
+    titulo: "Arreglo de texto",
+    cambios: ["El botón del interés dice “Eliminar interés (mal cargado)”."],
+  },
+  {
     version: "1.17.1",
     fecha: "2026-10-01",
     titulo: "Arreglo de texto",

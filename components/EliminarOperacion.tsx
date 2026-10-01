@@ -17,7 +17,7 @@ export default function EliminarOperacion({ oportunidadId, venta = false, irA }:
   const [abierto, setAbierto] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const que = venta ? "venta" : "interés";
+  const que = venta ? "venta (mal cargada)" : "interés (mal cargado)";
 
   if (!abierto)
     return (
@@ -26,7 +26,7 @@ export default function EliminarOperacion({ oportunidadId, venta = false, irA }:
         onClick={() => setAbierto(true)}
         className="inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-piedra underline hover:text-red-700"
       >
-        <Trash2 className="h-3.5 w-3.5" /> Eliminar {que} (mal cargada)
+        <Trash2 className="h-3.5 w-3.5" /> Eliminar {que}
       </button>
     );
 
