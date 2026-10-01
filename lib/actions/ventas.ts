@@ -14,6 +14,7 @@ import type { PedidoEstado } from "@/lib/types";
 import { avisar, puestoActual, regla, usuarioActual, usuariosDePuesto, type SupabaseServidor } from "./comun";
 import { buscarClientePorTelefono } from "./contactos";
 import { cambiarEtapa } from "./intereses";
+import { normalizarPlan, problemaPlan, textoPlan, tipoPlan, type PlanPago } from "@/lib/plan-pago";
 
 /**
  * Pedido directo: un cliente pide algo (llamada, WhatsApp, mostrador) y se
@@ -198,6 +199,8 @@ export async function informarVenta(
     formaPago: string;
     direccionEntrega: string;
     sucursalId?: string | null;
+    /** v1.18: obligatorio con anticipo + saldo, cheque o cuenta corriente. */
+    planPago?: PlanPago | null;
     llevaInstalacion: boolean;
     relevamiento?: Record<string, string>;
     entregaEstimada?: string | null;
@@ -208,6 +211,11 @@ export async function informarVenta(
   const direccion = input.direccionEntrega.trim();
   if (!formaPago) return { error: "Elegí la forma de pago" };
   if (!direccion) return { error: "Poné dónde se entrega (dirección o “retira en el local”)" };
+  const plan = tipoPlan(formaPago) ? normalizarPlan(input.planPago) : null;
+  if (tipoPlan(formaPago)) {
+    const problema = problemaPlan(plan);
+    if (problema) return { error: `Plan de pagos: ${problema}` };
+  }
   let relevamiento: Record<string, string> | null = null;
   if (input.llevaInstalacion) {
     relevamiento = {};
@@ -237,6 +245,7 @@ export async function informarVenta(
       forma_pago: formaPago,
       direccion_entrega: direccion,
       sucursal_id: input.sucursalId || null,
+      plan_pago: plan,
       lleva_instalacion: input.llevaInstalacion,
       relevamiento,
       entrega_estimada: input.entregaEstimada || null,
@@ -248,7 +257,7 @@ export async function informarVenta(
   await movimiento(
     supabase,
     v,
-    `Venta informada · pago: ${formaPago} · entrega: ${direccion}${input.llevaInstalacion ? " · con instalación (relevamiento cargado)" : ""}${
+    `Venta informada · pago: ${formaPago}${plan ? ` (${textoPlan(plan).join(" / ")})` : ""} · entrega: ${direccion}${input.llevaInstalacion ? " · con instalación (relevamiento cargado)" : ""}${
       input.nota?.trim() ? ` · ${input.nota.trim()}` : ""
     }`,
     user?.id

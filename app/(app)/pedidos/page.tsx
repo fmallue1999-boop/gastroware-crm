@@ -7,7 +7,7 @@ import { pasoDe, proximoPasoVenta } from "@/lib/ventas";
 import { infoStockPorProducto, textoStock } from "@/lib/stock";
 import ConPanel from "@/components/ficha/ConPanel";
 import LinkContacto from "@/components/LinkContacto";
-import VentaPaso, { type FacturaDatos } from "@/components/VentaPaso";
+import VentaPaso, { type FacturaDatos, type LugarEntrega } from "@/components/VentaPaso";
 import EliminarOperacion from "@/components/EliminarOperacion";
 import { esGestor } from "@/lib/puestos";
 import type { Oportunidad, Producto } from "@/lib/types";
@@ -63,6 +63,19 @@ export default async function VentasPage({
           .order("created_at", { ascending: false }),
       ])
     : [{ data: [] }, { data: [] }];
+  // Dónde se entrega (v1.18): sucursales de los clientes con ventas por informar
+  const clientesPorInformar = [...new Set(ventas.filter((o) => (o.pedido_estado ?? "comprometido") === "comprometido").map((o) => o.cliente_id))];
+  const { data: sucursalesData } = clientesPorInformar.length
+    ? await supabase
+        .from("sucursales")
+        .select("id, cliente_id, nombre, direccion, ciudad, es_principal")
+        .in("cliente_id", clientesPorInformar)
+        .is("deleted_at", null)
+        .order("es_principal", { ascending: false })
+        .order("nombre")
+    : { data: [] };
+  const lugaresDe = new Map<string, LugarEntrega[]>();
+  for (const s of (sucursalesData ?? []) as (LugarEntrega & { cliente_id: string })[]) lugaresDe.set(s.cliente_id, [...(lugaresDe.get(s.cliente_id) ?? []), s]);
   const serieFaltante = new Set(
     ((equiposData ?? []) as { oportunidad_id: string; numero_serie: string | null }[])
       .filter((e) => !e.numero_serie)
@@ -124,6 +137,7 @@ export default async function VentasPage({
             factura={factura}
             pedirSerie={serieFaltante.has(o.id)}
             videoUrl={o.producto?.video_url ?? null}
+            sucursales={lugaresDe.get(o.cliente_id) ?? []}
             compacto
           />
         </div>

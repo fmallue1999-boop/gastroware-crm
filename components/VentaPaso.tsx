@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, PlayCircle } from "lucide-react";
+import { ArrowRight, Check, PlayCircle, Plus } from "lucide-react";
 import {
   aprobarCondicion,
   cargarFactura,
+  crearSucursal,
   despacharVenta,
   entregarVenta,
   facturarVenta,
@@ -17,6 +18,8 @@ import { FORMAS_PAGO_VENTA, RELEVAMIENTO_INSTALACION, VENTA_PASOS } from "@/lib/
 import { dinero, fechaCorta, sumarDias } from "@/lib/format";
 import { esGestor, factura as puedeFacturar } from "@/lib/puestos";
 import { pasoDe } from "@/lib/ventas";
+import { FORMA_ANTICIPO_VIEJA, planInicial, problemaPlan, textoPlan, tipoPlan, type PlanPago } from "@/lib/plan-pago";
+import PlanPagoEditor from "@/components/PlanPagoEditor";
 import type { PedidoEstado } from "@/lib/types";
 
 const inputCls =
@@ -44,7 +47,13 @@ export type VentaDatos = {
   entrega_estimada?: string | null;
   sucursal_id?: string | null;
   entregado_at?: string | null;
+  plan_pago?: PlanPago | null;
 };
+
+export type LugarEntrega = { id: string; nombre: string; direccion?: string | null; ciudad?: string | null; es_principal?: boolean };
+
+const RETIRA = "Retira en el local";
+const textoLugar = (s: LugarEntrega) => [s.nombre, [s.direccion, s.ciudad].filter(Boolean).join(", ")].filter(Boolean).join(" — ");
 
 export type FacturaDatos = {
   id: string;
@@ -69,6 +78,9 @@ const COBRO_TEXTO: Record<string, string> = {
  * El circuito de la venta según el manual: el vendedor informa → la
  * administrativa factura → cobro (o condición de dirección) → preparar →
  * despachar → entregado. Cada puesto ve solo el botón que le toca.
+ * v1.18: el lugar de entrega se elige entre las sucursales del cliente (o se
+ * carga uno nuevo ahí mismo) y "Anticipo + saldo" / cheque / cuenta corriente
+ * llevan plan de pagos (PlanPagoEditor).
  */
 export default function VentaPaso({
   venta,
@@ -78,7 +90,6 @@ export default function VentaPaso({
   pedirSerie = false,
   videoUrl = null,
   sucursales = [],
-  direccionSugerida = "",
   compacto = false,
 }: {
   venta: VentaDatos;
@@ -87,8 +98,7 @@ export default function VentaPaso({
   factura?: FacturaDatos | null;
   pedirSerie?: boolean;
   videoUrl?: string | null;
-  sucursales?: { id: string; nombre: string; razon_social?: string | null }[];
-  direccionSugerida?: string;
+  sucursales?: LugarEntrega[];
   compacto?: boolean;
 }) {
   const router = useRouter();
@@ -104,9 +114,29 @@ export default function VentaPaso({
   const gestor = esGestor(rol);
 
   // --- formularios ---
-  const [formaPago, setFormaPago] = useState(venta.forma_pago ?? "");
-  const [direccion, setDireccion] = useState(venta.direccion_entrega ?? direccionSugerida);
-  const [sucursalId, setSucursalId] = useState(venta.sucursal_id ?? "");
+  const formaInicial = venta.forma_pago === FORMA_ANTICIPO_VIEJA ? "Anticipo + saldo" : (venta.forma_pago ?? "");
+  const [formaPago, setFormaPago] = useState(formaInicial);
+  const [plan, setPlan] = useState<PlanPago | null>(() => {
+    const t = tipoPlan(formaInicial);
+    if (venta.plan_pago && tipoPlan(formaInicial)) return venta.plan_pago;
+    return t ? planInicial(t, venta.monto_estimado ?? null, venta.moneda ?? "USD", formaInicial) : null;
+  });
+  // Dónde se entrega: una sucursal del cliente, "retira en el local" o lo que se escribió antes de v1.18
+  const [creadas, setCreadas] = useState<LugarEntrega[]>([]);
+  const lugares = [...sucursales, ...creadas.filter((c) => !sucursales.some((s) => s.id === c.id))];
+  const [lugar, setLugar] = useState(() =>
+    venta.sucursal_id && sucursales.some((s) => s.id === venta.sucursal_id)
+      ? venta.sucursal_id
+      : venta.direccion_entrega === RETIRA
+        ? "retira"
+        : venta.direccion_entrega
+          ? "texto"
+          : sucursales.length === 1
+            ? sucursales[0].id
+            : ""
+  );
+  const [nuevoLugar, setNuevoLugar] = useState<null | { nombre: string; direccion: string; ciudad: string }>(null);
+  const [guardandoLugar, setGuardandoLugar] = useState(false);
   const [instalacion, setInstalacion] = useState(Boolean(venta.lleva_instalacion));
   const [relev, setRelev] = useState<Record<string, string>>(venta.relevamiento ?? {});
   const [entrega, setEntrega] = useState(venta.entrega_estimada ?? "");
@@ -116,7 +146,7 @@ export default function VentaPaso({
   const [monto, setMonto] = useState(venta.monto_estimado != null ? String(venta.monto_estimado) : "");
   const [moneda, setMoneda] = useState(venta.moneda ?? "ARS");
   const [serie, setSerie] = useState("");
-  const [motivo, setMotivo] = useState("");
+  const [motivo, setMotivo] = useState(() => textoPlan(venta.plan_pago).join(" / "));
   const [remito, setRemito] = useState(venta.remito_nro ?? "");
   const [urgente, setUrgente] = useState(venta.prioridad_despacho === 1);
   const [transporte, setTransporte] = useState(venta.transporte ?? "");
@@ -138,19 +168,37 @@ export default function VentaPaso({
     });
   }
 
-  const conRazon = sucursales.filter((s) => s.razon_social);
+  const tipo = tipoPlan(formaPago);
+  const lineasPlan = textoPlan(venta.plan_pago);
+  const planVenta =
+    lineasPlan.length > 0 ? (
+      <ul className="mt-1 space-y-0.5 text-[13px] text-tinta/80">
+        {lineasPlan.map((l) => (
+          <li key={l}>· {l}</li>
+        ))}
+      </ul>
+    ) : null;
 
   const formInformar = (
     <form
       className="mt-2 space-y-2"
       onSubmit={(e) => {
         e.preventDefault();
+        const elegido = lugares.find((s) => s.id === lugar);
+        const direccionEntrega =
+          lugar === "retira" ? RETIRA : lugar === "texto" ? (venta.direccion_entrega ?? "") : elegido ? textoLugar(elegido) : "";
+        if (!direccionEntrega) return setError("Elegí dónde se entrega (o cargá el lugar)");
+        if (tipo && plan) {
+          const p = problemaPlan(plan);
+          if (p) return setError(`Plan de pagos: ${p}`);
+        }
         correr(
           () =>
             informarVenta(venta.id, {
               formaPago,
-              direccionEntrega: direccion,
-              sucursalId: sucursalId || null,
+              direccionEntrega,
+              sucursalId: elegido?.id ?? null,
+              planPago: tipo ? plan : null,
               llevaInstalacion: instalacion,
               relevamiento: relev,
               entregaEstimada: entrega || null,
@@ -159,7 +207,17 @@ export default function VentaPaso({
         );
       }}
     >
-      <select required value={formaPago} onChange={(e) => setFormaPago(e.target.value)} className={inputCls}>
+      <select
+        required
+        value={formaPago}
+        onChange={(e) => {
+          const f = e.target.value;
+          const t = tipoPlan(f);
+          if (t && t !== tipoPlan(formaPago)) setPlan(planInicial(t, plan?.total ?? venta.monto_estimado ?? null, plan?.moneda ?? venta.moneda ?? "USD", f));
+          setFormaPago(f);
+        }}
+        className={inputCls}
+      >
         <option value="">Forma de pago…</option>
         {FORMAS_PAGO_VENTA.map((f) => (
           <option key={f} value={f}>
@@ -167,22 +225,67 @@ export default function VentaPaso({
           </option>
         ))}
       </select>
-      <input
-        required
-        value={direccion}
-        onChange={(e) => setDireccion(e.target.value)}
-        placeholder="¿Dónde se entrega? (dirección, localidad o “retira en el local”)"
-        className={inputCls}
-      />
-      {conRazon.length > 0 && (
-        <select value={sucursalId} onChange={(e) => setSucursalId(e.target.value)} className={inputCls}>
-          <option value="">Facturar a la razón social del contacto</option>
-          {conRazon.map((s) => (
+      {tipo && plan && <PlanPagoEditor key={tipo} tipo={tipo} plan={plan} onChange={setPlan} />}
+      <label className="block text-[14px] font-bold">
+        ¿Dónde se entrega?
+        <select required value={lugar} onChange={(e) => setLugar(e.target.value)} className={`${inputCls} mt-1 font-normal`}>
+          <option value="">Elegí el lugar…</option>
+          {lugares.map((s) => (
             <option key={s.id} value={s.id}>
-              Facturar a {s.razon_social} ({s.nombre})
+              {textoLugar(s)}
+              {s.es_principal ? " (principal)" : ""}
             </option>
           ))}
+          {venta.direccion_entrega && venta.direccion_entrega !== RETIRA && !venta.sucursal_id && (
+            <option value="texto">{venta.direccion_entrega} (como estaba)</option>
+          )}
+          <option value="retira">{RETIRA} (lo retira el cliente)</option>
         </select>
+      </label>
+      {nuevoLugar ? (
+        <div className="space-y-2 rounded-xl bg-crema p-2.5">
+          <input
+            value={nuevoLugar.nombre}
+            onChange={(e) => setNuevoLugar({ ...nuevoLugar, nombre: e.target.value })}
+            placeholder="Nombre del lugar (ej: Local Palermo, Depósito)"
+            className={inputCls}
+          />
+          <input value={nuevoLugar.direccion} onChange={(e) => setNuevoLugar({ ...nuevoLugar, direccion: e.target.value })} placeholder="Dirección" className={inputCls} />
+          <input value={nuevoLugar.ciudad} onChange={(e) => setNuevoLugar({ ...nuevoLugar, ciudad: e.target.value })} placeholder="Localidad" className={inputCls} />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={guardandoLugar || !nuevoLugar.nombre.trim() || !nuevoLugar.direccion.trim()}
+              onClick={async () => {
+                setGuardandoLugar(true);
+                setError(null);
+                const r = await crearSucursal({ clienteId: venta.cliente_id, ...nuevoLugar });
+                setGuardandoLugar(false);
+                if ("error" in r && r.error) return setError(r.error);
+                if ("id" in r && r.id) {
+                  setCreadas([...creadas, { id: r.id, nombre: nuevoLugar.nombre.trim(), direccion: nuevoLugar.direccion.trim(), ciudad: nuevoLugar.ciudad.trim() }]);
+                  setLugar(r.id);
+                }
+                setNuevoLugar(null);
+              }}
+              className={btn}
+            >
+              {guardandoLugar ? "Guardando…" : "Agregar y elegir"}
+            </button>
+            <button type="button" onClick={() => setNuevoLugar(null)} className={btnSec}>
+              Cancelar
+            </button>
+          </div>
+          <p className="text-xs text-piedra">Queda como sucursal en la ficha del cliente (Datos), donde podés sumar quién recibe y el horario.</p>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setNuevoLugar({ nombre: "", direccion: "", ciudad: "" })}
+          className="inline-flex min-h-10 items-center gap-1 text-[14px] font-bold text-marino underline"
+        >
+          <Plus className="h-3.5 w-3.5" /> Otro lugar de entrega
+        </button>
       )}
       <label className="flex items-center gap-2 text-[15px] text-tinta">
         <span className="shrink-0 text-piedra">Entrega estimada</span>
@@ -300,6 +403,7 @@ export default function VentaPaso({
           Pago: {venta.forma_pago} · Entrega: {venta.direccion_entrega}
           {venta.lleva_instalacion ? " · con instalación" : ""}
         </p>
+        {planVenta}
         {abierto === "informar" ? (
           formInformar
         ) : abierto === "facturar" ? (
@@ -334,6 +438,7 @@ export default function VentaPaso({
           {factura ? ` · ${COBRO_TEXTO[factura.cobro_estado] ?? factura.cobro_estado}` : ""}
           {factura?.promesa_fecha && factura.cobro_estado === "prometido" ? ` (${fechaCorta(factura.promesa_fecha)})` : ""}
         </p>
+        {planVenta}
         {!factura && administra ? (
           abierto === "facturar" ? (
             formFacturar
