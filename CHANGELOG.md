@@ -3,6 +3,13 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.12.1 — 30 de septiembre de 2026
+
+Velocidad (migración 038_velocidad_rls.sql).
+
+- Las políticas RLS llamaban a fn_rol(), fn_ve_todo(), fn_es_gestor(), auth.uid()... por cada fila (Contactos: ~5.600 clientes y ~1.100 actividades por pantalla). La 038 reescribe todas las políticas de public envolviendo las funciones sin argumentos en (select ...) (initPlan: una vez por consulta) y fn_puede_ver_cliente(x) como ((select fn_ve_todo()) or fn_puede_ver_cliente(x)), que es equivalente porque la función ya empieza por fn_ve_todo().
+- Autoverificación: antes y después cuenta, como un usuario de cada puesto activo, las filas visibles de cada tabla tocada; si algo difiere corta con error y no aplica nada. Deja la medición en config.velocidad_038.
+
 ## v1.12.0 — 30 de septiembre de 2026
 
 Experiencia del vendedor (migración 037_cotizar_simple.sql), a partir de la prueba de Franco en el celular.

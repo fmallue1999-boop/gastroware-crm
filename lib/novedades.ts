@@ -19,6 +19,14 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.12.1",
+    fecha: "2026-09-30",
+    titulo: "Más rápido",
+    cambios: [
+      "Las pantallas con muchos contactos (Contactos, Embudo, Mi día) cargan bastante más rápido: los permisos de quién ve qué ahora se calculan una vez por pantalla y no una vez por cada contacto. Cada uno sigue viendo exactamente lo mismo que antes.",
+    ],
+  },
+  {
     version: "1.12.0",
     fecha: "2026-09-30",
     titulo: "Más simple y más rápido para vender",
