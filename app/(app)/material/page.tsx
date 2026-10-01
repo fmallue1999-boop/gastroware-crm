@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Table2 } from "lucide-react";
+import { ChevronRight, FileText, Table2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { buscarMaterial } from "@/lib/material";
 import { cargarArbol } from "@/lib/servidor/material";
@@ -13,7 +13,8 @@ export default async function MaterialPage({ searchParams }: { searchParams: Pro
   const { q } = await searchParams;
   const busqueda = q?.trim() ?? "";
   const supabase = await createClient();
-  const arbol = await cargarArbol(supabase);
+  const [arbol, { data: rol }] = await Promise.all([cargarArbol(supabase), supabase.rpc("fn_rol")]);
+  const cargaFichas = ["marketing", "direccion", "admin"].includes((rol as string) ?? "");
   const resultados = busqueda ? buscarMaterial(busqueda, arbol) : [];
 
   const productosDe = (marcaId: string) => {
@@ -83,6 +84,21 @@ export default async function MaterialPage({ searchParams }: { searchParams: Pro
             </span>
             <ChevronRight className="h-5 w-5 text-piedra" />
           </Link>
+          {cargaFichas && (
+            <Link
+              href="/material/fichas"
+              className="flex items-center gap-3 rounded-2xl border border-borde bg-white p-4 shadow-sm hover:bg-crema"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-celeste-soft text-azul">
+                <FileText className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[16px] font-extrabold">Fichas para cotizar</span>
+                <span className="block text-sm text-piedra">El PDF de cada producto que sale al final de las cotizaciones: cargar, cambiar o quitar.</span>
+              </span>
+              <ChevronRight className="h-5 w-5 text-piedra" />
+            </Link>
+          )}
         </>
       )}
     </div>

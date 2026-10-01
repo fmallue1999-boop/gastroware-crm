@@ -30,13 +30,13 @@ export type ClaveIcono =
   | "material"
   | "mas";
 
-export type ItemMenu = { href: string; label: string; icono: ClaveIcono; badgeHoy?: boolean };
+export type ItemMenu = { href: string; label: string; icono: ClaveIcono; badgeHoy?: boolean; badgeAprobar?: boolean };
 
 const I = {
   embudo: { href: "/", label: "Embudo", icono: "embudo" },
   midia: { href: "/hoy", label: "Mi día", icono: "midia", badgeHoy: true },
   tablero: { href: "/tablero", label: "Tablero", icono: "tablero" },
-  aprobaciones: { href: "/aprobaciones", label: "Aprobaciones", icono: "aprobaciones" },
+  aprobaciones: { href: "/aprobaciones", label: "Aprobaciones", icono: "aprobaciones", badgeAprobar: true },
   informes: { href: "/informes", label: "Informes", icono: "informes" },
   informe: { href: "/informe", label: "Mi informe", icono: "informes" },
   contactos: { href: "/clientes", label: "Contactos", icono: "contactos" },

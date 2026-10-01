@@ -93,6 +93,40 @@ export async function guardarContenido(id: string | null, d: DatosContenido): Pr
   return { ok: true, id: contenidoId as string };
 }
 
+/**
+ * Decisión de dirección general desde Aprobaciones (v1.15): aprobar, pedir
+ * cambios (con la corrección) o cancelar, sin abrir la ficha. La base también
+ * controla que solo dirección cambie el estado. Le avisa a quien lo cargó.
+ */
+export async function decidirContenido(id: string, estado: "aprobado" | "reedicion" | "cancelado", correccion?: string | null) {
+  if (!["aprobado", "reedicion", "cancelado"].includes(estado)) return { error: "Estado inválido" };
+  const texto = correccion?.trim() || null;
+  if (estado === "reedicion" && !texto) return { error: "Escribí qué hay que cambiar" };
+  const supabase = await createClient();
+  const [rol, user] = await Promise.all([puestoActual(supabase), usuarioActual()]);
+  if (rol !== "direccion") return { error: "Los contenidos los aprueba dirección general" };
+  const { data: previo } = await supabase.from("contenidos").select("nombre, fecha, created_by").eq("id", id).maybeSingle();
+  if (!previo) return { error: "No se encontró el contenido" };
+  const { error } = await supabase
+    .from("contenidos")
+    .update({ estado, ...(estado === "reedicion" || texto ? { correccion: texto } : {}) })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  await avisar(
+    supabase,
+    [previo.created_by as string | null],
+    {
+      tipo: "contenido_revisado",
+      titulo: `${estadoDe(estado).label}: ${previo.nombre}`,
+      cuerpo: estado === "reedicion" ? texto : fechaDMY(previo.fecha as string),
+      url: `/contenidos?ficha=${id}&dia=${previo.fecha}`,
+    },
+    user?.id
+  );
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
 /** Borra la ficha y sus archivos (también del almacenamiento). */
 export async function borrarContenido(id: string) {
   const supabase = await createClient();
