@@ -35,6 +35,7 @@ import NotaForm from "@/components/NotaForm";
 import EquipoForm from "@/components/EquipoForm";
 import DatosClienteForm from "@/components/DatosClienteForm";
 import BorrarCliente from "@/components/BorrarCliente";
+import EliminarOperacion from "@/components/EliminarOperacion";
 import SucursalesCliente from "@/components/SucursalesCliente";
 import DocumentosEntidad from "@/components/DocumentosEntidad";
 import BotonesPdfCotizacion from "@/components/BotonesPdfCotizacion";
@@ -334,6 +335,11 @@ export default async function FichaChat({
             direccionSugerida={[principal?.direccion, principal?.ciudad].filter(Boolean).join(", ")}
             compacto
           />
+          {esGestor && (
+            <div className="mt-1">
+              <EliminarOperacion oportunidadId={o.id} venta />
+            </div>
+          )}
         </div>
       ))}
       {casosAbiertos.length + repuestosAbiertos.length + interesesVenta.length + ventasEnCurso.length === 0 && (

@@ -14,6 +14,8 @@ import { SelectorProductos, chipCls } from "@/components/InteresAgregar";
 import { COLOR_ETAPA, PuntoNivel, textoProximo } from "@/components/PuntoNivel";
 import AsignacionInteres from "@/components/ficha/AsignacionInteres";
 import ReprogramarInteres from "@/components/ReprogramarInteres";
+import EliminarOperacion from "@/components/EliminarOperacion";
+import { esGestor } from "@/lib/puestos";
 import { CadenciaInteres } from "@/components/ficha/TrabajarInteres";
 import { IrAPestana } from "@/components/ficha/FichaTabs";
 import type { Oportunidad, Producto } from "@/lib/types";
@@ -312,6 +314,12 @@ export default function InteresFijado({
               Financiación
             </Link>
           </div>
+
+          {esGestor(rol) && (
+            <div className="border-t border-borde pt-2">
+              <EliminarOperacion oportunidadId={interes.id} />
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -3,6 +3,13 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.17.0 — 1 de octubre de 2026
+
+Pedido de dirección: "que a mí me deje eliminar una venta si está mal cargada" (sin migración: oportunidades y equipos ya permiten borrar a dirección por RLS; facturas_write permite a todos).
+
+- Acción eliminarOperacion(oportunidadId, motivo): solo gestores (esGestor), motivo obligatorio. Rechaza si hay una factura vinculada cobrada. Si la venta estaba entregada devuelve el stock (unidadesVendidas). Borra los equipos de la venta salvo los que tienen OT, las facturas y la oportunidad (cascada a cotizaciones, ítems y actividades vinculadas). Deja en la ficha una actividad "Venta/Interés eliminada por dirección: … · Motivo: …".
+- Componente EliminarOperacion (confirmación con motivo) en el tablero de ventas, en cada venta de la ficha y en "Más opciones" del interés; solo se muestra a dirección.
+
 ## v1.16.0 — 1 de octubre de 2026
 
 Pedido de dirección: "si cargo una venta directa, que me permita añadir más unidades (un cliente que compró 3 Essential)" (migración 042_ventas_con_cantidades.sql).

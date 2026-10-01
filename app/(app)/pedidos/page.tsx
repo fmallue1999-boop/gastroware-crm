@@ -8,6 +8,8 @@ import { infoStockPorProducto, textoStock } from "@/lib/stock";
 import ConPanel from "@/components/ficha/ConPanel";
 import LinkContacto from "@/components/LinkContacto";
 import VentaPaso, { type FacturaDatos } from "@/components/VentaPaso";
+import EliminarOperacion from "@/components/EliminarOperacion";
+import { esGestor } from "@/lib/puestos";
 import type { Oportunidad, Producto } from "@/lib/types";
 import AyudaLink from "@/components/guia/AyudaLink";
 
@@ -125,6 +127,11 @@ export default async function VentasPage({
             compacto
           />
         </div>
+        {esGestor(rol) && (
+          <div className="mt-1">
+            <EliminarOperacion oportunidadId={o.id} venta />
+          </div>
+        )}
       </div>
     );
   };

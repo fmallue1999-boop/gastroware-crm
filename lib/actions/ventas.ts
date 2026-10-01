@@ -510,3 +510,77 @@ export async function atrasoDeCliente(clienteId: string) {
   const limite = Number(await regla(supabase, "dias_atraso_frena_despacho")) || 30;
   return { dias, limite, frena: dias > limite };
 }
+
+/**
+ * Eliminar una venta o un interés mal cargado (v1.17, solo dirección y
+ * administración). Se borra la operación con sus cotizaciones; los equipos que
+ * creó la venta se borran salvo que ya tengan un service; si estaba entregada
+ * vuelve el stock; la factura se borra salvo que ya tenga un cobro. En la ficha
+ * del cliente queda el registro de qué se eliminó y por qué.
+ */
+export async function eliminarOperacion(oportunidadId: string, motivo: string) {
+  const texto = motivo.trim();
+  if (!texto) return { error: "Contá por qué se elimina (ej: cargada dos veces, cliente equivocado)" };
+  const supabase = await createClient();
+  if (!esGestor(await puestoActual(supabase))) return { error: "Solo dirección puede eliminar una operación" };
+  const user = await usuarioActual();
+  const { data: opp } = await supabase
+    .from("oportunidades")
+    .select("id, cliente_id, etapa, pedido_estado, producto_id, productos_extra, monto_estimado, moneda, mensaje_inicial, producto:productos(nombre)")
+    .eq("id", oportunidadId)
+    .maybeSingle();
+  if (!opp) return { error: "No se encontró la operación" };
+
+  // La factura: si ya tiene un cobro, no se toca (primero se corrige en Cobranzas)
+  const { data: facturas } = await supabase.from("facturas").select("id, numero, cobro_estado").eq("oportunidad_id", oportunidadId);
+  const cobrada = ((facturas ?? []) as { numero: string | null; cobro_estado: string }[]).find((f) => f.cobro_estado === "cobrado");
+  if (cobrada) return { error: `Tiene la factura${cobrada.numero ? ` N° ${cobrada.numero}` : ""} cobrada: primero corregí el cobro en Cobranzas` };
+
+  // Stock: si ya se había entregado, vuelve
+  if (opp.etapa === "ganada" && opp.pedido_estado === "entregado") {
+    const unidades = await unidadesVendidas(supabase, opp);
+    await Promise.all(unidades.map((u) => supabase.rpc("fn_ajustar_stock", { p_producto_id: u.productoId, p_delta: u.cantidad })));
+  }
+
+  // Equipos que creó la venta: se borran salvo los que ya tienen un service
+  const { data: equipos } = await supabase.from("equipos").select("id").eq("oportunidad_id", oportunidadId);
+  const idsEquipos = ((equipos ?? []) as { id: string }[]).map((e) => e.id);
+  let conService = 0;
+  if (idsEquipos.length) {
+    const { data: ots } = await supabase.from("ordenes_trabajo").select("equipo_id").in("equipo_id", idsEquipos);
+    const usados = new Set(((ots ?? []) as { equipo_id: string }[]).map((o) => o.equipo_id));
+    conService = usados.size;
+    const borrar = idsEquipos.filter((id) => !usados.has(id));
+    if (borrar.length) {
+      const { error: eEq } = await supabase.from("equipos").delete().in("id", borrar);
+      if (eEq) return { error: `borrar equipos: ${eEq.message}` };
+    }
+  }
+  if ((facturas ?? []).length) {
+    const { error: eFac } = await supabase.from("facturas").delete().eq("oportunidad_id", oportunidadId);
+    if (eFac) return { error: `borrar factura: ${eFac.message}` };
+  }
+
+  const que =
+    (opp.producto as unknown as { nombre: string } | null)?.nombre ?? opp.mensaje_inicial ?? (opp.etapa === "ganada" ? "Venta" : "Interés");
+  const tipo = opp.etapa === "ganada" ? "Venta" : "Interés";
+  const { error } = await supabase.from("oportunidades").delete().eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  await supabase.from("actividades").insert({
+    cliente_id: opp.cliente_id,
+    oportunidad_id: null,
+    // No cuenta como contacto en los informes
+    tipo: "cambio_etapa",
+    contenido: [
+      `${tipo} eliminada por dirección: ${que}`,
+      opp.monto_estimado ? `${opp.moneda ?? ""} ${Number(opp.monto_estimado).toLocaleString("es-AR")}`.trim() : null,
+      `Motivo: ${texto}`,
+      conService ? `${conService} equipo${conService > 1 ? "s" : ""} con service quedaron en la ficha` : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const, conService };
+}
