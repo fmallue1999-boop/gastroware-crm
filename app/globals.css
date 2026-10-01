@@ -93,3 +93,12 @@ body {
 html[data-teclado] .ocultar-con-teclado:not(:focus-within) {
   display: none !important;
 }
+
+/* iPhone agranda la pantalla al tocar un campo con letra de menos de 16 px
+   (y queda todo chico y corrido). En el celular los campos para escribir van
+   con 16 px como mínimo; los de letra más grande (text-base, 17 px) quedan igual. */
+@media (pointer: coarse), (max-width: 1023px) {
+  :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="image"]), select, textarea):not(.text-base, .text-lg, .text-xl, .text-2xl, .text-3xl) {
+    font-size: 16px;
+  }
+}

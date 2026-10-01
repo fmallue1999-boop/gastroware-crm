@@ -19,6 +19,15 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.12.2",
+    fecha: "2026-09-30",
+    titulo: "Mejor en el celular",
+    cambios: [
+      "En el iPhone, tocar un campo para escribir ya no agranda la pantalla (quedaba todo chico y corrido al cerrar el teclado). Vale para toda la app: buscador del embudo, ventas, repuestos, tareas, stock y cotizar.",
+      "El botón verde + ya no tapa “Guardar y armar PDF” al cotizar, ni los botones de las pantallas de carga y del asistente.",
+    ],
+  },
+  {
     version: "1.12.1",
     fecha: "2026-09-30",
     titulo: "Más rápido",

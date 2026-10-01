@@ -3,6 +3,13 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.12.2 — 30 de septiembre de 2026
+
+Celular (sin migración), probado en producción a 390 px de ancho.
+
+- globals.css: en pantallas táctiles o de menos de 1024 px, input/select/textarea van con 16 px como mínimo (había decenas de campos con text-[15px]; Safari de iPhone hace zoom al enfocar un campo de menos de 16 px). Los text-base (17 px) y más grandes no se tocan.
+- BotonFlotante oculto en /cotizar/*, /asistente, /consumibles/venta, /repuestos/nueva y /tareas/nueva (tapaba "Guardar y armar PDF" y el enviar del asistente).
+
 ## v1.12.1 — 30 de septiembre de 2026
 
 Velocidad (migración 038_velocidad_rls.sql).
