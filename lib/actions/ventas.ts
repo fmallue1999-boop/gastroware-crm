@@ -563,7 +563,7 @@ export async function eliminarOperacion(oportunidadId: string, motivo: string) {
 
   const que =
     (opp.producto as unknown as { nombre: string } | null)?.nombre ?? opp.mensaje_inicial ?? (opp.etapa === "ganada" ? "Venta" : "Interés");
-  const tipo = opp.etapa === "ganada" ? "Venta" : "Interés";
+  const eliminado = opp.etapa === "ganada" ? "Venta eliminada" : "Interés eliminado";
   const { error } = await supabase.from("oportunidades").delete().eq("id", oportunidadId);
   if (error) return { error: error.message };
   await supabase.from("actividades").insert({
@@ -572,7 +572,7 @@ export async function eliminarOperacion(oportunidadId: string, motivo: string) {
     // No cuenta como contacto en los informes
     tipo: "cambio_etapa",
     contenido: [
-      `${tipo} eliminada por dirección: ${que}`,
+      `${eliminado} por dirección: ${que}`,
       opp.monto_estimado ? `${opp.moneda ?? ""} ${Number(opp.monto_estimado).toLocaleString("es-AR")}`.trim() : null,
       `Motivo: ${texto}`,
       conService ? `${conService} equipo${conService > 1 ? "s" : ""} con service quedaron en la ficha` : null,
