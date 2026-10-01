@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import { Minus, Plus, X } from "lucide-react";
 import { crearPedidoDirecto } from "@/lib/actions";
+import ClienteSelector from "@/components/ClienteSelector";
+import ClienteNuevoRapido from "@/components/ClienteNuevoRapido";
+import { cuitProlijo, cuitValido } from "@/lib/datos-cotizar";
 import { dinero } from "@/lib/format";
 import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
 import type { Producto } from "@/lib/types";
@@ -12,23 +15,38 @@ const inputCls =
   "w-full rounded-2xl border border-borde bg-white shadow-sm px-4 py-3.5 text-base outline-none focus:border-marino";
 
 /**
- * Venta nueva sin trabas: primero qué se vendió (con cuántas unidades de cada
- * uno, v1.16), después a quién (un solo campo de texto: el cliente se crea o se
- * encuentra solo). Entra al tablero de ventas en "Vendido".
+ * Venta nueva: primero qué se vendió (con cuántas unidades de cada uno,
+ * v1.16), después a quién: un cliente de la base o uno nuevo, siempre con razón
+ * social y CUIT para facturar (v1.19; si el elegido no los tiene, se piden acá).
+ * Entra al tablero de ventas en "Vendido".
  */
+
+type ClienteVenta = { id: string; nombre: string; razon_social?: string | null; cuit?: string | null };
 export default function PedidoDirectoForm({
   productos,
   clienteInicial = null,
 }: {
   productos: Producto[];
-  clienteInicial?: { id: string; nombre: string } | null;
+  clienteInicial?: ClienteVenta | null;
 }) {
   const [pending, startTransition] = useTransition();
   const [productoIds, setProductoIds] = useState<string[]>([]);
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const cant = (id: string) => cantidades[id] ?? 1;
   const [entregaEstimada, setEntregaEstimada] = useState("");
-  const [clienteTexto, setClienteTexto] = useState("");
+  const [cliente, setCliente] = useState<ClienteVenta | null>(clienteInicial);
+  const [nuevoCliente, setNuevoCliente] = useState(false);
+  const [razonSocial, setRazonSocial] = useState(clienteInicial?.razon_social ?? "");
+  const [cuit, setCuit] = useState(clienteInicial?.cuit ?? "");
+  // Sin razón social o sin CUIT válido no se puede facturar: se completa acá
+  const faltaFiscal = Boolean(cliente) && (!cliente?.razon_social?.trim() || !cuitValido(cliente?.cuit));
+  const cuitMal = cuit.replace(/\D/g, "").length >= 11 && !cuitValido(cuit);
+  function elegirCliente(c: ClienteVenta | null) {
+    setCliente(c);
+    setNuevoCliente(false);
+    setRazonSocial(c?.razon_social ?? "");
+    setCuit(c?.cuit ?? "");
+  }
   const [monto, setMonto] = useState("");
   const [moneda, setMoneda] = useState<"ARS" | "USD">("ARS");
   const [montoManual, setMontoManual] = useState(false);
@@ -68,9 +86,11 @@ export default function PedidoDirectoForm({
     e.preventDefault();
     setError(null);
     startTransition(async () => {
+      if (!cliente) return setError("Elegí el cliente o cargá uno nuevo");
+      if (faltaFiscal && (!razonSocial.trim() || !cuitValido(cuit))) return setError("Completá la razón social y un CUIT válido del cliente");
       const res = await crearPedidoDirecto({
-        clienteId: clienteInicial?.id,
-        clienteTexto: clienteInicial ? undefined : clienteTexto,
+        clienteId: cliente.id,
+        fiscal: faltaFiscal ? { razonSocial, cuit } : undefined,
         productoIds,
         cantidades: Object.fromEntries(productoIds.map((id) => [id, cant(id)])),
         monto: parseFloat(monto.replace(/\./g, "").replace(",", ".")) || null,
@@ -84,8 +104,7 @@ export default function PedidoDirectoForm({
   }
 
   const puedeEnviar =
-    (productoIds.length > 0 || nota.trim()) &&
-    (clienteInicial || clienteTexto.trim());
+    (productoIds.length > 0 || nota.trim()) && Boolean(cliente) && (!faltaFiscal || (razonSocial.trim() && cuitValido(cuit)));
 
   return (
     <form onSubmit={enviar} className="space-y-3">
@@ -183,24 +202,56 @@ export default function PedidoDirectoForm({
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-piedra">
           2 · ¿Quién lo compró?
         </p>
-        {clienteInicial ? (
-          <div className="rounded-2xl bg-celeste-soft px-4 py-3 text-sm font-medium">
-            {clienteInicial.nombre}
+        {cliente ? (
+          <div className="space-y-2">
+            <div className="flex min-h-11 items-center gap-2 rounded-2xl bg-celeste-soft px-4 py-3">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] font-bold">{cliente.nombre}</span>
+                {!faltaFiscal && (
+                  <span className="block text-xs text-piedra">
+                    {cliente.razon_social} · CUIT {cuitProlijo(cliente.cuit)}
+                  </span>
+                )}
+              </span>
+              {!clienteInicial && (
+                <button type="button" onClick={() => elegirCliente(null)} className="shrink-0 text-[14px] text-azul underline">
+                  Cambiar
+                </button>
+              )}
+            </div>
+            {faltaFiscal && (
+              <div className="space-y-2 rounded-2xl border border-ambar bg-ambar-soft p-3">
+                <p className="text-[14px] font-bold text-ambar">Para facturar faltan los datos del cliente:</p>
+                <input value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} placeholder="Razón social (como va en la factura)" className={inputCls} />
+                <input
+                  inputMode="numeric"
+                  value={cuit}
+                  onChange={(e) => setCuit(e.target.value)}
+                  placeholder="CUIT (ej: 30-71234567-8)"
+                  className={`${inputCls} ${cuitMal ? "border-red-400" : ""}`}
+                />
+                {cuitMal && <p className="text-xs font-bold text-red-600">Ese CUIT no es válido: revisá los números.</p>}
+                <p className="text-xs text-piedra">Se guardan en la ficha del cliente.</p>
+              </div>
+            )}
           </div>
+        ) : nuevoCliente ? (
+          <ClienteNuevoRapido pedirCuit onElegido={elegirCliente} onCancelar={() => setNuevoCliente(false)} />
         ) : (
-          <>
-            <input
-              type="text"
-              placeholder="Nombre, empresa o teléfono, como lo tengas"
-              value={clienteTexto}
-              onChange={(e) => setClienteTexto(e.target.value)}
-              className={inputCls}
+          <div className="space-y-2">
+            <ClienteSelector
+              valor={null}
+              onChange={(c) => c && elegirCliente({ id: c.id, nombre: c.nombre_comercial, razon_social: c.razon_social, cuit: c.cuit })}
+              placeholder="Buscar cliente: nombre, razón social, teléfono o CUIT"
             />
-            <p className="mt-1 text-xs text-piedra">
-              Si el teléfono ya está en la base lo enganchamos solos. El resto
-              se completa después.
-            </p>
-          </>
+            <button
+              type="button"
+              onClick={() => setNuevoCliente(true)}
+              className="inline-flex min-h-11 items-center gap-1 text-[15px] font-bold text-marino underline"
+            >
+              <Plus className="h-4 w-4" /> Cliente nuevo (con CUIT)
+            </button>
+          </div>
         )}
       </div>
 

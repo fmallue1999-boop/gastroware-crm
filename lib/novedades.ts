@@ -19,6 +19,16 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.19.0",
+    fecha: "2026-10-01",
+    titulo: "Nueva venta con cliente y CUIT",
+    cambios: [
+      "En Nueva venta, “¿Quién lo compró?” busca el cliente en la base (nombre, razón social, teléfono o CUIT) o carga uno nuevo con razón social y CUIT. Ya no se crean clientes sueltos con solo un nombre.",
+      "El CUIT se controla al cargarlo. Si ya está en la base, te muestra ese cliente para usarlo en vez de duplicarlo.",
+      "Si el cliente elegido no tiene razón social o CUIT, la venta los pide ahí mismo y quedan guardados en su ficha.",
+    ],
+  },
+  {
     version: "1.18.0",
     fecha: "2026-10-01",
     titulo: "Lugar de entrega y plan de pagos en la venta",

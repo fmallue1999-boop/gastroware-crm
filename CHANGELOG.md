@@ -3,6 +3,14 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.19.0 — 1 de octubre de 2026
+
+Pedido de dirección: "para cargar nueva venta, que te solicite cargar cliente o cargar uno nuevo para poner CUIT" (sin migración).
+
+- PedidoDirectoForm: "¿Quién lo compró?" = ClienteSelector (buscarClientes: nombre, razón social, teléfono, CUIT) o "Cliente nuevo (con CUIT)" = ClienteNuevoRapido pedirCuit (razón social + CUIT obligatorios, validación de dígito verificador en vivo). Si el cliente elegido no tiene razón social o CUIT válido, se piden en la venta. Se quitó el campo de texto libre que creaba un cliente mínimo.
+- crearPedidoDirecto: clienteId obligatorio (sin clienteTexto); con fiscal valida y guarda razón social y CUIT (único) en el cliente; sin fiscal exige que el cliente ya los tenga.
+- crearClienteRapido: pedirCuit/razonSocial/cuit; el CUIT es único: si ya existe devuelve ese cliente como duplicado por "CUIT" (solo "usar" o "corregir el CUIT", no "cargarlo igual"). PosibleDuplicado y buscarDuplicados traen razón social y CUIT. Nueva /pedidos/nuevo?cliente= pasa razón social y CUIT.
+
 ## v1.18.0 — 1 de octubre de 2026
 
 Pedido de dirección: "en ventas, ¿dónde se entrega? no me despliega la sucursal de entrega (ej. Makery); si no tiene, que me deje cargar el lugar" y "con anticipo + saldo, una calculadora: anticipo x% y cómo se paga (20% al día, 10% a 15 y 10% a 30 días), saldo igual (antes de despachar e-cheqs a 30, 45, 60 y 75 días)" (migración 043_plan_de_pagos.sql).

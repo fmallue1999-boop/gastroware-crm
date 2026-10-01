@@ -11,7 +11,7 @@ import { consultarIA } from "@/lib/core/ia";
 import { exigirGestor, rolActual } from "@/lib/auth";
 import { hoyISO, sumarDias, normalizarTelefono, fechaCorta } from "@/lib/format";
 import { CONDICIONES_FISCALES, ETAPAS_ABIERTAS, RUBROS } from "@/lib/constants";
-import { faltanParaCotizar } from "@/lib/datos-cotizar";
+import { cuitValido, faltanParaCotizar } from "@/lib/datos-cotizar";
 import type { Cliente } from "@/lib/types";
 import { usuarioActual, type SupabaseServidor } from "./comun";
 import { crearInteres } from "./intereses";
@@ -35,7 +35,14 @@ export async function buscarClientePorTelefono(
   return data as Cliente | null;
 }
 
-export type PosibleDuplicado = { id: string; nombre: string; telefono: string | null; por: "teléfono" | "email" };
+export type PosibleDuplicado = {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  por: "teléfono" | "email" | "CUIT";
+  razon_social?: string | null;
+  cuit?: string | null;
+};
 
 /**
  * Posibles duplicados por teléfono o email (del cliente o de sus personas).
@@ -60,14 +67,16 @@ export async function buscarDuplicados(telefono?: string | null, email?: string 
   if (!encontrados.size) return [];
   const { data } = await supabase
     .from("clientes")
-    .select("id, nombre_comercial, telefono")
+    .select("id, nombre_comercial, telefono, razon_social, cuit")
     .in("id", [...encontrados.keys()])
     .is("deleted_at", null);
-  return ((data ?? []) as { id: string; nombre_comercial: string; telefono: string | null }[]).map((c) => ({
+  return ((data ?? []) as { id: string; nombre_comercial: string; telefono: string | null; razon_social: string | null; cuit: string | null }[]).map((c) => ({
     id: c.id,
     nombre: c.nombre_comercial,
     telefono: c.telefono,
     por: encontrados.get(c.id) ?? "teléfono",
+    razon_social: c.razon_social,
+    cuit: c.cuit,
   }));
 }
 
@@ -1040,32 +1049,62 @@ export async function crearClienteRapido(input: {
   telefono?: string;
   localidad?: string;
   crearIgual?: boolean;
-}): Promise<{ error: string } | { duplicados: PosibleDuplicado[] } | { ok: true; id: string; nombre: string }> {
+  /** v1.19 (venta nueva): razón social y CUIT obligatorios; el CUIT no se puede repetir. */
+  pedirCuit?: boolean;
+  razonSocial?: string;
+  cuit?: string;
+}): Promise<
+  | { error: string }
+  | { duplicados: PosibleDuplicado[] }
+  | { ok: true; id: string; nombre: string; razon_social: string | null; cuit: string | null }
+> {
   const nombre = input.nombre.trim();
   const empresa = input.empresa?.trim() ?? "";
-  if (!nombre && !empresa) return { error: "Poné el nombre de la persona o del negocio" };
+  const razonSocial = input.razonSocial?.trim() ?? "";
+  const cuit = (input.cuit ?? "").replace(/\D/g, "");
+  if (input.pedirCuit) {
+    if (!razonSocial) return { error: "Poné la razón social (como va en la factura)" };
+    if (!cuitValido(cuit)) return { error: "Revisá el CUIT: son 11 números y el último tiene que coincidir" };
+  } else if (!nombre && !empresa) return { error: "Poné el nombre de la persona o del negocio" };
   const tel = normalizarTelefono(input.telefono ?? "");
+  const supabase = await createClient();
+  if (cuit) {
+    // El CUIT es único: si ya está, es ese cliente (no se carga otro)
+    const { data: conCuit } = await supabase
+      .from("clientes")
+      .select("id, nombre_comercial, telefono, razon_social, cuit")
+      .eq("cuit", cuit)
+      .is("deleted_at", null)
+      .limit(1);
+    const c = (conCuit ?? [])[0] as { id: string; nombre_comercial: string; telefono: string | null; razon_social: string | null; cuit: string } | undefined;
+    if (c) return { duplicados: [{ id: c.id, nombre: c.nombre_comercial, telefono: c.telefono, por: "CUIT", razon_social: c.razon_social, cuit: c.cuit }] };
+  }
   if (!input.crearIgual) {
     const duplicados = await buscarDuplicados(tel, null);
     if (duplicados.length) return { duplicados };
   }
-  const supabase = await createClient();
   const user = await usuarioActual();
-  const nombreComercial = empresa || nombre;
+  const nombreComercial = empresa || razonSocial || nombre;
   const { data, error } = await supabase
     .from("clientes")
-    .insert({ nombre_comercial: nombreComercial, telefono: tel.length >= 6 ? tel : null, rubro: "Otro", comercial_id: user?.id ?? null })
+    .insert({
+      nombre_comercial: nombreComercial,
+      telefono: tel.length >= 6 ? tel : null,
+      rubro: "Otro",
+      comercial_id: user?.id ?? null,
+      ...(cuit ? { cuit, razon_social: razonSocial } : {}),
+    })
     .select("id")
     .single();
   if (error || !data) return { error: error?.message ?? "No se pudo crear el cliente" };
   const id = data.id as string;
   await Promise.all([
-    nombre && empresa ? supabase.from("contactos").insert({ cliente_id: id, nombre, telefono: tel.length >= 6 ? tel : null, es_decisor: true }) : Promise.resolve(),
+    nombre && (empresa || razonSocial) ? supabase.from("contactos").insert({ cliente_id: id, nombre, telefono: tel.length >= 6 ? tel : null, es_decisor: true }) : Promise.resolve(),
     input.localidad?.trim()
       ? supabase.from("sucursales").insert({ cliente_id: id, nombre: "Principal", ciudad: input.localidad.trim(), es_principal: true })
       : Promise.resolve(),
     supabase.from("actividades").insert({ cliente_id: id, tipo: "nota", contenido: "Cliente cargado", created_by: user?.id ?? null }),
   ]);
   revalidatePath("/", "layout");
-  return { ok: true, id, nombre: nombreComercial };
+  return { ok: true, id, nombre: nombreComercial, razon_social: cuit ? razonSocial : null, cuit: cuit || null };
 }
