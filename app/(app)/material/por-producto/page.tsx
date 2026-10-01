@@ -25,7 +25,8 @@ export default async function MaterialPorProductoPage({ searchParams }: { search
   const marcaDe = new Map(arbol.marcas.map((m) => [m.id, m]));
   const categoriaDe = new Map(arbol.categorias.map((c) => [c.id, c]));
   const ordenMarca = new Map(arbol.marcas.map((m, i) => [m.id, i]));
-  const ordenCat = new Map(arbol.categorias.map((c, i) => [c.id, i]));
+  // Primero los productos y después los accesorios de cada marca
+  const ordenCat = new Map(arbol.categorias.map((c, i) => [c.id, (c.seccion === "accesorios" ? 10000 : 0) + i]));
   const filas = arbol.productos
     .map((p) => {
       const c = categoriaDe.get(p.categoria_id);

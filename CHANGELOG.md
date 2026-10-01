@@ -3,6 +3,11 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.11.1 — 30 de septiembre de 2026
+
+- Material por producto: orden marca → productos → accesorios (antes las categorías con el mismo orden se ordenaban por nombre y ACCESORIOS quedaba primero).
+- Probado en producción: buscador, marca con tres columnas, subir imagen y ficha, PDF embebido, .zip de imágenes, tabla por producto y borrar (sin rastros en la base ni en el almacenamiento).
+
 ## v1.11.0 — 30 de septiembre de 2026
 
 Material, la biblioteca comercial (migración 036_material.sql).
