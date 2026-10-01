@@ -177,7 +177,7 @@ export const PRIORIDADES_CASO = [
 export const FORMAS_PAGO_VENTA = [
   "Contado (transferencia)",
   "Contado (efectivo)",
-  "Anticipo y saldo antes de despachar",
+  "Anticipo + saldo",
   "Cheque o e-cheq",
   "Tarjeta",
   "Mercado Pago",

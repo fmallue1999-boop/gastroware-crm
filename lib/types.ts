@@ -245,6 +245,8 @@ export interface Oportunidad {
   /** Datos de la venta para facturar, cobrar y despachar. */
   forma_pago?: string | null;
   direccion_entrega?: string | null;
+  /** v1.18: plan de pagos (anticipo + saldo, cheques, cuenta corriente). */
+  plan_pago?: import("@/lib/plan-pago").PlanPago | null;
   lleva_instalacion?: boolean;
   relevamiento?: Record<string, string> | null;
   remito_nro?: string | null;

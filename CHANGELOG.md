@@ -3,6 +3,13 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.18.0 — 1 de octubre de 2026
+
+Pedido de dirección: "en ventas, ¿dónde se entrega? no me despliega la sucursal de entrega (ej. Makery); si no tiene, que me deje cargar el lugar" y "con anticipo + saldo, una calculadora: anticipo x% y cómo se paga (20% al día, 10% a 15 y 10% a 30 días), saldo igual (antes de despachar e-cheqs a 30, 45, 60 y 75 días)" (migración 043_plan_de_pagos.sql).
+
+- VentaPaso (informar la venta): "¿Dónde se entrega?" es un select con las sucursales activas del cliente (+ "Retira en el local" y el texto anterior "como estaba"); "Otro lugar de entrega" crea la sucursal inline (crearSucursal) y la elige. Se guardan oportunidades.sucursal_id (lugar) y direccion_entrega (texto "Nombre — dirección, ciudad"). Se quitó el select "Facturar a la razón social de la sucursal" (ninguna sucursal tiene razón social propia; sucursal_id pasa a ser el lugar de entrega, como en la cotización). Tablero de ventas: carga las sucursales de los clientes con ventas por informar. Ficha: sin direccionSugerida.
+- Plan de pagos: lib/plan-pago.ts (tipoPlan, planInicial, cambiarAnticipo, repartir, problemaPlan, normalizarPlan, textoPlan; tests/unit/plan-pago.test.ts) + PlanPagoEditor. "Anticipo + saldo" (antes "Anticipo y saldo antes de despachar"; la 043 renombra las ventas existentes) → grupos Anticipo/Saldo (saldo antes de despachar o contra entrega); cheque/e-cheq y cuenta corriente → un grupo "Pagos". Porcentajes sobre el total, montos con monto_estimado (o total cargado en la calculadora). informarVenta valida y guarda oportunidades.plan_pago (jsonb) y lo suma al movimiento; la venta informada/facturada muestra el plan; "Aprobar sin cobro" viene completado con el plan.
+
 ## v1.17.2 — 1 de octubre de 2026
 
 - EliminarOperacion: "Eliminar interés (mal cargado)" (antes "mal cargada").

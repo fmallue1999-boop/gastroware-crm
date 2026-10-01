@@ -19,6 +19,16 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.18.0",
+    fecha: "2026-10-01",
+    titulo: "Lugar de entrega y plan de pagos en la venta",
+    cambios: [
+      "Al completar los datos de la venta, “¿Dónde se entrega?” muestra las sucursales del cliente para elegir. Si el lugar no está, “Otro lugar de entrega” lo carga ahí mismo y queda en la ficha. También está “Retira en el local”.",
+      "Con “Anticipo + saldo” aparece la calculadora: ponés el % del anticipo y cada parte se divide en pagos (% del total, a cuántos días y con qué medio: transferencia, e-cheq…), con el monto de cada uno. El saldo puede ser antes de despachar o contra entrega. “Repartir en pagos iguales” arma, por ejemplo, 4 e-cheqs a 30, 45, 60 y 75 días.",
+      "Con cheque/e-cheq o cuenta corriente también se carga el plan de pagos. Administración lo ve en la venta y en la aprobación de la condición.",
+    ],
+  },
+  {
     version: "1.17.2",
     fecha: "2026-10-01",
     titulo: "Arreglo de texto",

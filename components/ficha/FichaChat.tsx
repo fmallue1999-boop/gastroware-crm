@@ -332,7 +332,6 @@ export default async function FichaChat({
             pedirSerie={serieFaltante.has(o.id)}
             videoUrl={o.producto?.video_url ?? null}
             sucursales={sucursales}
-            direccionSugerida={[principal?.direccion, principal?.ciudad].filter(Boolean).join(", ")}
             compacto
           />
           {esGestor && (
