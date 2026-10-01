@@ -19,6 +19,12 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.11.1",
+    fecha: "2026-09-30",
+    titulo: "Material por producto: primero los productos",
+    cambios: ["En la tabla “Material por producto”, cada marca muestra primero sus productos y después los accesorios."],
+  },
+  {
     version: "1.11.0",
     fecha: "2026-09-30",
     titulo: "Material: la biblioteca comercial",
