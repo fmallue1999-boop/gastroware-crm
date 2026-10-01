@@ -38,7 +38,7 @@ export default async function VentasPage({
   const [{ data }, { data: prods }, stockInfo, { data: yo }] = await Promise.all([
     supabase
       .from("oportunidades")
-      .select("*, cliente:clientes(*), producto:productos(*)")
+      .select("*, cliente:clientes(*), producto:productos(*), items:oportunidad_items(producto_id, cantidad)")
       .eq("etapa", "ganada")
       .is("deleted_at", null)
       .order("closed_at", { ascending: false })
@@ -70,9 +70,16 @@ export default async function VentasPage({
   for (const f of (facturasData ?? []) as (FacturaDatos & { oportunidad_id: string })[])
     if (!facturaDe.has(f.oportunidad_id)) facturaDe.set(f.oportunidad_id, f);
 
+  // "3 × Zumex Essential Basic, Licuadora GX22" (v1.16: con las unidades)
   const nombreProductos = (o: Oportunidad) => {
-    const extra = (o.productos_extra ?? []).map((pid) => productos.find((p) => p.id === pid)?.nombre).filter(Boolean) as string[];
-    return [o.producto?.nombre, ...extra].filter(Boolean).join(", ") || o.mensaje_inicial || "Venta";
+    const items = ((o as Oportunidad & { items?: { producto_id: string; cantidad: number }[] }).items ?? []);
+    const conCantidad = (pid: string | null | undefined, nombre: string | null | undefined) => {
+      if (!nombre) return null;
+      const n = Math.round(items.filter((i) => i.producto_id === pid).reduce((t, i) => t + Number(i.cantidad), 0));
+      return n > 1 ? `${n} × ${nombre}` : nombre;
+    };
+    const extra = (o.productos_extra ?? []).map((pid) => conCantidad(pid, productos.find((p) => p.id === pid)?.nombre)).filter(Boolean) as string[];
+    return [conCantidad(o.producto_id, o.producto?.nombre), ...extra].filter(Boolean).join(", ") || o.mensaje_inicial || "Venta";
   };
 
   const porPaso = VENTA_PASOS.map((_, i) =>

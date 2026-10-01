@@ -19,6 +19,16 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.16.0",
+    fecha: "2026-10-01",
+    titulo: "Ventas con varias unidades",
+    cambios: [
+      "En Nueva venta, cada equipo tiene cuántas unidades (− 1 +): por ejemplo, 3 Essential. El monto se calcula solo con la lista.",
+      "Al cerrar una venta quedan cargados todos los equipos vendidos en la ficha del cliente (uno por unidad, cada uno con su garantía y en la sucursal de la venta). Antes quedaba solo el primero.",
+      "Al entregar se descuenta del stock la cantidad vendida de cada producto, y el tablero de ventas muestra “3 × Zumex Essential Basic”.",
+    ],
+  },
+  {
     version: "1.15.0",
     fecha: "2026-10-01",
     titulo: "Aprobar contenidos a la vista y fichas para marketing",
