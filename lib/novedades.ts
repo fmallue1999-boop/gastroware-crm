@@ -19,6 +19,16 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.13.0",
+    fecha: "2026-10-01",
+    titulo: "Reprogramar en un toque",
+    cambios: [
+      "Nuevo botón “Reprogramar” (el del calendario) en Mi día, en la tarjeta del embudo y en la ficha: pasás el contacto para más tarde hoy (con hora), mañana, el lunes, la semana que viene u otra fecha, sin tener que anotar un contacto.",
+      "Al reprogramar podés cambiar qué vas a hacer (llamar, visitar, cotizar…) y dejar una nota. Queda en el historial de dónde a dónde se movió.",
+      "El próximo contacto puede tener hora: Mi día ordena los de hoy por hora y la muestra.",
+    ],
+  },
+  {
     version: "1.12.4",
     fecha: "2026-09-30",
     titulo: "Contactos: todos a la vista",

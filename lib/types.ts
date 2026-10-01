@@ -224,6 +224,8 @@ export interface Oportunidad {
   nro_factura: string | null;
   /** Próxima fecha para volver a contactar por este interés (una sola, o ninguna). */
   proximo_contacto: string | null;
+  /** Hora de ese contacto, si se fijó al reprogramar (HH:MM:SS). Se borra sola si cambia la fecha. */
+  proximo_hora?: string | null;
   /** Qué hacer en ese contacto ("Llegó stock", "mandar cotización"…). */
   proximo_nota: string | null;
   /** Se actualiza sola con cada movimiento (trigger en actividades). */

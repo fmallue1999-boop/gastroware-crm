@@ -88,6 +88,17 @@ export const BASICOS: Tarea[] = [
     ojo: "Abrir WhatsApp o tocar Llamar no registra nada solo: el resultado lo cargás vos. Las operaciones abiertas sin próximo paso aparecen en Mi día, en “Sin próximo paso”.",
   },
   {
+    id: "reprogramar",
+    titulo: "Pasar un contacto para otro día u hora",
+    pasos: [
+      { texto: "Si todavía no hablaste y lo querés mover (“prefiere que lo visite la semana que viene”), no hace falta anotar un contacto: tocá “Reprogramar” (el botón del calendario)." },
+      { texto: "Está en Mi día (al lado del lápiz), en la tarjeta del embudo y en la ficha, debajo del próximo contacto." },
+      { texto: "Elegí cuándo: Hoy más tarde (con la hora), Mañana, Pasado mañana, El lunes, En una semana u Otra fecha. La hora es opcional." },
+      { texto: "Si cambia lo que vas a hacer, elegilo (Llamar, Escribir, Cotizar, Demo, Visitar) y, si querés, dejá una nota." },
+    ],
+    ojo: "Queda en el historial de dónde a dónde se movió. Ese día aparece en Mi día, ordenado por hora.",
+  },
+  {
     id: "agenda",
     titulo: "Tareas, reuniones, capacitaciones y pagos",
     pasos: [

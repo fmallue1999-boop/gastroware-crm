@@ -30,6 +30,7 @@ type InteresFila = {
   etapa: string;
   temperatura: string | null;
   proximo_contacto: string | null;
+  proximo_hora: string | null;
   proximo_nota: string | null;
   ultimo_movimiento_at: string | null;
   mensaje_inicial: string | null;
@@ -156,7 +157,7 @@ export default async function HoyPage({
         let q = supabase
           .from("oportunidades")
           .select(
-            "id, cliente_id, comercial_id, linea, proxima_accion, asignado_at, primer_contacto_at, etapa, temperatura, proximo_contacto, proximo_nota, ultimo_movimiento_at, mensaje_inicial, producto:productos(nombre), cliente:clientes!inner(nombre_comercial, telefono, deleted_at)"
+            "id, cliente_id, comercial_id, linea, proxima_accion, asignado_at, primer_contacto_at, etapa, temperatura, proximo_contacto, proximo_hora, proximo_nota, ultimo_movimiento_at, mensaje_inicial, producto:productos(nombre), cliente:clientes!inner(nombre_comercial, telefono, deleted_at)"
           )
           .in("etapa", [...ETAPAS_ABIERTAS])
           .is("cliente.deleted_at", null)
@@ -195,6 +196,7 @@ export default async function HoyPage({
     detalle: detalle ?? null,
     linea: i.linea,
     proximo: i.proximo_contacto,
+    hora: i.proximo_hora,
     accion: i.proxima_accion,
     // Si dirección mira todo el equipo, cada fila dice de quién es
     responsable: !comercialId && i.comercial_id && i.comercial_id !== userId ? nombres.get(i.comercial_id) ?? null : null,

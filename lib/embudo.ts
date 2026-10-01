@@ -15,6 +15,8 @@ export type TarjetaEmbudo = {
   nivel: string | null;
   etapa: string;
   proximo_contacto: string | null;
+  proximo_hora: string | null;
+  proxima_accion: string | null;
   proximo_nota: string | null;
   ultimo_movimiento_at: string | null;
   monto: number | null;
@@ -57,6 +59,8 @@ type Fila = {
   etapa: string;
   temperatura: string | null;
   proximo_contacto: string | null;
+  proximo_hora: string | null;
+  proxima_accion: string | null;
   proximo_nota: string | null;
   ultimo_movimiento_at: string | null;
   mensaje_inicial: string | null;
@@ -70,7 +74,7 @@ type Fila = {
 };
 
 const SELECT =
-  "id, cliente_id, comercial_id, etapa, temperatura, proximo_contacto, proximo_nota, ultimo_movimiento_at, mensaje_inicial, monto_estimado, moneda, pedido_estado, closed_at, created_at, producto:productos(nombre), cliente:clientes!inner(nombre_comercial, telefono, deleted_at)";
+  "id, cliente_id, comercial_id, etapa, temperatura, proximo_contacto, proximo_hora, proxima_accion, proximo_nota, ultimo_movimiento_at, mensaje_inicial, monto_estimado, moneda, pedido_estado, closed_at, created_at, producto:productos(nombre), cliente:clientes!inner(nombre_comercial, telefono, deleted_at)";
 
 function aTarjeta(f: Fila): TarjetaEmbudo {
   return {
@@ -82,6 +86,8 @@ function aTarjeta(f: Fila): TarjetaEmbudo {
     nivel: f.temperatura,
     etapa: f.etapa,
     proximo_contacto: f.proximo_contacto,
+    proximo_hora: f.proximo_hora ?? null,
+    proxima_accion: f.proxima_accion ?? null,
     proximo_nota: f.proximo_nota,
     ultimo_movimiento_at: f.ultimo_movimiento_at,
     monto: f.monto_estimado,

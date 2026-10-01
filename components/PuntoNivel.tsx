@@ -19,14 +19,15 @@ export function PuntoNivel({ nivel, conTexto = false }: { nivel: string | null; 
   );
 }
 
-/** Texto de la próxima fecha: atrasado / hoy / fecha / sin fecha. Sin rojos. */
-export function textoProximo(proximo: string | null, nota: string | null, hoy: string, accion?: string | null) {
+/** Texto de la próxima fecha: atrasado / hoy / fecha / sin fecha, con la hora si la tiene. Sin rojos. */
+export function textoProximo(proximo: string | null, nota: string | null, hoy: string, accion?: string | null, hora?: string | null) {
   if (!proximo) return { texto: "Sin próximo paso", clase: "text-piedra" };
   const n = nota ? ` · ${nota}` : "";
   const a = nombreAccion(accion);
-  if (proximo < hoy) return { texto: `${a ? `${a}: e` : "E"}ra para el ${fechaCorta(proximo)}${n}`, clase: "text-ambar font-semibold" };
-  if (proximo === hoy) return { texto: `${a ?? "Contactar"} hoy${n}`, clase: "text-tinta font-semibold" };
-  return { texto: `${a ? `${a} el` : "Volver a contactar el"} ${fechaCorta(proximo)}${n}`, clase: "text-azul" };
+  const h = hora ? ` a las ${hora.slice(0, 5)}` : "";
+  if (proximo < hoy) return { texto: `${a ? `${a}: e` : "E"}ra para el ${fechaCorta(proximo)}${h}${n}`, clase: "text-ambar font-semibold" };
+  if (proximo === hoy) return { texto: `${a ?? "Contactar"} hoy${h}${n}`, clase: "text-tinta font-semibold" };
+  return { texto: `${a ? `${a} el` : "Volver a contactar el"} ${fechaCorta(proximo)}${h}${n}`, clase: "text-azul" };
 }
 
 export const COLOR_ETAPA: Record<string, string> = {

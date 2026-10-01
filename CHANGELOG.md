@@ -3,6 +3,15 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.13.0 — 1 de octubre de 2026
+
+Reprogramar (migración 039_proximo_hora.sql), a partir de un caso real del vendedor de territorio (cliente que prefirió la visita la semana siguiente).
+
+- Migración 039: oportunidades.proximo_hora (time) + trigger fn_hora_proximo: si cambia proximo_contacto sin indicar hora nueva, la hora vieja se borra.
+- reprogramarInteres(oportunidadId, { fecha, hora, accion, nota }): no cuenta como contacto; actividad tipo 'interes' "Reprogramado: del dd/mm (hh:mm) al dd/mm (hh:mm) · acción · nota". Dos updates (fecha → hora) para que el trigger no pise la hora elegida.
+- components/ReprogramarInteres.tsx (PanelReprogramar + botón): Hoy más tarde (hora obligatoria), Mañana, Pasado mañana, El lunes, En una semana, Otra fecha; acción y nota opcionales. En Mi día (PendienteFila, botón de calendario), embudo (tarjeta desplegada) y ficha (InteresFijado).
+- textoProximo muestra la hora; Mi día carga proximo_hora y ordena los de hoy por hora (clasificarPendientes); embudo carga proximo_hora y proxima_accion. Guía: "Pasar un contacto para otro día u hora".
+
 ## v1.12.4 — 30 de septiembre de 2026
 
 - Contactos (/clientes): la lista por defecto salía solo de las últimas actividades; tras la puesta a cero (sin actividades) quedaba vacía aunque decía "5.608 en total". Ahora: "Últimos movimientos" (hasta 20, solo en la página 1) y debajo todos de la A a la Z paginados de a 60 (?pagina=N, con Anteriores/Siguientes). El vendedor sigue viendo solo los suyos; dirección y administración, todos.
