@@ -21,6 +21,7 @@ export default function ProductoFila({ producto }: { producto: Producto }) {
   const [usd, setUsd] = useState(inicialUsd);
   const [moneda, setMoneda] = useState(producto.moneda === "USD" ? "USD" : "ARS");
   const [garantia, setGarantia] = useState(txt(producto.garantia_meses));
+  const [iva, setIva] = useState(String(producto.iva_pct ?? 10.5));
   const [reposicion, setReposicion] = useState(txt(producto.frecuencia_recompra_dias));
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
@@ -30,6 +31,7 @@ export default function ProductoFila({ producto }: { producto: Producto }) {
     usd !== inicialUsd ||
     moneda !== (producto.moneda === "USD" ? "USD" : "ARS") ||
     garantia !== txt(producto.garantia_meses) ||
+    iva !== String(producto.iva_pct ?? 10.5) ||
     reposicion !== txt(producto.frecuencia_recompra_dias);
 
   const guardar = (patch?: { activo?: boolean }) => {
@@ -41,6 +43,7 @@ export default function ProductoFila({ producto }: { producto: Producto }) {
         precio_usd: num(usd),
         moneda,
         garantia_meses: num(garantia),
+        iva_pct: Number(iva),
         ...(producto.es_consumible ? { frecuencia_recompra_dias: num(reposicion) } : {}),
         ...patch,
       });
@@ -72,6 +75,15 @@ export default function ProductoFila({ producto }: { producto: Producto }) {
         <select value={moneda} onChange={(e) => setMoneda(e.target.value)} className={input}>
           <option value="ARS">pesos</option>
           <option value="USD">dólares</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-1 text-xs text-piedra" title="El IVA que se suma en la cotización">
+        IVA
+        <select value={iva} onChange={(e) => setIva(e.target.value)} className={input}>
+          <option value="10.5">10,5%</option>
+          <option value="21">21%</option>
+          <option value="27">27%</option>
+          <option value="0">exento</option>
         </select>
       </label>
       {producto.es_consumible && (

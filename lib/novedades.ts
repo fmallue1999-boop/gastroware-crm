@@ -19,6 +19,21 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.12.0",
+    fecha: "2026-09-30",
+    titulo: "Más simple y más rápido para vender",
+    cambios: [
+      "Todo anda más rápido: el sistema ahora trabaja en San Pablo, al lado de la base de datos (antes en Estados Unidos).",
+      "Nueva consulta: cuántos de cada producto (ej. 2 licuadoras), el vendedor sale solo por la zona pero se puede elegir otro, y ya no pide “volver a contactar”: el primer contacto queda para hoy.",
+      "Primer contacto: botones “Ya lo contacté por WhatsApp / Llamada / Email” en la tarjeta, y ahora cuenta aunque lo anote otra persona.",
+      "Cotizar: en dólares (lo define dirección), a precio de catálogo, con el IVA de cada producto, y forma de pago, plazo y condición de entrega con desplegables. Un solo “pedido especial” (descuento, plazo o financiación) que aprueba dirección.",
+      "En el celular, mientras escribís se esconden las barras de abajo para que el teclado no tape nada.",
+      "Al guardar la cotización: el seguimiento queda agendado para mañana y podés volver al embudo o a Mi día.",
+      "Embudo: la tarjeta desplegada quedó con WhatsApp, Abrir ficha, Cotizar, Me compró y No se dio. Las ventas marcadas a la noche del último día del mes ya aparecen en Vendidos.",
+      "La tarjeta del interés en la ficha quedó más simple (sin calificación, objeción ni diagnóstico).",
+    ],
+  },
+  {
     version: "1.11.1",
     fecha: "2026-09-30",
     titulo: "Material por producto: primero los productos",

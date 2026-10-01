@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, Search } from "lucide-react";
+import { Check, Minus, Plus, Search } from "lucide-react";
 import { buscarClientes, registrarInteres } from "@/lib/actions";
-import { fechaCorta, hoyISO, normalizarTelefono, sumarDias, telefonoProlijo } from "@/lib/format";
-import { CATEGORIAS_PRODUCTO, NIVELES_INTERES, ORIGENES_INTERES, PROVINCIAS_AR, RUBROS, SEGUIMIENTO_RAPIDO } from "@/lib/constants";
+import { fechaCorta, normalizarTelefono, telefonoProlijo } from "@/lib/format";
+import { CATEGORIAS_PRODUCTO, NIVELES_INTERES, ORIGENES_INTERES, PROVINCIAS_AR, RUBROS } from "@/lib/constants";
 import { textoStock, type InfoStock } from "@/lib/stock";
 import { ZONAS_ENTREGA } from "@/lib/territorios";
 import LeerConsultaIA from "@/components/ia/LeerConsultaIA";
@@ -21,9 +21,10 @@ const seccion = "text-xs font-bold uppercase tracking-wide text-piedra";
 const pareceTelefono = (s: string) => /^[\d\s+\-().]{6,}$/.test(s.trim());
 
 /**
- * Nuevo interés en una sola pantalla (rediseño aprobado por Franco): qué le
- * interesa con el stock al lado, cuánto, quién (de la base o nuevo), cuándo
- * volver a contactar, lista de espera si no hay stock, y Guardar.
+ * Nuevo interés en una sola pantalla: qué le interesa (y cuántos de cada
+ * uno), cuánto le interesa, quién (de la base o nuevo), dónde se entrega y
+ * quién lo atiende (el de la zona, o el que se elija). El primer contacto
+ * queda agendado para hoy: no se pide fecha al cargar (v1.12).
  */
 export default function InteresNuevoForm({
   productos,
@@ -32,7 +33,13 @@ export default function InteresNuevoForm({
   notaInicial = "",
   iaOn = false,
   compartido = "",
+  vendedores = [],
+  automatico = {},
 }: {
+  /** Quién puede atender la consulta (para elegirlo a mano). */
+  vendedores?: { id: string; nombre: string }[];
+  /** A quién va solo según la zona ("" = todavía no se sabe). */
+  automatico?: Record<string, string | null>;
   productos: Producto[];
   stockInfo?: Record<string, InfoStock>;
   telefonoInicial?: string;
@@ -45,6 +52,8 @@ export default function InteresNuevoForm({
   const [pending, startTransition] = useTransition();
   const [filtro, setFiltro] = useState("");
   const [productoIds, setProductoIds] = useState<string[]>([]);
+  const [cantidades, setCantidades] = useState<Record<string, number>>({});
+  const [vendedorId, setVendedorId] = useState("");
   const [otro, setOtro] = useState(false);
   const [interesTexto, setInteresTexto] = useState("");
   const [nivel, setNivel] = useState("");
@@ -64,7 +73,6 @@ export default function InteresNuevoForm({
   const [duplicados, setDuplicados] = useState<{ id: string; nombre: string; telefono: string | null; por: string }[]>([]);
   const [origen, setOrigen] = useState("");
   const [nota, setNota] = useState(notaInicial);
-  const [volverEl, setVolverEl] = useState("");
   const [enEspera, setEnEspera] = useState(false);
   /** Lugar de entrega (decide el vendedor); "?" = todavía no se sabe. */
   const [zona, setZona] = useState("");
@@ -181,8 +189,9 @@ export default function InteresNuevoForm({
         rubro: rubro || undefined,
         ciudad,
         nota,
-        volverEl: volverEl || undefined,
         zonaEntrega: zona && zona !== "?" ? zona : null,
+        cantidades,
+        vendedorId: vendedorId || null,
       });
       if (res && "duplicados" in res && res.duplicados?.length) {
         setDuplicados(res.duplicados);
@@ -263,6 +272,37 @@ export default function InteresNuevoForm({
             onChange={(e) => setInteresTexto(e.target.value)}
             className={inputCls}
           />
+        )}
+        {productoIds.length > 0 && (
+          <div className="space-y-1.5 rounded-2xl bg-white p-3 shadow-sm">
+            <p className="text-sm font-bold">¿Cuántos de cada uno?</p>
+            {productoIds.map((id) => {
+              const n = cantidades[id] ?? 1;
+              const cambiarN = (v: number) => setCantidades({ ...cantidades, [id]: Math.max(1, Math.min(999, v)) });
+              return (
+                <div key={id} className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-[15px] font-semibold">{productos.find((p) => p.id === id)?.nombre}</span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <button type="button" onClick={() => cambiarN(n - 1)} disabled={n <= 1} aria-label="Uno menos" className="flex h-10 w-10 items-center justify-center rounded-full border border-borde bg-white disabled:opacity-40">
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      value={n}
+                      onChange={(e) => cambiarN(Number(e.target.value) || 1)}
+                      aria-label="Cantidad"
+                      className="h-10 w-14 rounded-xl border border-borde text-center text-[16px] font-bold"
+                    />
+                    <button type="button" onClick={() => cambiarN(n + 1)} aria-label="Uno más" className="flex h-10 w-10 items-center justify-center rounded-full border border-borde bg-white">
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         )}
       </section>
 
@@ -404,7 +444,24 @@ export default function InteresNuevoForm({
             Todavía no sé
           </button>
         </div>
-        <p className="px-1 text-xs text-piedra">Decide qué vendedor la atiende: CABA y AMBA, o Mar del Plata, costa e interior.</p>
+        {zona && vendedores.length > 0 && (
+          <label className="block space-y-1">
+            <span className={seccion}>¿Quién lo atiende?</span>
+            <select value={vendedorId} onChange={(e) => setVendedorId(e.target.value)} className={inputCls}>
+              <option value="">
+                {(() => {
+                  const auto = automatico[zona === "?" ? "" : zona];
+                  return auto ? `Automático por la zona: ${auto}` : "Automático (queda para asignar)";
+                })()}
+              </option>
+              {vendedores.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {esNuevo && (
           <div className="grid grid-cols-2 gap-2">
             <input type="text" placeholder="Localidad" value={ciudad} onChange={(e) => setCiudad(e.target.value)} className={inputCls} />
@@ -429,29 +486,6 @@ export default function InteresNuevoForm({
               {o}
             </button>
           ))}
-        </div>
-      </section>
-
-      {/* Cuándo */}
-      <section className="space-y-2">
-        <p className={seccion}>¿Volver a contactar?</p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {SEGUIMIENTO_RAPIDO.filter((o) => o.dias != null).map((o) => {
-            const fecha = sumarDias(o.dias as number);
-            return (
-              <button key={o.label} type="button" onClick={() => setVolverEl(volverEl === fecha ? "" : fecha)} className={chipCls(volverEl === fecha)}>
-                {o.label}
-              </button>
-            );
-          })}
-          <input
-            type="date"
-            value={volverEl}
-            min={hoyISO()}
-            onChange={(e) => setVolverEl(e.target.value)}
-            aria-label="Otra fecha"
-            className="min-h-11 rounded-full border border-borde bg-white px-3 text-sm outline-none focus:border-marino"
-          />
         </div>
       </section>
 

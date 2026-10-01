@@ -31,6 +31,29 @@ describe("cotización en PDF", () => {
     expect(t.total).toBe(1900);
   });
 
+  it("IVA por producto: 10,5% y 21% por separado", () => {
+    const t = calcularTotales(
+      [
+        { cantidad: 1, precio_unit: 1000, iva_pct: 10.5 },
+        { cantidad: 2, precio_unit: 100, iva_pct: 21 },
+      ],
+      { total: 1200 }
+    );
+    expect(t.ivas).toEqual([
+      { pct: 10.5, monto: 105 },
+      { pct: 21, monto: 42 },
+    ]);
+    expect(t.iva).toBe(147);
+    expect(t.total).toBe(1347);
+    expect(t.ivaPct).toBe(0);
+  });
+
+  it("IVA por producto con descuento especial", () => {
+    const t = calcularTotales([{ cantidad: 1, precio_unit: 1000, iva_pct: 21 }], { total: 900, subtotal: 1000, descuento_pct: 10 });
+    expect(t.ivas).toEqual([{ pct: 21, monto: 189 }]);
+    expect(t.total).toBe(1089);
+  });
+
   it("sin líneas vale el monto guardado", () => {
     expect(calcularTotales([], { total: 500, iva_pct: 21 }).total).toBe(605);
   });

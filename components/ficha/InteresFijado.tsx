@@ -9,15 +9,11 @@ import { cambiarEtapa, cambiarProductoInteres, setTemperatura } from "@/lib/acti
 import { ETAPAS, MOTIVOS_PERDIDA, NIVELES_INTERES } from "@/lib/constants";
 import { dinero, fechaCorta, diasDesde } from "@/lib/format";
 import BotonesPdfCotizacion from "@/components/BotonesPdfCotizacion";
-import DiagnosticoForm from "@/components/DiagnosticoForm";
-import ObjecionControl from "@/components/ObjecionControl";
-import PlantillaCopiar from "@/components/PlantillaCopiar";
-import MaterialItem from "@/components/MaterialItem";
 import IAMensaje from "@/components/IAMensaje";
 import { SelectorProductos, chipCls } from "@/components/InteresAgregar";
 import { COLOR_ETAPA, PuntoNivel, textoProximo } from "@/components/PuntoNivel";
 import AsignacionInteres from "@/components/ficha/AsignacionInteres";
-import { CadenciaInteres, CalificacionInteres } from "@/components/ficha/TrabajarInteres";
+import { CadenciaInteres } from "@/components/ficha/TrabajarInteres";
 import { IrAPestana } from "@/components/ficha/FichaTabs";
 import type { Oportunidad, Producto } from "@/lib/types";
 
@@ -39,24 +35,14 @@ export type VersionCot = {
 export type Guion = { id: string; nombre: string; texto: string };
 export type MaterialLite = { id: string; nombre: string; tipo: string; url: string | null };
 
-/** Un grupo desplegable dentro de "Más opciones". */
-function Grupo({ titulo, children, abierto = false }: { titulo: string; children: React.ReactNode; abierto?: boolean }) {
-  return (
-    <details className="group border-b border-borde/70 last:border-0" open={abierto}>
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-[15px] font-semibold [&::-webkit-details-marker]:hidden">
-        {titulo}
-        <ChevronDown className="h-4 w-4 shrink-0 text-piedra transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="pb-3">{children}</div>
-    </details>
-  );
-}
 
 /**
  * Un interés abierto en la pestaña Operaciones de la ficha (v1.9): qué
  * quiere, en qué está y el próximo paso; la cotización a la vista (Cotizar,
  * o Ver PDF / Compartir); Me compró / No se dio; y "Más opciones" ordenado
- * en grupos (seguimiento, producto, para mandar, herramientas).
+ * con lo justo (cuánto le interesa, productos, mensaje con IA, lista de
+ * espera, calculadora y financiación). v1.12: sin calificación, objeción ni
+ * diagnóstico, que confundían en el celular.
  */
 export default function InteresFijado({
   interes,
@@ -64,8 +50,6 @@ export default function InteresFijado({
   productos,
   stockTexto,
   versiones,
-  guiones,
-  materiales,
   telefono,
   iaOn,
   abierta = false,
@@ -80,8 +64,6 @@ export default function InteresFijado({
   productos: Producto[];
   stockTexto: string | null;
   versiones: VersionCot[];
-  guiones: Guion[];
-  materiales: MaterialLite[];
   telefono: string | null;
   iaOn: boolean;
   abierta?: boolean;
@@ -106,7 +88,6 @@ export default function InteresFijado({
   const prox = textoProximo(interes.proximo_contacto ?? null, interes.proximo_nota ?? null, hoy, interes.proxima_accion);
   const sinMovimiento = diasDesde(interes.ultimo_movimiento_at ?? interes.created_at);
   const categoria = interes.producto?.categoria ?? "otro";
-  const conDiagnostico = categoria === "exprimidora" || categoria === "licuadora";
   const vigente = versiones[0] ?? null;
   const bloqueada = vigente?.aprobacion === "pendiente" || vigente?.aprobacion === "rechazada";
   const cotizarHref = `/cotizar/${interes.id}`;
@@ -262,45 +243,26 @@ export default function InteresFijado({
       </button>
 
       {mas && (
-        <div className="mt-1 rounded-xl border border-borde bg-white px-3">
-          <Grupo titulo="Seguimiento: nivel, calificación, objeción, lista de espera">
-            <div className="space-y-3">
-              <div>
-                <p className={sub}>Cuánto le interesa</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {NIVELES_INTERES.map((n) => (
-                    <button
-                      key={n.value}
-                      type="button"
-                      disabled={pending}
-                      onClick={() => correr(() => setTemperatura(interes.id, n.value), "Guardado")}
-                      className={chipCls(interes.temperatura === n.value)}
-                    >
-                      {n.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className={sub}>Calificación (cantidad, plazo, quién decide)</p>
-                <CalificacionInteres interes={interes} />
-              </div>
-              <div>
-                <p className={sub}>Objeción principal</p>
-                <ObjecionControl oportunidadId={interes.id} objecion={interes.objecion_principal} />
-              </div>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => correr(() => cambiarEtapa(interes.id, enEspera ? "seguimiento" : "espera"), enEspera ? "Salió de la lista de espera" : "Pasó a lista de espera")}
-                className={`min-h-11 rounded-xl px-4 text-[15px] font-bold ${enEspera ? "border border-naranja bg-white text-naranja" : "border border-borde bg-white text-tinta"} disabled:opacity-50`}
-              >
-                {enEspera ? "Sacar de la lista de espera" : "Poner en lista de espera (espera stock)"}
-              </button>
+        <div className="mt-1 space-y-4 rounded-xl border border-borde bg-white p-3">
+          <div>
+            <p className={sub}>Cuánto le interesa</p>
+            <div className="flex flex-wrap gap-1.5">
+              {NIVELES_INTERES.map((n) => (
+                <button
+                  key={n.value}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => correr(() => setTemperatura(interes.id, n.value), "Guardado")}
+                  className={chipCls(interes.temperatura === n.value)}
+                >
+                  {n.label}
+                </button>
+              ))}
             </div>
-          </Grupo>
+          </div>
 
-          <Grupo titulo={conDiagnostico ? "Producto y diagnóstico" : "Cambiar producto"}>
+          <div>
+            <p className={sub}>Productos</p>
             <SelectorProductos productos={productos} elegidos={ids} onChange={setIds} />
             <input
               type="text"
@@ -315,47 +277,37 @@ export default function InteresFijado({
               onClick={() => correr(() => cambiarProductoInteres(interes.id, ids, texto), "Guardado")}
               className="mt-1.5 min-h-11 rounded-xl border border-marino px-4 text-[15px] font-bold disabled:opacity-50"
             >
-              Guardar producto
+              Guardar productos
             </button>
-            {conDiagnostico && (
-              <div className="mt-3">
-                <p className={sub}>Diagnóstico {categoria === "exprimidora" ? "Zumex (cuenta de recupero)" : "GX"}</p>
-                <DiagnosticoForm oportunidadId={interes.id} categoria={categoria} diagnostico={interes.diagnostico ?? {}} />
-              </div>
-            )}
-          </Grupo>
+          </div>
 
-          {(guiones.length > 0 || materiales.length > 0 || iaOn) && (
-            <Grupo titulo="Para mandarle: guiones, material, mensaje con IA">
-              <div className="space-y-3">
-                {iaOn && (
-                  <div>
-                    <p className={`${sub} flex items-center gap-1`}>
-                      <Sparkles className="h-3.5 w-3.5" /> Mensaje con IA
-                    </p>
-                    <IAMensaje oportunidadId={interes.id} telefono={telefono} />
-                  </div>
-                )}
-                {guiones.map((g) => (
-                  <PlantillaCopiar key={g.id} nombre={g.nombre} texto={g.texto} telefono={telefono} />
-                ))}
-                {materiales.map((m) => (
-                  <MaterialItem key={m.id} material={m} telefono={telefono} />
-                ))}
-              </div>
-            </Grupo>
+          {iaOn && (
+            <div>
+              <p className={`${sub} flex items-center gap-1`}>
+                <Sparkles className="h-3.5 w-3.5" /> Mensaje con IA
+              </p>
+              <IAMensaje oportunidadId={interes.id} telefono={telefono} />
+            </div>
           )}
 
-          <Grupo titulo="Herramientas: calculadora y financiación">
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => correr(() => cambiarEtapa(interes.id, enEspera ? "seguimiento" : "espera"), enEspera ? "Salió de la lista de espera" : "Pasó a lista de espera")}
+              className={`min-h-11 rounded-xl px-4 text-[15px] font-bold ${enEspera ? "border border-naranja bg-white text-naranja" : "border border-borde bg-white text-tinta"} disabled:opacity-50`}
+            >
+              {enEspera ? "Sacar de la lista de espera" : "Lista de espera (no hay stock)"}
+            </button>
+            {categoria === "exprimidora" && (
               <Link href="/calculadora" className={botonSec}>
                 Calculadora Zumex
               </Link>
-              <Link href="/financiacion" className={botonSec}>
-                Financiación
-              </Link>
-            </div>
-          </Grupo>
+            )}
+            <Link href="/financiacion" className={botonSec}>
+              Financiación
+            </Link>
+          </div>
         </div>
       )}
     </div>

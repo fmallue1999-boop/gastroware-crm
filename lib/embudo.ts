@@ -93,12 +93,18 @@ function aTarjeta(f: Fila): TarjetaEmbudo {
   };
 }
 
-/** "2026-09" → [inicio, fin) en ISO. */
+/**
+ * "2026-09" → [inicio, fin) en ISO, en hora de Argentina (UTC−3). Antes era
+ * en UTC: una venta marcada el último día del mes después de las 21 h caía
+ * en el mes siguiente y no aparecía en Vendidos.
+ */
 export function rangoMes(mes: string): { desde: string; hasta: string } {
   const [a, m] = mes.split("-").map(Number);
-  const desde = new Date(Date.UTC(a, m - 1, 1)).toISOString();
-  const hasta = new Date(Date.UTC(a, m, 1)).toISOString();
-  return { desde, hasta };
+  const siguiente = m === 12 ? `${a + 1}-01` : `${a}-${String(m + 1).padStart(2, "0")}`;
+  return {
+    desde: new Date(`${mes}-01T00:00:00-03:00`).toISOString(),
+    hasta: new Date(`${siguiente}-01T00:00:00-03:00`).toISOString(),
+  };
 }
 
 export function mesActual(): string {

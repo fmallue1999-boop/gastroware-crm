@@ -102,6 +102,7 @@ export async function cargarCotizacionPdf(supabase: SupabaseServidor, id: string
     descripcion: string;
     cantidad: number;
     precio_unit: number;
+    iva_pct?: number | null;
     codigo?: string | null;
     detalle?: string | null;
     producto: { nombre: string; codigo?: string | null; detalle_tecnico?: string | null } | null;

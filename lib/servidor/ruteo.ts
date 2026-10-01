@@ -38,12 +38,25 @@ export async function rutearConsulta(
   responsableNombre: string | null;
   derivada: boolean;
 }> {
+  const { territorios, usuarios } = await datosDeRuteo(supabase);
+  return elegirResponsable(input, territorios, usuarios);
+}
+
+/** Territorios y usuarios para rutear (una sola lectura). */
+export async function datosDeRuteo(supabase: SupabaseServidor) {
   const [{ data: ts }, { data: us }] = await Promise.all([
     supabase.from("territorios").select("codigo, nombre, zonas, responsable_id").order("orden"),
     supabase.from("usuarios").select("id, nombre, rol, activo, territorio"),
   ]);
-  const territorios = (ts ?? []) as Territorio[];
-  const usuarios = (us ?? []) as UsuarioMin[];
+  return { territorios: (ts ?? []) as Territorio[], usuarios: (us ?? []) as UsuarioMin[] };
+}
+
+/** La regla del ruteo, sin leer la base (también la usa el formulario para mostrar a quién va). */
+export function elegirResponsable(
+  input: { zona?: string | null; creadorId: string | null },
+  territorios: Territorio[],
+  usuarios: UsuarioMin[]
+) {
   const creador = usuarios.find((u) => u.id === input.creadorId) ?? null;
   const zona = input.zona?.trim() || null;
   const territorio = territorioDeZona(zona, territorios);

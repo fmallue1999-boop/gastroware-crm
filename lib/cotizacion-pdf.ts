@@ -19,6 +19,10 @@ export const CAMPOS_COTIZACION = [
   { clave: "empresa_localidad", label: "Localidad" },
   { clave: "cotizacion_punto_venta", label: "Punto de venta" },
   { clave: "cotizacion_leyenda_usd", label: "Nota de las cotizaciones en dólares" },
+  { clave: "cotizacion_moneda", label: "Moneda de las cotizaciones" },
+  { clave: "cotizacion_formas_pago", label: "Formas de pago" },
+  { clave: "cotizacion_plazos_entrega", label: "Plazos de entrega" },
+  { clave: "cotizacion_condiciones_entrega", label: "Condiciones de entrega" },
 ] as const;
 export type ClaveCotizacion = (typeof CAMPOS_COTIZACION)[number]["clave"];
 
@@ -41,17 +45,22 @@ export type TotalesCotizacion = {
   descuentoPct: number;
   descuento: number;
   neto: number;
-  ivaPct: number;
+  /** IVA por alícuota (v1.12: cada producto trae el suyo; 10,5% y 21% van por separado). */
+  ivas: { pct: number; monto: number }[];
+  /** Suma de todos los IVA. */
   iva: number;
+  /** La alícuota si hay una sola (0 si no se discrimina o si hay varias). */
+  ivaPct: number;
   total: number;
 };
 
 /**
  * Subtotal de las líneas, descuento especial, neto gravado, IVA y total.
- * Sin líneas (cotización con monto a mano) el neto es el total guardado.
+ * Cada línea usa su IVA (el del producto); si no tiene, el de la versión
+ * (cotizaciones viejas). Sin líneas (monto a mano), el neto es el total guardado.
  */
 export function calcularTotales(
-  items: { cantidad: number; precio_unit: number }[],
+  items: { cantidad: number; precio_unit: number; iva_pct?: number | null }[],
   version: { total: number | null; subtotal?: number | null; descuento_pct?: number | null; iva_pct?: number | null }
 ): TotalesCotizacion {
   const descuentoPct = Number(version.descuento_pct ?? 0) || 0;
@@ -60,9 +69,22 @@ export function calcularTotales(
     : r2(Number(version.subtotal ?? version.total ?? 0));
   const neto = version.total != null ? r2(Number(version.total)) : r2(subtotal * (1 - descuentoPct / 100));
   const descuento = descuentoPct ? r2(Math.max(0, subtotal - neto)) : 0;
-  const ivaPct = Number(version.iva_pct ?? 0) || 0;
-  const iva = r2((neto * ivaPct) / 100);
-  return { subtotal, descuentoPct, descuento, neto, ivaPct, iva, total: r2(neto + iva) };
+  const ivaVersion = Number(version.iva_pct ?? 0) || 0;
+
+  // Base gravada por alícuota (con el descuento repartido en cada línea)
+  const bases = new Map<number, number>();
+  if (items.length)
+    for (const i of items) {
+      const pct = Number(i.iva_pct ?? ivaVersion) || 0;
+      bases.set(pct, (bases.get(pct) ?? 0) + Number(i.cantidad) * Number(i.precio_unit) * (1 - descuentoPct / 100));
+    }
+  else bases.set(ivaVersion, neto);
+  const ivas = [...bases.entries()]
+    .filter(([pct]) => pct > 0)
+    .sort((a, b) => a[0] - b[0])
+    .map(([pct, base]) => ({ pct, monto: r2((base * pct) / 100) }));
+  const iva = r2(ivas.reduce((s, x) => s + x.monto, 0));
+  return { subtotal, descuentoPct, descuento, neto, ivas, iva, ivaPct: ivas.length === 1 ? ivas[0].pct : 0, total: r2(neto + iva) };
 }
 
 /** Importe con dos decimales: "US$ 12.927,39" / "$ 1.405,00". */

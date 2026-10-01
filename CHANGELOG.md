@@ -3,6 +3,18 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.12.0 — 30 de septiembre de 2026
+
+Experiencia del vendedor (migración 037_cotizar_simple.sql), a partir de la prueba de Franco en el celular.
+
+- Velocidad: vercel.json regions ["gru1"] (las funciones corrían en iad1 y la base está en São Paulo: cada consulta cruzaba el continente). Layout con los conteos en paralelo; la ficha ya no carga plantillas ni material viejo.
+- Migración 037: productos.iva_pct (10,5 equipos; 21 consumibles/repuestos) y cotizacion_items.iva_pct; config cotizacion_moneda (USD) y listas cotizacion_formas_pago / plazos_entrega / condiciones_entrega; fn_toca_interes marca el primer contacto con cualquier nota/cotización (antes solo si la anotaba el comercial_id); fn_linea_oportunidad también al cambiar el producto (equipos ↔ consumibles).
+- Nueva consulta: cantidades por producto (oportunidad_items + cantidad), "¿Quién lo atiende?" con el automático por zona (elegirResponsable puro en ruteo.ts), sin "volver a contactar" (primer contacto hoy; la nota de alta va como tipo 'consulta').
+- registrarCotizacion: moneda fija y precios de catálogo para vendedores (líneas libres solo dirección/administración), IVA por línea, pedido especial único (pedidoEspecial) y seguimiento día 1 agendado. calcularTotales con IVA por alícuota; el PDF muestra un renglón por alícuota.
+- CotizacionForm: datos del cliente resumidos si están completos, cantidades con − +, precio fijo, desplegables, pedido especial único, inputs de 16 px (sin zoom en iPhone), salida a embudo / Mi día. TecladoAbierto + .ocultar-con-teclado.
+- Embudo: rangoMes en hora argentina; tarjeta desplegada con WhatsApp / Abrir ficha / Cotizar / Me compró / No se dio (sin Anotar ni Pasar a…). AvisoVersion apilado en el celular. InteresFijado "Más opciones" reducido; AsignacionInteres con "Ya lo contacté por…".
+- Admin: moneda y listas en Marca → Cotización; IVA por producto en el Catálogo.
+
 ## v1.11.1 — 30 de septiembre de 2026
 
 - Material por producto: orden marca → productos → accesorios (antes las categorías con el mismo orden se ordenaban por nombre y ACCESORIOS quedaba primero).

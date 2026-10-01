@@ -281,12 +281,14 @@ export default function CotizacionPdf({ d }: { d: DatosCotizacionPdf }) {
             <FilaTotal etiqueta="SUBTOTAL" valor={$(t.subtotal)} />
             {t.descuento > 0 ? <FilaTotal etiqueta={`DESCUENTO (${porcentaje(t.descuentoPct)}%)`} valor={`− ${$(t.descuento)}`} /> : null}
             <FilaTotal etiqueta="NETO GRAVADO" valor={$(t.neto)} />
-            {t.ivaPct > 0 ? <FilaTotal etiqueta={`IVA (${porcentaje(t.ivaPct)}%)`} valor={$(t.iva)} /> : null}
+            {t.ivas.map((x) => (
+              <FilaTotal key={x.pct} etiqueta={`IVA (${porcentaje(x.pct)}%)`} valor={$(x.monto)} />
+            ))}
             <View style={s.totalFinal}>
               <Text style={s.totalFinalEtiqueta}>TOTAL</Text>
               <Text style={s.totalFinalValor}>{$(t.total)}</Text>
             </View>
-            {t.ivaPct > 0 ? null : <Text style={s.aclaracionIva}>IVA no discriminado</Text>}
+            {t.ivas.length ? null : <Text style={s.aclaracionIva}>IVA no discriminado</Text>}
           </View>
         </View>
 

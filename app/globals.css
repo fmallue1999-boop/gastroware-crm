@@ -87,3 +87,9 @@ body {
     line-height: 1.4;
   }
 }
+
+/* Celular escribiendo (components/TecladoAbierto): lo fijo de abajo se
+   esconde para que el teclado no tape el campo, salvo lo que tiene el foco. */
+html[data-teclado] .ocultar-con-teclado:not(:focus-within) {
+  display: none !important;
+}

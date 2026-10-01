@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, MessageCircle, PenLine } from "lucide-react";
+import { ChevronDown, FileText, MessageCircle } from "lucide-react";
 import { cambiarEtapa, ultimosMovimientos } from "@/lib/actions";
 import { COLUMNAS_EMBUDO, type ColumnaEmbudo, type TarjetaEmbudo } from "@/lib/embudo";
 import { MOTIVOS_PERDIDA, PEDIDO_ESTADOS } from "@/lib/constants";
@@ -11,7 +11,6 @@ import { textoMontos } from "@/lib/dinero";
 import { dinero, fechaCorta, haceCuanto, linkWhatsApp } from "@/lib/format";
 import { PuntoNivel, textoProximo } from "@/components/PuntoNivel";
 import LinkContacto from "@/components/LinkContacto";
-import AnotarContacto from "@/components/AnotarContacto";
 import type { Etapa } from "@/lib/types";
 
 type Mov = { id: string; contenido: string; created_at: string; quien: string | null };
@@ -51,7 +50,6 @@ export default function EmbudoBoard({
   const [pending, startTransition] = useTransition();
   const [abierta, setAbierta] = useState<string | null>(null);
   const [movs, setMovs] = useState<Record<string, Mov[]>>({});
-  const [anotando, setAnotando] = useState<string | null>(null);
   const [perdiendo, setPerdiendo] = useState<string | null>(null);
   const [motivo, setMotivo] = useState("");
   const [verTodo, setVerTodo] = useState<Record<string, boolean>>({});
@@ -87,7 +85,6 @@ export default function EmbudoBoard({
       return;
     }
     setAbierta(t.id);
-    setAnotando(null);
     if (!movs[t.id]) {
       ultimosMovimientos(t.id, 3).then((lista) => setMovs((m) => ({ ...m, [t.id]: lista })));
     }
@@ -169,9 +166,7 @@ export default function EmbudoBoard({
               ))
             )}
 
-            {anotando === t.id ? (
-              <AnotarContacto clienteId={t.cliente_id} oportunidadId={t.id} compacto onGuardado={() => setAnotando(null)} />
-            ) : perdiendo === t.id ? (
+            {perdiendo === t.id ? (
               <div className="flex flex-wrap gap-1.5">
                 <select
                   value={motivo}
@@ -198,56 +193,47 @@ export default function EmbudoBoard({
                 </button>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {t.telefono && (
-                  <a
-                    href={linkWhatsApp(t.telefono)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${chip} gap-1 bg-verde text-white`}
-                  >
-                    <MessageCircle className="h-4 w-4" /> WhatsApp
-                  </a>
-                )}
+              <div className="space-y-1.5">
+                {/* Contactar y abrir: lo de todos los días */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  {t.telefono ? (
+                    <a href={linkWhatsApp(t.telefono)} target="_blank" rel="noopener noreferrer" className={`${chip} gap-1 bg-verde text-white`}>
+                      <MessageCircle className="h-4 w-4" /> WhatsApp
+                    </a>
+                  ) : (
+                    <span className={`${chip} border border-dashed border-borde text-piedra`}>Sin teléfono</span>
+                  )}
+                  <LinkContacto id={t.cliente_id} interes={t.id} className={`${chip} bg-marino text-white`}>
+                    Abrir ficha
+                  </LinkContacto>
+                </div>
                 {vendida ? (
-                  <Link href="/pedidos" className={`${chip} border border-borde bg-white`}>
+                  <Link href="/pedidos" className={`${chip} w-full border border-borde bg-white`}>
                     Ver la venta
                   </Link>
                 ) : (
                   <>
-                    <button type="button" onClick={() => setAnotando(t.id)} className={`${chip} gap-1 border border-borde bg-white`}>
-                      <PenLine className="h-4 w-4" /> Anotar
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => correr(() => cambiarEtapa(t.id, "ganada"), "Venta registrada")}
-                      className={`${chip} bg-verde-soft text-verde`}
-                    >
-                      Me compró
-                    </button>
-                    <button type="button" disabled={pending} onClick={() => setPerdiendo(t.id)} className={`${chip} border border-borde bg-white text-piedra`}>
-                      No se dio
-                    </button>
-                    <select
-                      value=""
-                      disabled={pending}
-                      aria-label="Pasar a"
-                      onChange={(e) => e.target.value && mover(t.id, e.target.value as ColumnaEmbudo)}
-                      className={`${chip} border border-borde bg-white pr-6`}
-                    >
-                      <option value="">Pasar a…</option>
-                      {COLUMNAS_EMBUDO.filter((c) => c.key !== t.etapa).map((c) => (
-                        <option key={c.key} value={c.key}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
+                    {t.etapa === "nueva" && (
+                      <Link href={`/cotizar/${t.id}`} className={`${chip} w-full gap-1 border border-marino bg-white text-marino`}>
+                        <FileText className="h-4 w-4" /> Cotizar
+                      </Link>
+                    )}
+                    {/* Cerrar: compró o no se dio */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => correr(() => cambiarEtapa(t.id, "ganada"), "Venta registrada: está en Vendidos")}
+                        className={`${chip} bg-verde-soft text-verde`}
+                      >
+                        Me compró
+                      </button>
+                      <button type="button" disabled={pending} onClick={() => setPerdiendo(t.id)} className={`${chip} border border-borde bg-white text-piedra`}>
+                        No se dio
+                      </button>
+                    </div>
                   </>
                 )}
-                <LinkContacto id={t.cliente_id} interes={t.id} className={`${chip} border border-borde bg-white`}>
-                  Abrir ficha
-                </LinkContacto>
               </div>
             )}
           </div>
