@@ -12,6 +12,7 @@ import { evaluarFueraDeLista, type PrecioLista } from "@/lib/propuestas";
 import { precioEn } from "@/lib/precios";
 import { datosFiscalesDe, faltanParaCotizar } from "@/lib/datos-cotizar";
 import { NIVELES_INTERES, RUBROS } from "@/lib/constants";
+import { ACCIONES } from "@/lib/actividad";
 import type { Etapa } from "@/lib/types";
 import { avisar, puestoActual, regla, usuarioActual, usuariosDePuesto } from "./comun";
 import { camposDeRuta, rutearConsulta } from "@/lib/servidor/ruteo";
@@ -854,6 +855,68 @@ export async function agendarProximo(oportunidadId: string, fecha: string, nota:
     oportunidad_id: oportunidadId,
     tipo: "interes",
     contenido: `Próximo contacto: ${fecha.split("-").reverse().join("/")} · ${nota}`,
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Reprogramar el próximo contacto sin tener que anotar un contacto (v1.13):
+ * otro día, o más tarde hoy con hora, cambiando qué toca hacer y con una nota
+ * ("prefiere que lo visite la semana que viene"). No cuenta como contacto;
+ * queda en el historial de dónde a dónde se movió.
+ */
+export async function reprogramarInteres(
+  oportunidadId: string,
+  input: { fecha: string; hora?: string | null; accion?: string | null; nota?: string | null }
+) {
+  const fecha = input.fecha;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: "Elegí una fecha" };
+  if (fecha < hoyISO()) return { error: "La fecha ya pasó" };
+  const hora = input.hora?.trim() || null;
+  if (hora && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) return { error: "Hora inválida" };
+  const accion = input.accion?.trim() || null;
+  if (accion && !ACCIONES.some((a) => a.value === accion)) return { error: "Acción inválida" };
+  const nota = input.nota?.trim().slice(0, 120) || null;
+
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: antes } = await supabase
+    .from("oportunidades")
+    .select("id, cliente_id, etapa, proximo_contacto, proximo_hora, proxima_accion, proximo_nota")
+    .eq("id", oportunidadId)
+    .maybeSingle();
+  if (!antes) return { error: "No se encontró el interés" };
+  if (!["nueva", "cotizada", "seguimiento", "espera"].includes(antes.etapa as string)) return { error: "Este interés ya está cerrado" };
+
+  // Primero la fecha (si cambia, la base borra la hora vieja) y después la hora elegida
+  const { error } = await supabase
+    .from("oportunidades")
+    .update({
+      proximo_contacto: fecha,
+      ...(accion ? { proxima_accion: accion } : {}),
+      ...(nota ? { proximo_nota: nota } : {}),
+    })
+    .eq("id", oportunidadId);
+  if (error) return { error: error.message };
+  const { error: eHora } = await supabase.from("oportunidades").update({ proximo_hora: hora }).eq("id", oportunidadId);
+  if (eHora) return { error: eHora.message };
+
+  const dia = (f: string | null) => (f ? f.split("-").reverse().slice(0, 2).join("/") : "sin fecha");
+  const conHora = (h: string | null | undefined) => (h ? ` a las ${h.slice(0, 5)}` : "");
+  const que = ACCIONES.find((a) => a.value === (accion ?? antes.proxima_accion))?.label;
+  await supabase.from("actividades").insert({
+    cliente_id: antes.cliente_id,
+    oportunidad_id: oportunidadId,
+    tipo: "interes",
+    contenido: [
+      `Reprogramado: del ${dia(antes.proximo_contacto as string | null)}${conHora(antes.proximo_hora as string | null)} al ${dia(fecha)}${conHora(hora)}`,
+      que,
+      nota,
+    ]
+      .filter(Boolean)
+      .join(" · "),
     created_by: user?.id ?? null,
   });
   revalidatePath("/", "layout");

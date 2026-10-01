@@ -13,6 +13,7 @@ import IAMensaje from "@/components/IAMensaje";
 import { SelectorProductos, chipCls } from "@/components/InteresAgregar";
 import { COLOR_ETAPA, PuntoNivel, textoProximo } from "@/components/PuntoNivel";
 import AsignacionInteres from "@/components/ficha/AsignacionInteres";
+import ReprogramarInteres from "@/components/ReprogramarInteres";
 import { CadenciaInteres } from "@/components/ficha/TrabajarInteres";
 import { IrAPestana } from "@/components/ficha/FichaTabs";
 import type { Oportunidad, Producto } from "@/lib/types";
@@ -85,7 +86,7 @@ export default function InteresFijado({
 
   const enEspera = interes.etapa === "espera";
   const etapaLabel = ETAPAS.find((e) => e.value === interes.etapa)?.label ?? interes.etapa;
-  const prox = textoProximo(interes.proximo_contacto ?? null, interes.proximo_nota ?? null, hoy, interes.proxima_accion);
+  const prox = textoProximo(interes.proximo_contacto ?? null, interes.proximo_nota ?? null, hoy, interes.proxima_accion, interes.proximo_hora);
   const sinMovimiento = diasDesde(interes.ultimo_movimiento_at ?? interes.created_at);
   const categoria = interes.producto?.categoria ?? "otro";
   const vigente = versiones[0] ?? null;
@@ -130,6 +131,9 @@ export default function InteresFijado({
         {stockTexto ? ` · ${stockTexto}` : ""}
         {sinMovimiento > 7 ? ` · ${sinMovimiento} días sin movimiento` : ""}
       </p>
+      <div className="mt-2">
+        <ReprogramarInteres oportunidadId={interes.id} accion={interes.proxima_accion} />
+      </div>
       <AsignacionInteres interes={interes} rol={rol} miId={miId} responsableNombre={responsableNombre} ahoraMs={ahoraMs} />
       {!enEspera && (
         <CadenciaInteres

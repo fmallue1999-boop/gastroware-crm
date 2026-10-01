@@ -11,6 +11,7 @@ import { textoMontos } from "@/lib/dinero";
 import { dinero, fechaCorta, haceCuanto, linkWhatsApp } from "@/lib/format";
 import { PuntoNivel, textoProximo } from "@/components/PuntoNivel";
 import LinkContacto from "@/components/LinkContacto";
+import ReprogramarInteres from "@/components/ReprogramarInteres";
 import type { Etapa } from "@/lib/types";
 
 type Mov = { id: string; contenido: string; created_at: string; quien: string | null };
@@ -104,7 +105,7 @@ export default function EmbudoBoard({
   const Tarjeta = ({ t }: { t: TarjetaEmbudo }) => {
     const vendida = t.etapa === "ganada";
     const expandida = abierta === t.id;
-    const prox = textoProximo(t.proximo_contacto, t.proximo_nota, hoy);
+    const prox = textoProximo(t.proximo_contacto, t.proximo_nota, hoy, t.proxima_accion, t.proximo_hora);
     const llegoStock = t.etapa === "espera" && t.proximo_nota === "Llegó stock";
     const paso = PEDIDO_ESTADOS.find((p) => p.value === (t.pedido_estado ?? "comprometido"))?.label ?? "Vendido";
     return (
@@ -213,6 +214,7 @@ export default function EmbudoBoard({
                   </Link>
                 ) : (
                   <>
+                    <ReprogramarInteres oportunidadId={t.id} accion={t.proxima_accion} className="min-h-10 text-[14px]" />
                     {t.etapa === "nueva" && (
                       <Link href={`/cotizar/${t.id}`} className={`${chip} w-full gap-1 border border-marino bg-white text-marino`}>
                         <FileText className="h-4 w-4" /> Cotizar

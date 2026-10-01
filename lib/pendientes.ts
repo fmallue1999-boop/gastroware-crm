@@ -6,6 +6,8 @@ export type InteresPendiente = {
   etapa: string;
   temperatura: string | null;
   proximo_contacto: string | null;
+  /** Hora del contacto, si se reprogramó con hora (HH:MM:SS). */
+  proximo_hora?: string | null;
   proximo_nota: string | null;
   ultimo_movimiento_at: string | null;
 };
@@ -13,7 +15,7 @@ export type InteresPendiente = {
 export type Bloques<T> = {
   /** proximo_contacto < hoy, el más atrasado primero */
   atrasados: T[];
-  /** proximo_contacto = hoy, Muy interesado primero */
+  /** proximo_contacto = hoy: primero los sin hora (Muy interesado primero), después por hora */
   hoy: T[];
   /** en lista de espera y llegó el stock */
   llegoStock: T[];
@@ -63,7 +65,7 @@ export function clasificarPendientes<T extends InteresPendiente>(
     }
   }
   b.atrasados.sort(porFecha);
-  b.hoy.sort(porNivel);
+  b.hoy.sort((x, y) => (x.proximo_hora ?? "").localeCompare(y.proximo_hora ?? "") || porNivel(x, y));
   b.llegoStock.sort(porNivel);
   b.proximos.sort(porFecha);
   b.sinFecha.sort(porUltimo);
