@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { buscarClientes, listarEquiposCliente, crearOT } from "@/lib/actions";
+import { buscarClientes, listarEquiposCliente, crearOT, sucursalesDe } from "@/lib/actions";
 import { TIPOS_OT, PRIORIDADES_OT } from "@/lib/constants";
 import type { Cliente, Usuario } from "@/lib/types";
 
@@ -15,21 +15,29 @@ export default function OTForm({
   equiposIniciales = [],
   equipoInicialId = "",
   tipoInicial,
+  sucursalesIniciales = [],
 }: {
   usuarios: Usuario[];
   clienteInicial?: Cliente | null;
-  equiposIniciales?: { id: string; etiqueta: string }[];
+  equiposIniciales?: { id: string; etiqueta: string; sucursalId?: string | null }[];
   equipoInicialId?: string;
   tipoInicial?: string;
+  /** v1.14.1: sucursales del cliente (la principal primero), para elegir dónde es el service. */
+  sucursalesIniciales?: { id: string; nombre: string; ciudad: string | null }[];
 }) {
   const [pending, startTransition] = useTransition();
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState<Cliente[]>([]);
   const [cliente, setCliente] = useState<Cliente | null>(clienteInicial);
-  const [equipos, setEquipos] = useState<{ id: string; etiqueta: string }[]>(
+  const [equipos, setEquipos] = useState<{ id: string; etiqueta: string; sucursalId?: string | null }[]>(
     equiposIniciales
   );
   const [equipoId, setEquipoId] = useState(equipoInicialId);
+  const [sucursales, setSucursales] = useState(sucursalesIniciales);
+  // Por defecto, donde está instalado el equipo; si no, la principal
+  const [sucursalId, setSucursalId] = useState(
+    equiposIniciales.find((e) => e.id === equipoInicialId)?.sucursalId ?? sucursalesIniciales[0]?.id ?? ""
+  );
   const [tipo, setTipo] = useState(
     TIPOS_OT.some((t) => t.value === tipoInicial) ? tipoInicial! : "correctivo"
   );
@@ -51,7 +59,10 @@ export default function OTForm({
   async function elegirCliente(c: Cliente) {
     setCliente(c);
     setResultados([]);
-    setEquipos(await listarEquiposCliente(c.id));
+    const [eqs, sucs] = await Promise.all([listarEquiposCliente(c.id), sucursalesDe(c.id)]);
+    setEquipos(eqs);
+    setSucursales(sucs);
+    setSucursalId(sucs[0]?.id ?? "");
   }
 
   function enviar(e: React.FormEvent) {
@@ -62,6 +73,7 @@ export default function OTForm({
       const res = await crearOT({
         clienteId: cliente.id,
         equipoId: equipoId || null,
+        sucursalId: sucursalId || null,
         tipo,
         prioridad,
         fechaProgramada: fecha || null,
@@ -121,6 +133,8 @@ export default function OTForm({
                 setCliente(null);
                 setEquipos([]);
                 setEquipoId("");
+                setSucursales([]);
+                setSucursalId("");
               }}
               className="text-xs text-azul underline"
             >
@@ -130,7 +144,11 @@ export default function OTForm({
 
           <select
             value={equipoId}
-            onChange={(e) => setEquipoId(e.target.value)}
+            onChange={(e) => {
+              setEquipoId(e.target.value);
+              const donde = equipos.find((x) => x.id === e.target.value)?.sucursalId;
+              if (donde && sucursales.some((s) => s.id === donde)) setSucursalId(donde);
+            }}
             className={inputCls}
           >
             <option value="">
@@ -144,6 +162,21 @@ export default function OTForm({
               </option>
             ))}
           </select>
+
+          {sucursales.length > 0 && (
+            <label className="block text-sm font-medium">
+              ¿Dónde es el service?
+              <select value={sucursalId} onChange={(e) => setSucursalId(e.target.value)} className={`${inputCls} mt-1`}>
+                {sucursales.map((s, k) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                    {s.ciudad ? ` · ${s.ciudad}` : ""}
+                    {k === 0 ? " (principal)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={inputCls}>

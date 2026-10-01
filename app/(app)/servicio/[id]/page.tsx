@@ -136,10 +136,11 @@ export default async function OTPage({
   const [{ data: tecnicosData }, { data: aliadosData }, { data: sucursalesData }, { data: facturasOt }] = await Promise.all([
     supabase.from("usuarios").select("id, nombre").eq("rol", "tecnico").eq("activo", true).order("nombre"),
     supabase.from("tecnicos_aliados").select("id, nombre, zona").eq("activo", true).order("nombre"),
-    supabase.from("sucursales").select("id, ciudad, es_principal, deleted_at").eq("cliente_id", ot.cliente_id),
+    supabase.from("sucursales").select("id, nombre, direccion, ciudad, provincia, telefono, recibe, indicaciones, es_principal, deleted_at").eq("cliente_id", ot.cliente_id),
     supabase.from("facturas").select("id, numero, cobro_estado").eq("ot_id", ot.id).order("created_at"),
   ]);
-  const suc = ((sucursalesData ?? []) as { id: string; ciudad: string | null; es_principal: boolean; deleted_at: string | null }[]).find((x) =>
+  type SucOT = { id: string; nombre: string; direccion: string | null; ciudad: string | null; provincia: string | null; telefono: string | null; recibe: string | null; indicaciones: string | null; es_principal: boolean; deleted_at: string | null };
+  const suc = ((sucursalesData ?? []) as SucOT[]).find((x) =>
     ot.sucursal_id ? x.id === ot.sucursal_id : x.es_principal && !x.deleted_at
   );
   const ciudad = (suc?.ciudad ?? "").toLowerCase();
@@ -197,6 +198,14 @@ export default async function OTPage({
           {ot.remito_nro ? ` · Remito ${ot.remito_nro}` : ""}
           {ot.cliente?.telefono ? ` · ${ot.cliente.telefono}` : ""}
         </p>
+        {suc && (
+          <p className="mt-1 text-sm text-tinta/80">
+            <span className="font-medium">Dónde:</span>{" "}
+            {[suc.nombre, [suc.direccion, suc.ciudad, suc.provincia].filter(Boolean).join(", ")].filter(Boolean).join(" — ")}
+            {suc.recibe ? ` · Recibe: ${suc.recibe}${suc.telefono ? ` (${suc.telefono})` : ""}` : ""}
+            {suc.indicaciones ? ` · ${suc.indicaciones}` : ""}
+          </p>
+        )}
         {ot.problema && (
           <p className="mt-2 rounded-lg bg-crema p-3 text-sm text-tinta/80">
             <span className="font-medium">Problema:</span> {ot.problema}

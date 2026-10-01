@@ -118,7 +118,7 @@ export async function listarEquiposCliente(clienteId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("equipos")
-    .select("id, numero_serie, marca_modelo_libre, producto:productos(nombre)")
+    .select("id, numero_serie, marca_modelo_libre, sucursal_id, producto:productos(nombre)")
     .eq("cliente_id", clienteId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -127,6 +127,8 @@ export async function listarEquiposCliente(clienteId: string) {
     return {
       id: e.id as string,
       etiqueta: `${prod?.nombre ?? e.marca_modelo_libre ?? "Equipo"}${e.numero_serie ? ` · serie ${e.numero_serie}` : ""}`,
+      /** Dónde está instalado (v1.14.1: el service va ahí por defecto). */
+      sucursalId: (e.sucursal_id as string | null) ?? null,
     };
   });
 }

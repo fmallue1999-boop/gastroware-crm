@@ -49,8 +49,12 @@ export default async function InspeccionPage({
   const aImprimir = inspecciones.length > 0 ? inspecciones : listas;
 
   const sucursales = (ot.cliente?.sucursales ?? []).filter((s) => !s.deleted_at);
+  // El lugar del service (v1.14.1); si la OT no lo tiene, la principal
+  const sucursalOt = (ot as { sucursal_id?: string | null }).sucursal_id
+    ? (ot.cliente?.sucursales ?? []).find((s) => s.id === (ot as { sucursal_id?: string | null }).sucursal_id) ?? null
+    : null;
   const principal =
-    sucursales.find((s) => s.es_principal) ?? sucursales[0] ?? null;
+    sucursalOt ?? sucursales.find((s) => s.es_principal) ?? sucursales[0] ?? null;
   const firmaUrl = await firmarUrl("servicio", ot.firma_path);
 
   return (
@@ -77,6 +81,7 @@ export default async function InspeccionPage({
         <div>
           <p className="font-semibold">Cliente</p>
           <p>{ot.cliente?.razon_social ?? ot.cliente?.nombre_comercial}</p>
+          {sucursalOt && !sucursalOt.es_principal && <p className="text-piedra">{sucursalOt.nombre}</p>}
           {principal?.direccion && (
             <p className="text-piedra">{principal.direccion}</p>
           )}

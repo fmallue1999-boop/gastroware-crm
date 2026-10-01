@@ -19,6 +19,15 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.14.1",
+    fecha: "2026-10-01",
+    titulo: "Sucursales también en el service",
+    cambios: [
+      "Al abrir una orden de service se elige en qué sucursal es; por defecto, donde está instalado el equipo.",
+      "La orden muestra dónde es, quién recibe y las indicaciones, y la lista de inspección sale con la dirección de esa sucursal.",
+    ],
+  },
+  {
     version: "1.14.0",
     fecha: "2026-10-01",
     titulo: "Sucursales y puntos de entrega",
