@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { listarEquiposCliente } from "@/lib/actions";
+import { listarEquiposCliente, sucursalesDe } from "@/lib/actions";
 import OTForm from "@/components/OTForm";
 import type { Cliente, Usuario } from "@/lib/types";
 
@@ -18,7 +18,8 @@ export default async function NuevaOTPage({
 
   // Si llega desde la ficha de un equipo/cliente, precargar
   let clienteInicial: Cliente | null = null;
-  let equiposIniciales: { id: string; etiqueta: string }[] = [];
+  let equiposIniciales: { id: string; etiqueta: string; sucursalId?: string | null }[] = [];
+  let sucursalesIniciales: { id: string; nombre: string; ciudad: string | null }[] = [];
   if (clienteId) {
     const { data: c } = await supabase
       .from("clientes")
@@ -27,7 +28,7 @@ export default async function NuevaOTPage({
       .single();
     if (c) {
       clienteInicial = c as Cliente;
-      equiposIniciales = await listarEquiposCliente(clienteId);
+      [equiposIniciales, sucursalesIniciales] = await Promise.all([listarEquiposCliente(clienteId), sucursalesDe(clienteId)]);
     }
   }
 
@@ -41,6 +42,7 @@ export default async function NuevaOTPage({
         usuarios={(data ?? []) as Usuario[]}
         clienteInicial={clienteInicial}
         equiposIniciales={equiposIniciales}
+        sucursalesIniciales={sucursalesIniciales}
         equipoInicialId={equipoId ?? ""}
         tipoInicial={tipo}
       />

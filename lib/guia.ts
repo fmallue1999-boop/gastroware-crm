@@ -96,7 +96,7 @@ export const BASICOS: Tarea[] = [
       { texto: "La principal es la dirección del cliente (la que va como domicilio en la cotización). Con “Hacer principal” la cambiás; “Dar de baja” la saca de las listas sin borrar lo que ya se hizo ahí." },
       { texto: "Al cotizar, en “Pago y entrega”, elegí el lugar de entrega (o cargá uno nuevo ahí mismo con “Otro lugar de entrega”): sale en el PDF con quién recibe y el horario." },
     ],
-    ojo: "Al registrar la venta también elegís la sucursal: los equipos quedan instalados en ese lugar.",
+    ojo: "Al registrar la venta también elegís la sucursal: los equipos quedan instalados en ese lugar. Y al abrir un service se elige dónde es (por defecto, donde está el equipo): el técnico ve la dirección, quién recibe y las indicaciones.",
   },
   {
     id: "reprogramar",

@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.14.1 — 1 de octubre de 2026
+
+- Service con sucursal (sin migración: ordenes_trabajo.sucursal_id ya existía y crearOT lo aceptaba, pero el formulario no lo mandaba). OTForm: "¿Dónde es el service?" con las sucursales activas (sucursalesDe), por defecto la del equipo (listarEquiposCliente devuelve sucursalId) o la principal. Ficha de la OT: renglón "Dónde" (nombre, dirección, quién recibe, indicaciones). Lista de inspección: dirección de la sucursal de la OT.
+
 ## v1.14.0 — 1 de octubre de 2026
 
 Sucursales y puntos de entrega (migración 040_sucursales_entrega.sql), pedido de dirección: "una razón social puede tener múltiples sucursales o puntos de entrega".
