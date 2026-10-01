@@ -69,7 +69,7 @@ No hay recordatorios automáticos: solo aparece lo que alguien agenda a mano.
 `docs/DATA_MODEL.md`, `docs/PERMISSIONS_MATRIX.md`, `docs/archive/` (planes
 anteriores, solo historia).
 
-## Pantallas (rediseño de septiembre 2026, aprobado por Franco)
+## Pantallas (rediseño de septiembre 2026, aprobado por dirección)
 
 Una plataforma con el embudo al frente y la ficha como un chat:
 

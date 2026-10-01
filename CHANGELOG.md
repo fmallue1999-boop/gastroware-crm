@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.12.3 — 30 de septiembre de 2026
+
+- El mensaje de error (app/(app)/error.tsx) decía el nombre de una persona: ahora "avisale a dirección". Docs y comentarios sin nombres propios, solo puestos (las migraciones ya aplicadas no se tocan).
+
 ## v1.12.2 — 30 de septiembre de 2026
 
 Celular (sin migración), probado en producción a 390 px de ancho.
@@ -19,7 +23,7 @@ Velocidad (migración 038_velocidad_rls.sql).
 
 ## v1.12.0 — 30 de septiembre de 2026
 
-Experiencia del vendedor (migración 037_cotizar_simple.sql), a partir de la prueba de Franco en el celular.
+Experiencia del vendedor (migración 037_cotizar_simple.sql), a partir de la prueba de dirección en el celular.
 
 - Velocidad: vercel.json regions ["gru1"] (las funciones corrían en iad1 y la base está en São Paulo: cada consulta cruzaba el continente). Layout con los conteos en paralelo; la ficha ya no carga plantillas ni material viejo.
 - Migración 037: productos.iva_pct (10,5 equipos; 21 consumibles/repuestos) y cotizacion_items.iva_pct; config cotizacion_moneda (USD) y listas cotizacion_formas_pago / plazos_entrega / condiciones_entrega; fn_toca_interes marca el primer contacto con cualquier nota/cotización (antes solo si la anotaba el comercial_id); fn_linea_oportunidad también al cambiar el producto (equipos ↔ consumibles).

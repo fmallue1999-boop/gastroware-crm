@@ -23,7 +23,7 @@ describe("normalizarTelefono", () => {
 });
 
 describe("telefonoProlijo", () => {
-  it("deja prolijo el ejemplo real de Franco", () => {
+  it("deja prolijo un ejemplo real", () => {
     expect(telefonoProlijo("+54 9 2243 43-4282")).toBe("2243 43-4282");
   });
   it("formatea CABA con área 11", () => {

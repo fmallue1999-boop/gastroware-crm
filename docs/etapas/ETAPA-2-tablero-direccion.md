@@ -16,7 +16,7 @@ negocio sin abrir una planilla ni preguntarle a nadie.
 
 ## Decisiones de adaptación
 
-- Franco eligió el **embudo** como pantalla principal. El tablero no lo
+- Dirección eligió el **embudo** como pantalla principal. El tablero no lo
   reemplaza: es una pantalla propia, **Tablero** (`/tablero`), segunda en la
   barra lateral para dirección y administración, y dentro de "Más" en el
   celular. `/reportes` redirige al tablero.

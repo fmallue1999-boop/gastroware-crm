@@ -8,7 +8,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     <div className="mx-auto max-w-md rounded-2xl border border-borde bg-white p-5 text-center shadow-sm">
       <p className="text-lg font-semibold">Algo no cargó bien</p>
       <p className="mt-1 text-[15px] text-piedra">
-        No se perdió nada. Probá de nuevo; si sigue igual, avisale a Franco.
+        No se perdió nada. Probá de nuevo; si sigue igual, avisale a dirección.
       </p>
       {error?.digest && <p className="mt-1 text-xs text-piedra">Código: {error.digest}</p>}
       <div className="mt-4 flex gap-2">
