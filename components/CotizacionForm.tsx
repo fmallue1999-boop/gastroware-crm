@@ -682,7 +682,7 @@ export default function CotizacionForm({
       </Seccion>
 
       {/* Total y guardar, siempre a la vista (se esconde mientras se escribe en el celular) */}
-      <div className="ocultar-con-teclado sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 rounded-2xl border border-borde bg-white/95 p-3 shadow-lg backdrop-blur lg:bottom-3">
+      <div className="ocultar-con-teclado fijo-abajo sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 rounded-2xl border border-borde bg-white/95 p-3 shadow-lg backdrop-blur lg:bottom-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1 text-sm">
             <p className="text-piedra">
