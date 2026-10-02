@@ -126,7 +126,7 @@ export default async function VentasPage({
             {sinStock && <p className="text-xs font-bold text-ambar">{textoStock(stockInfo[o.producto_id!], fechaCorta)}</p>}
           </LinkContacto>
           {paso < 4 && (
-            <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold ${COLOR_PASO[paso]}`}>{sigue.texto}</span>
+            <span className={`max-w-[50%] shrink-0 rounded-xl px-2.5 py-1 text-right text-xs leading-tight font-extrabold ${COLOR_PASO[paso]}`}>{sigue.texto}</span>
           )}
         </div>
         <div className="mt-2">
