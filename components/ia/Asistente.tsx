@@ -181,7 +181,7 @@ export default function Asistente({
           e.preventDefault();
           enviar(texto, mensajes);
         }}
-        className="sticky bottom-20 flex items-end gap-2 rounded-2xl border border-borde bg-white p-2 shadow-md lg:bottom-4"
+        className="fijo-abajo sticky bottom-20 flex items-end gap-2 rounded-2xl border border-borde bg-white p-2 shadow-md lg:bottom-4"
       >
         <textarea
           value={texto}

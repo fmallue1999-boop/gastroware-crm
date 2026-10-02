@@ -3,6 +3,14 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.21.2 — 2 de octubre de 2026
+
+Nueva captura del iPhone de dirección: la caja de notas y la barra de abajo flotando a mitad de pantalla, y la tarjeta del interés todavía en la versión anterior a v1.21 (la app instalada no se había recargado).
+
+- TecladoAbierto: además de la corrección por visualViewport (v1.20.1), cada vez que se cierra el teclado (focusout de un campo, la parte visible crece de golpe >120 px, orientationchange, volver a la app con visibilitychange/pageshow) da un toque de scroll de 1 px y vuelve (en 60, 450 y 900 ms) para que el iPhone recalcule la ventana; antes solo si detectaba desfasaje.
+- .fijo-abajo también en lo pegado abajo: caja de notas de la ficha (FichaChat), total de la cotización, caja del asistente IA y pie de la ficha de contenido.
+- AvisoVersion + GET /api/version (sin caché): al abrir, cada 5 minutos y al volver a la app compara la versión publicada con la cargada; si cambió muestra "Hay una versión nueva del sistema · Actualizar" (recarga con un toque; no recarga sola para no perder lo escrito).
+
 ## v1.21.1 — 2 de octubre de 2026
 
 - InteresFijado (movimientos): hora con hourCycle h23 ("hoy 10:31" en vez de "hoy 10:31 a. m."). Verificado v1.21.0 en prod: tarjeta con movimientos y autor, lápiz y ⋯, columna Para hoy (6 = KPI), ficha a 390 px sin desborde.

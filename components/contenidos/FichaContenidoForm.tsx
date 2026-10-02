@@ -346,7 +346,7 @@ export default function FichaContenidoForm({
       {msg && <p className={`text-sm font-bold ${msg.error ? "text-red-600" : "text-verde"}`}>{msg.texto}</p>}
 
       {puedeCargar && (
-        <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-2 border-t border-borde bg-crema/95 px-4 py-3 backdrop-blur">
+        <div className="fijo-abajo sticky bottom-0 -mx-4 flex flex-wrap items-center gap-2 border-t border-borde bg-crema/95 px-4 py-3 backdrop-blur">
           <button type="button" disabled={pending} onClick={guardar} className="min-h-11 flex-1 rounded-xl bg-marino px-5 text-[15px] font-extrabold text-white disabled:opacity-60 sm:flex-none">
             {pending ? "Guardando…" : contenido ? "Guardar cambios" : "Crear contenido"}
           </button>

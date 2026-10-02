@@ -19,6 +19,15 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.21.2",
+    fecha: "2026-10-02",
+    titulo: "Celular: la barra de abajo y aviso de versión nueva",
+    cambios: [
+      "En el iPhone, al cerrar el teclado la barra de abajo, el botón + y la caja de notas vuelven a su lugar (también al volver a la app).",
+      "Cuando se publica una versión nueva, arriba aparece “Hay una versión nueva del sistema · Actualizar”: un toque y queda al día, sin cerrar la app.",
+    ],
+  },
+  {
     version: "1.21.1",
     fecha: "2026-10-02",
     titulo: "Arreglo de texto",

@@ -690,7 +690,7 @@ export default async function FichaChat({
   return (
     <div className="mx-auto max-w-3xl space-y-3">
       <FichaTabs key={c.id} cabecera={cabecera} pestanas={pestanas} inicial={inicial} />
-      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 -mx-4 border-t border-borde bg-crema/95 px-4 py-2.5 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border [html[data-teclado]_&]:bottom-0">
+      <div className="fijo-abajo sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 -mx-4 border-t border-borde bg-crema/95 px-4 py-2.5 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border [html[data-teclado]_&]:bottom-0">
         {compositor}
       </div>
     </div>

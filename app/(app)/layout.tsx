@@ -8,6 +8,8 @@ import { filtroQuien } from "@/lib/quien";
 import BottomNav from "@/components/BottomNav";
 import BotonFlotante from "@/components/BotonFlotante";
 import TecladoAbierto from "@/components/TecladoAbierto";
+import AvisoVersion from "@/components/AvisoVersion";
+import { VERSIONES } from "@/lib/novedades";
 import Rail from "@/components/Rail";
 import EstiloMarca from "@/components/marca/EstiloMarca";
 import LogoSistema from "@/components/marca/LogoSistema";
@@ -95,6 +97,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             )}
           </Link>
         </header>
+
+        <AvisoVersion version={VERSIONES[0].version} />
 
         <main className="w-full flex-1 px-4 pt-4 pb-28 lg:px-7 lg:pt-6 lg:pb-12">
           <div className="mx-auto w-full max-w-[1400px]">{children}</div>
