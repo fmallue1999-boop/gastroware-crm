@@ -19,6 +19,12 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.21.1",
+    fecha: "2026-10-02",
+    titulo: "Arreglo de texto",
+    cambios: ["En los movimientos de cada interés la hora va en formato 24 h (10:31 en vez de 10:31 a. m.)."],
+  },
+  {
     version: "1.21.0",
     fecha: "2026-10-02",
     titulo: "Tarjeta del interés renovada y “Para hoy” en el embudo",

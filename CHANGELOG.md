@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.21.1 — 2 de octubre de 2026
+
+- InteresFijado (movimientos): hora con hourCycle h23 ("hoy 10:31" en vez de "hoy 10:31 a. m."). Verificado v1.21.0 en prod: tarjeta con movimientos y autor, lápiz y ⋯, columna Para hoy (6 = KPI), ficha a 390 px sin desborde.
+
 ## v1.21.0 — 2 de octubre de 2026
 
 Pedido de dirección (con captura y propuesta aprobada): "que en embudo aparezcan los que hay que contactar hoy" y "repensar la parte de cada contacto: que se vean los movimientos, notas y de quién son; lo de productos de abajo quedó de versiones anteriores" (sin migración).
