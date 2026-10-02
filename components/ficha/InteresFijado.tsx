@@ -62,7 +62,7 @@ const TIPO_MOVIMIENTO: Record<string, string> = {
 /** "hoy 10:40", "ayer 18:02" o "12 sept". */
 function cuandoCorto(iso: string) {
   const d = diasDesde(iso);
-  const hora = new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
+  const hora = new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "America/Argentina/Buenos_Aires" });
   return d === 0 ? `hoy ${hora}` : d === 1 ? `ayer ${hora}` : fechaCorta(iso);
 }
 
