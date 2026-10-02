@@ -135,7 +135,7 @@ export default async function MasPage() {
         {(["marketing", "direccion", "admin"].includes(rol) || yo?.ve_contenidos) && (
           <MenuLink href="/contenidos" icono={CalendarRange} titulo="Calendario de contenidos" detalle="Lo que se publica en redes, por día: historias y feed, con su aprobación" />
         )}
-        <MenuLink href="/marketing/pedidos" icono={Palette} titulo="Pedidos de material" detalle="Pedirle a marketing folletos, videos, fichas o posteos" />
+        <MenuLink href="/marketing/pedidos" icono={Palette} titulo="Pedidos a marketing" detalle="Pedirle contenido a marketing (folletos, videos, posteos…) y aprobarlo" />
         {(esAdmin || rol === "marketing") && (
           <MenuLink href="/marketing/videos" icono={PlayCircle} titulo="Videos por modelo" detalle="El video instructivo que se manda con cada despacho" />
         )}

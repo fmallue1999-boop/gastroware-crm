@@ -194,6 +194,18 @@ export async function cargarMiDia(
         lista: ((conts ?? []) as { id: string; nombre: string; fecha: string }[]).map((c) => ({ id: c.id, titulo: c.nombre, href: "/aprobaciones" })),
       })
     );
+    // v1.23: lo que marketing hizo de un pedido y espera aprobación
+    const { data: pedAprobar } = await supabase.from("pedidos_material").select("id, titulo").eq("estado", "para_aprobar").order("enviado_at").limit(50);
+    bandejas.push(
+      bandeja({
+        clave: "pedidos_aprobar",
+        titulo: "Pedidos a marketing para aprobar",
+        ayuda: "Aprobá o pedí cambios",
+        href: "/marketing/pedidos",
+        tono: "violeta",
+        lista: ((pedAprobar ?? []) as { id: string; titulo: string }[]).map((p) => ({ id: p.id, titulo: p.titulo, href: `/marketing/pedidos/${p.id}` })),
+      })
+    );
     bandejas.push(
       bandeja({
         clave: "informes",
@@ -504,21 +516,23 @@ export async function cargarMiDia(
   if (rol === "marketing") {
     const inicioMes = hoy.slice(0, 8) + "01";
     const [{ data: pedidos }, { data: sinVideo }, { data: canales }] = await Promise.all([
-      supabase.from("pedidos_material").select("id, titulo, para_fecha").neq("estado", "entregado").order("para_fecha", { nullsFirst: false }).limit(50),
+      supabase.from("pedidos_material").select("id, titulo, para_fecha, estado").in("estado", ["pedido", "en_curso", "cambios"]).order("para_fecha", { nullsFirst: false }).limit(50),
       supabase.from("productos").select("id, nombre").eq("activo", true).is("video_url", null).limit(200),
       supabase.from("oportunidades").select("origen").gte("created_at", `${inicioMes}T03:00:00.000Z`).limit(5000),
     ]);
     bandejas.push(
       bandeja({
         clave: "pedidos_material",
-        titulo: "Pedidos de material",
+        titulo: "Pedidos a marketing",
         href: "/marketing/pedidos",
         tono: "ambar",
-        lista: ((pedidos ?? []) as { id: string; titulo: string; para_fecha: string | null }[]).map((p) => ({
+        lista: ((pedidos ?? []) as { id: string; titulo: string; para_fecha: string | null; estado: string }[]).map((p) => ({
           id: p.id,
           titulo: p.titulo,
-          detalle: p.para_fecha ? `para el ${p.para_fecha.split("-").reverse().join("/")}` : null,
-          href: "/marketing/pedidos",
+          detalle: [p.estado === "cambios" ? "con cambios de dirección" : null, p.para_fecha ? `para el ${p.para_fecha.split("-").reverse().join("/")}` : null]
+            .filter(Boolean)
+            .join(" · ") || null,
+          href: `/marketing/pedidos/${p.id}`,
         })),
       })
     );

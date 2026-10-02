@@ -1,13 +1,15 @@
 import { notFound } from "next/navigation";
 import { Link2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { archivosDe, cargarArbol, puedeGestionarMaterial } from "@/lib/servidor/material";
+import { archivosDe, archivosDeEspacios, cargarArbol, espaciosDe, puedeGestionarMaterial } from "@/lib/servidor/material";
+import EspaciosPropios from "@/components/material/EspaciosPropios";
 import { MigasMaterial } from "@/components/material/Navegacion";
 import EspacioArchivos from "@/components/material/EspacioArchivos";
 
 /**
  * Página de un producto (v1.11): VIDEOS | IMÁGENES | FICHA. La misma
  * estructura para todos los productos y accesorios de las tres marcas.
+ * v1.23: más los espacios propios que marketing cree para el producto.
  */
 export default async function ProductoMaterialPage({ params }: { params: Promise<{ marca: string; producto: string }> }) {
   const { marca: slugMarca, producto: slugProducto } = await params;
@@ -18,10 +20,12 @@ export default async function ProductoMaterialPage({ params }: { params: Promise
   const categoria = producto ? arbol.categorias.find((c) => c.id === producto.categoria_id) : null;
   if (!marca || !producto || !categoria || categoria.marca_id !== marca.id) notFound();
 
-  const [archivos, { data: delCatalogo }] = await Promise.all([
+  const [archivos, { data: delCatalogo }, espaciosProducto] = await Promise.all([
     archivosDe(supabase, "producto", producto.id),
     producto.producto_id ? supabase.from("productos").select("nombre").eq("id", producto.producto_id).maybeSingle() : Promise.resolve({ data: null }),
+    espaciosDe(supabase, "producto", producto.id),
   ]);
+  const archivosEspacios = Object.fromEntries(await archivosDeEspacios(supabase, espaciosProducto.map((e) => e.id)));
   const videos = archivos.filter((a) => a.espacio === "videos");
   const imagenes = archivos.filter((a) => a.espacio === "imagenes");
   const ficha = archivos.filter((a) => a.espacio === "ficha");
@@ -31,6 +35,7 @@ export default async function ProductoMaterialPage({ params }: { params: Promise
     { id: "videos", titulo: "VIDEOS", cuenta: videos.length },
     { id: "imagenes", titulo: "IMÁGENES", cuenta: imagenes.length },
     { id: "ficha", titulo: "FICHA", cuenta: ficha.length },
+    ...espaciosProducto.map((e) => ({ id: `espacio-${e.id}`, titulo: e.nombre.toUpperCase(), cuenta: e.cantidad })),
   ];
 
   return (
@@ -84,6 +89,8 @@ export default async function ProductoMaterialPage({ params }: { params: Promise
         <h2 className="text-xs font-extrabold tracking-[0.15em] text-piedra">FICHA</h2>
         <EspacioArchivos dueno="producto" duenoId={producto.id} espacio="ficha" archivos={ficha} puedeGestionar={gestiona} vacio="Todavía no hay ficha de este producto." />
       </section>
+
+      <EspaciosPropios ambito="producto" ambitoId={producto.id} espacios={espaciosProducto} archivos={archivosEspacios} puedeGestionar={gestiona} comoSecciones />
     </div>
   );
 }

@@ -48,7 +48,7 @@ const I = {
   stock: { href: "/stock", label: "Stock", icono: "stock" },
   movimientos: { href: "/movimientos", label: "Movimientos", icono: "movimientos" },
   marketing: { href: "/marketing", label: "Campañas", icono: "marketing" },
-  pedidos_material: { href: "/marketing/pedidos", label: "Pedidos de material", icono: "pedidos_material" },
+  pedidos_material: { href: "/marketing/pedidos", label: "Pedidos a marketing", icono: "pedidos_material" },
   videos: { href: "/marketing/videos", label: "Videos", icono: "videos" },
   guia: { href: "/guia", label: "Guía de uso", icono: "guia" },
   asistente: { href: "/asistente", label: "Asistente IA", icono: "asistente" },
@@ -107,7 +107,7 @@ function menuDelPuesto(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
       };
     case "direccion":
       return {
-        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.tablero, I.aprobaciones, I.informes, I.contenidos, I.contactos, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.tablero, I.aprobaciones, I.informes, I.contenidos, I.pedidos_material, I.contactos, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.embudo, I.midia, I.contactos, I.mas],
       };
     case "distribuidor":

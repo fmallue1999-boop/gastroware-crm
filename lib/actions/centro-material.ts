@@ -6,7 +6,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { esEspacio, esVideoTipo, slugDe, type Espacio } from "@/lib/material";
+import { aceptaArchivo, espacioValido, esEspacio, esVideoTipo, slugDe, type AmbitoEspacio, type DuenoArchivo, type Espacio } from "@/lib/material";
 import { puestoActual, type SupabaseServidor } from "./comun";
 
 const GESTIONAN = ["marketing", "direccion", "admin"];
@@ -37,7 +37,7 @@ async function borrarArchivos(supabase: SupabaseServidor, filas: { id: string; p
 
 /** Registra archivos ya subidos al bucket. La ficha reemplaza a la anterior. */
 export async function registrarArchivosMaterial(input: {
-  dueno: "marca" | "producto";
+  dueno: DuenoArchivo;
   duenoId: string;
   espacio: Espacio;
   videoTipo?: string | null;
@@ -45,7 +45,13 @@ export async function registrarArchivosMaterial(input: {
 }) {
   const p = await conPermiso();
   if ("error" in p) return p;
-  if (!esEspacio(input.espacio)) return { error: "Espacio inválido" };
+  if (!esEspacio(input.espacio) || !espacioValido(input.dueno, input.espacio)) return { error: "Espacio inválido" };
+  if (input.dueno === "pedido") {
+    // Lo que se entrega de un pedido se puede cambiar hasta que dirección lo aprueba
+    const { data: ped } = await p.supabase.from("pedidos_material").select("estado").eq("id", input.duenoId).maybeSingle();
+    if (!ped || !["pedido", "en_curso", "cambios"].includes(ped.estado as string))
+      return { error: "Ese pedido ya no admite archivos (está para aprobar o cerrado)" };
+  }
   if (input.espacio === "videos" && !esVideoTipo(input.videoTipo)) return { error: "Elegí de qué es el video" };
   if (input.archivos.some((a) => !a.path.startsWith(`${input.dueno}/${input.duenoId}/`))) return { error: "Archivo inválido" };
   const { supabase } = p;
@@ -196,8 +202,129 @@ export async function borrarProductoMaterial(id: string) {
   const p = await conPermiso();
   if ("error" in p) return p;
   const { data: archivos } = await p.supabase.from("material_archivos").select("id, path").eq("dueno", "producto").eq("dueno_id", id);
-  const errArch = await borrarArchivos(p.supabase, (archivos ?? []) as { id: string; path: string }[]);
+  const { data: espacios } = await p.supabase.from("material_espacios").select("id").eq("ambito", "producto").eq("ambito_id", id);
+  const idsEsp = ((espacios ?? []) as { id: string }[]).map((e) => e.id);
+  const { data: dePropios } = idsEsp.length
+    ? await p.supabase.from("material_archivos").select("id, path").eq("dueno", "espacio").in("dueno_id", idsEsp)
+    : { data: [] };
+  const errArch = await borrarArchivos(p.supabase, [...((archivos ?? []) as { id: string; path: string }[]), ...((dePropios ?? []) as { id: string; path: string }[])]);
   if (errArch) return { error: errArch };
   const { error } = await p.supabase.from("material_productos").delete().eq("id", id);
   return error ? { error: error.message } : listo();
+}
+
+// ---------------------------------------------------------------------
+// Espacios propios (v1.23): marketing crea donde subir contenido de todo tipo
+// ---------------------------------------------------------------------
+
+export async function crearEspacioMaterial(input: { ambito: AmbitoEspacio; ambitoId?: string | null; nombre: string; descripcion?: string }) {
+  const nombre = input.nombre.trim().slice(0, 80);
+  if (!nombre) return { error: "Poné un nombre (ej: Presentaciones, Redes, Banners)" };
+  if (!["general", "marca", "producto"].includes(input.ambito)) return { error: "Lugar inválido" };
+  if (input.ambito !== "general" && !input.ambitoId) return { error: "Falta dónde va el espacio" };
+  const p = await conPermiso();
+  if ("error" in p) return p;
+  const { data: ultimos } = await p.supabase
+    .from("material_espacios")
+    .select("orden")
+    .eq("ambito", input.ambito)
+    .order("orden", { ascending: false })
+    .limit(1);
+  const { data, error } = await p.supabase
+    .from("material_espacios")
+    .insert({
+      ambito: input.ambito,
+      ambito_id: input.ambito === "general" ? null : input.ambitoId,
+      nombre,
+      descripcion: input.descripcion?.trim().slice(0, 300) || null,
+      orden: ((ultimos?.[0]?.orden as number) ?? 0) + 1,
+    })
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+  return { ...listo(), id: data.id as string };
+}
+
+export async function editarEspacioMaterial(id: string, input: { nombre: string; descripcion?: string }) {
+  const nombre = input.nombre.trim().slice(0, 80);
+  if (!nombre) return { error: "Poné un nombre" };
+  const p = await conPermiso();
+  if ("error" in p) return p;
+  const { error } = await p.supabase
+    .from("material_espacios")
+    .update({ nombre, descripcion: input.descripcion?.trim().slice(0, 300) || null })
+    .eq("id", id);
+  return error ? { error: error.message } : listo();
+}
+
+/** Borra el espacio con todos sus archivos (también del almacenamiento). */
+export async function borrarEspacioMaterial(id: string) {
+  const p = await conPermiso();
+  if ("error" in p) return p;
+  const { data: archivos } = await p.supabase.from("material_archivos").select("id, path").eq("dueno", "espacio").eq("dueno_id", id);
+  const errArch = await borrarArchivos(p.supabase, (archivos ?? []) as { id: string; path: string }[]);
+  if (errArch) return { error: errArch };
+  const { error } = await p.supabase.from("material_espacios").delete().eq("id", id);
+  return error ? { error: error.message } : listo();
+}
+
+export type DestinoMaterial = { clave: string; grupo: string; etiqueta: string; dueno: DuenoArchivo; duenoId: string; espacio: Espacio };
+
+/** A dónde se puede mover un archivo: los espacios propios y los espacios fijos de marcas y productos. */
+export async function destinosMaterial(): Promise<DestinoMaterial[]> {
+  const supabase = await createClient();
+  const [{ data: marcas }, { data: categorias }, { data: productos }, { data: espacios }] = await Promise.all([
+    supabase.from("material_marcas").select("id, nombre").order("orden").order("nombre"),
+    supabase.from("material_categorias").select("id, marca_id").order("orden"),
+    supabase.from("material_productos").select("id, nombre, categoria_id").order("orden").order("nombre"),
+    supabase.from("material_espacios").select("id, ambito, ambito_id, nombre").order("orden").order("nombre"),
+  ]);
+  const m = (marcas ?? []) as { id: string; nombre: string }[];
+  const marcaDeCat = new Map(((categorias ?? []) as { id: string; marca_id: string }[]).map((c) => [c.id, c.marca_id]));
+  const prods = (productos ?? []) as { id: string; nombre: string; categoria_id: string }[];
+  const nombreMarca = new Map(m.map((x) => [x.id, x.nombre]));
+  const nombreProd = new Map(prods.map((x) => [x.id, x.nombre]));
+  const out: DestinoMaterial[] = [];
+  for (const e of (espacios ?? []) as { id: string; ambito: string; ambito_id: string | null; nombre: string }[]) {
+    const donde = e.ambito === "general" ? "Material" : e.ambito === "marca" ? nombreMarca.get(e.ambito_id ?? "") : nombreProd.get(e.ambito_id ?? "");
+    out.push({ clave: `espacio:${e.id}`, grupo: "Espacios", etiqueta: `${e.nombre}${donde ? ` · ${donde}` : ""}`, dueno: "espacio", duenoId: e.id, espacio: "propio" });
+  }
+  const fijosMarca: [Espacio, string][] = [["catalogo", "Catálogo general"], ["logo", "Logo"], ["tipografias", "Tipografías"]];
+  const fijosProd: [Espacio, string][] = [["imagenes", "Imágenes"], ["videos", "Videos"], ["ficha", "Ficha"]];
+  for (const marca of m) {
+    for (const [esp, txt] of fijosMarca) out.push({ clave: `marca:${marca.id}:${esp}`, grupo: marca.nombre, etiqueta: `${marca.nombre} · ${txt}`, dueno: "marca", duenoId: marca.id, espacio: esp });
+    for (const prod of prods.filter((x) => marcaDeCat.get(x.categoria_id) === marca.id))
+      for (const [esp, txt] of fijosProd)
+        out.push({ clave: `producto:${prod.id}:${esp}`, grupo: marca.nombre, etiqueta: `${prod.nombre} · ${txt}`, dueno: "producto", duenoId: prod.id, espacio: esp });
+  }
+  return out;
+}
+
+/** Mueve un archivo a otro espacio (sin volver a subirlo). La ficha nueva reemplaza a la anterior. */
+export async function moverArchivoMaterial(id: string, destino: { dueno: DuenoArchivo; duenoId: string; espacio: Espacio }) {
+  if (destino.dueno === "pedido" || !espacioValido(destino.dueno, destino.espacio)) return { error: "Destino inválido" };
+  const p = await conPermiso();
+  if ("error" in p) return p;
+  const { data: a } = await p.supabase.from("material_archivos").select("id, dueno, nombre, mime, video_tipo").eq("id", id).maybeSingle();
+  if (!a) return { error: "No se encontró el archivo" };
+  if (a.dueno === "pedido") return { error: "Lo de un pedido pasa a Material cuando dirección lo aprueba" };
+  const noVa = aceptaArchivo(destino.espacio, { name: a.nombre as string, type: (a.mime as string | null) ?? "" });
+  if (noVa) return { error: noVa };
+  const { data: anteriores } =
+    destino.espacio === "ficha"
+      ? await p.supabase.from("material_archivos").select("id, path").eq("dueno", destino.dueno).eq("dueno_id", destino.duenoId).eq("espacio", "ficha").neq("id", id)
+      : { data: [] };
+  const { error } = await p.supabase
+    .from("material_archivos")
+    .update({
+      dueno: destino.dueno,
+      dueno_id: destino.duenoId,
+      espacio: destino.espacio,
+      video_tipo: destino.espacio === "videos" ? ((a.video_tipo as string | null) ?? "otro") : null,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  const errBorrar = await borrarArchivos(p.supabase, (anteriores ?? []) as { id: string; path: string }[]);
+  if (errBorrar) return { error: `Se movió, pero no se pudo borrar la ficha anterior: ${errBorrar}` };
+  return listo();
 }
