@@ -143,7 +143,7 @@ export default async function HotelgaPage({
           Nada acá con estos filtros.
         </p>
       ) : (
-        <div className="grid gap-2 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {leads.map((l) => (
             <FeriaLeadFila
               key={l.id}

@@ -89,7 +89,7 @@ export default function PanelesComerciales({
             Todavía no hay contactos registrados con medio y resultado en este período. Se cuentan desde “Registrar actividad” (llamada, WhatsApp, email, visita, demo).
           </p>
         ) : (
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             <div className={tile}>
               <p className={`${titulo} mb-2`}>Por medio</p>
               <ul className="space-y-1 text-[14px]">
@@ -123,7 +123,7 @@ export default function PanelesComerciales({
 
       {/* Consumibles y repuestos */}
       {(verConsumibles || verRepuestos) && (
-        <section className="grid gap-2 lg:grid-cols-2">
+        <section className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {verConsumibles && (
             <Link href="/consumibles" className={`${tile} block hover:ring-1 hover:ring-borde`}>
               <p className={titulo}>Consumibles · {etiqueta}</p>

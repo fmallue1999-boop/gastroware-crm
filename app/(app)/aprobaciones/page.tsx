@@ -111,7 +111,7 @@ export default async function AprobacionesPage() {
         {contenidos.length === 0 ? (
           <p className="rounded-2xl bg-white px-4 py-4 text-center text-[15px] font-bold text-verde shadow-sm">No hay contenidos esperando.</p>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {contenidos.map((ct, k) => (
               <div key={ct.id} className="rounded-2xl bg-white p-4 shadow-sm">
                 <div className="flex gap-3">
@@ -147,7 +147,7 @@ export default async function AprobacionesPage() {
       {pendientes.length === 0 ? (
         <p className="rounded-2xl bg-white px-4 py-6 text-center text-lg font-bold text-verde shadow-sm">Nada para aprobar.</p>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {pendientes.map((p) => {
             const opp = p.cotizacion?.oportunidad;
             return (

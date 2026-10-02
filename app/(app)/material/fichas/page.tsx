@@ -72,7 +72,7 @@ export default async function FichasParaCotizarPage({ searchParams }: { searchPa
       {marcas.map((m) => (
         <section key={m} className="space-y-2">
           <h2 className="text-xs font-bold uppercase tracking-wide text-piedra">{m}</h2>
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {visibles
               .filter((p) => (p.marca ?? "Otras") === m)
               .map((p) => (

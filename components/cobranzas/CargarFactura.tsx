@@ -66,7 +66,7 @@ export default function CargarFactura({ hoy }: { hoy: string }) {
     >
       <p className="text-[15px] font-extrabold">Nueva factura para cobrar</p>
       <ClienteSelector valor={cliente} onChange={setCliente} />
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <select value={tipo} onChange={(e) => setTipo(e.target.value as typeof tipo)} className={cls} aria-label="Tipo">
           <option value="consumible">Consumible</option>
           <option value="repuesto">Repuesto</option>

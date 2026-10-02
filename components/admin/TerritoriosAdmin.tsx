@@ -29,7 +29,7 @@ export default function TerritoriosAdmin({
           Cada consulta nueva va al responsable del territorio donde se entrega. Si queda vacante, la atiende dirección general.
         </p>
       </div>
-      <div className="grid gap-2 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {territorios.map((t) => (
           <div key={t.codigo} className="rounded-2xl border border-borde bg-white p-4 shadow-sm">
             <p className="text-[16px] font-extrabold">{t.nombre}</p>

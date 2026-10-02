@@ -71,7 +71,7 @@ export default async function InformesPage({ searchParams }: { searchParams: Pro
         <p className="rounded-2xl border border-dashed border-borde p-6 text-center text-[15px] text-piedra">Todavía no llegó ningún informe de esta semana.</p>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {informes
           .filter((i) => i.enviado_at)
           .map((i) => (

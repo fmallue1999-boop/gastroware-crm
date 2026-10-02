@@ -47,7 +47,7 @@ function Formulario({ inicial, onListo }: { inicial?: Aliado | null; onListo: ()
       <p className="text-[15px] font-extrabold">{inicial ? `Editar ${inicial.nombre}` : "Nuevo técnico aliado"}</p>
       <input required value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} placeholder="Nombre o empresa" className={inputCls} />
       <input value={f.zona} onChange={(e) => setF({ ...f, zona: e.target.value })} placeholder="Zona que cubre (ej: CABA y zona norte)" className={inputCls} />
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <input value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} placeholder="Teléfono" className={inputCls} />
         <input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="Email" className={inputCls} />
       </div>
@@ -80,7 +80,7 @@ export default function AliadosAdmin({ aliados, puedeEditar }: { aliados: Aliado
           Todavía no hay técnicos aliados cargados.
         </p>
       )}
-      <div className="grid gap-2 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {aliados.map((a) =>
           editando !== "nuevo" && editando?.id === a.id ? (
             <Formulario key={a.id} inicial={a} onListo={() => setEditando(null)} />

@@ -94,6 +94,12 @@ html[data-teclado] .ocultar-con-teclado:not(:focus-within) {
   display: none !important;
 }
 
+/* iPhone: si al cerrar el teclado lo fijo de abajo queda más arriba, se baja
+   hasta el borde real de la pantalla (TecladoAbierto mide la diferencia). */
+.fijo-abajo {
+  transform: translateY(var(--ajuste-abajo, 0px));
+}
+
 /* iPhone agranda la pantalla al tocar un campo con letra de menos de 16 px
    (y queda todo chico y corrido). En el celular los campos para escribir van
    con 16 px como mínimo; los de letra más grande (text-base, 17 px) quedan igual. */

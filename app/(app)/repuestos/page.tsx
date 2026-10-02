@@ -52,7 +52,7 @@ export default async function RepuestosPage({ searchParams }: { searchParams: Pr
   };
 
   const tarjetas = (items: SolicitudVista[]) => (
-    <div className="grid gap-2 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
       {items.map((s) => (
         <TarjetaRepuesto
           key={s.oportunidad_id}

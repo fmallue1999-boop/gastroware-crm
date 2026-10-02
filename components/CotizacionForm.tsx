@@ -368,7 +368,7 @@ export default function CotizacionForm({
         ) : (
           <>
             {faltan.length > 0 && <p className="rounded-xl bg-ambar-soft px-3 py-2 text-sm font-semibold text-ambar">Falta: {faltan.join(", ")}.</p>}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm font-bold sm:col-span-2">
                 Razón social *
                 <input value={datos.razonSocial} onChange={campo("razonSocial")} placeholder="Como figura en AFIP" className={`${inputCls} mt-1 font-normal ${marca(!datos.razonSocial.trim())}`} />
@@ -528,7 +528,7 @@ export default function CotizacionForm({
       </Seccion>
 
       <Seccion n={3} titulo="Pago y entrega" detalle="Sale abajo en el PDF.">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Lista etiqueta="Forma de pago" valor={formaPago} opciones={config.formasPago} onChange={setFormaPago} placeholder="Elegir forma de pago…" />
           </div>

@@ -119,7 +119,7 @@ export default function PedidosMaterial({ pedidos, gestiona }: { pedidos: Pedido
         </button>
       )}
       {abiertos.length === 0 && <p className="rounded-2xl border border-dashed border-borde p-6 text-center text-[15px] text-piedra">No hay pedidos abiertos.</p>}
-      <div className="grid gap-2 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {abiertos.map((p) => (
           <Fila key={p.id} p={p} gestiona={gestiona} />
         ))}

@@ -19,6 +19,15 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.20.1",
+    fecha: "2026-10-02",
+    titulo: "Arreglo en el celular: la barra de abajo",
+    cambios: [
+      "En el celular, las listas (Contactos, Consumibles, Servicio, Cobranzas, Tablero y otras) ya no quedan más anchas que la pantalla: los textos largos se cortan con “…”. Eso hacía que la barra de abajo se subiera y la pantalla quedara corrida.",
+      "En el iPhone, si al cerrar el teclado la barra de abajo o el botón + quedan más arriba, vuelven solos a su lugar.",
+    ],
+  },
+  {
     version: "1.20.0",
     fecha: "2026-10-02",
     titulo: "Eliminar una reposición suspendida",

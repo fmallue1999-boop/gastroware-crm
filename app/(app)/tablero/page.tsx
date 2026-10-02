@@ -143,7 +143,7 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
             {lista.filas.length === 0 ? (
               <p className="text-[15px] text-piedra">No hay nada en esta lista.</p>
             ) : (
-              <div className="grid gap-2 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {lista.filas.slice(0, 100).map((o) => (
                   <div key={o.id} className="flex items-center gap-3 rounded-xl bg-crema px-3 py-2.5">
                     <LinkContacto id={o.cliente_id} interes={o.id} className="min-w-0 flex-1">
@@ -221,7 +221,7 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
           {t.alertas.length === 0 ? (
             <p className="rounded-2xl bg-white px-4 py-3 text-[15px] font-bold text-verde shadow-sm">Sin alertas.</p>
           ) : (
-            <div className="grid gap-2 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {t.alertas.map((a) => {
                 const Icono = ICONO_ALERTA[a.tipo];
                 return (
@@ -356,7 +356,7 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
         {/* Reportes del período */}
         <section className="space-y-3">
           <h2 className="text-xs font-bold uppercase tracking-wide text-piedra">Reportes · {per.etiqueta}</h2>
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <Barras
               titulo={`De los ${e.creados} intereses que entraron`}
               vacio="No entraron intereses en este período."

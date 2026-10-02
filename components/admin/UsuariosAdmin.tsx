@@ -203,7 +203,7 @@ export default function UsuariosAdmin({
           <p className="text-[15px] font-extrabold">Nuevo usuario</p>
           <input type="text" required placeholder="Nombre y apellido" value={nombre} onChange={(e) => setNombre(e.target.value)} className={inputCls} />
           <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <select value={rol} onChange={(e) => setRol(e.target.value)} className={inputCls} aria-label="Puesto">
               {puestosDisponibles.map((r) => (
                 <option key={r.value} value={r.value}>

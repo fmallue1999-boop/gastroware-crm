@@ -76,7 +76,7 @@ export default async function ConsumiblesPage({ searchParams }: { searchParams: 
         <h2 className={`text-xs font-bold uppercase tracking-wide ${clase}`}>
           {titulo} ({lista.length})
         </h2>
-        <div className="grid gap-2 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {lista.map((g) => (
             <GrupoReposicion key={g.map((x) => x.id).join("-")} planes={g} hoy={hoy} usuarios={equipo} puedeEliminar={puedeEliminar} />
           ))}
@@ -168,7 +168,7 @@ export default async function ConsumiblesPage({ searchParams }: { searchParams: 
       )}
 
       {ver === "todos" && (
-        <div className="grid gap-2 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {planes.length === 0 && <p className="rounded-2xl bg-white px-4 py-6 text-center text-[15px] text-piedra shadow-sm">Todavía no hay planes de reposición.</p>}
           {agruparPorCliente(planes, 100000)
             .sort((a, b) => (a[0].cliente?.nombre_comercial ?? "").localeCompare(b[0].cliente?.nombre_comercial ?? ""))

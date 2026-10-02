@@ -57,7 +57,7 @@ function Grupo({ titulo, lista, hoy, color = "text-piedra" }: { titulo: string; 
       <h2 className={`mb-2 text-xs font-bold uppercase tracking-wide ${color}`}>
         {titulo} ({lista.length})
       </h2>
-      <div className="grid gap-2 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {lista.map((ot) => (
           <Tarjeta key={ot.id} ot={ot} hoy={hoy} />
         ))}
@@ -158,7 +158,7 @@ export default async function ServiciosPage() {
             Nada programado. Cuando termines uno, cargalo con “Cargar hecho”.
           </p>
         ) : (
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {[...(controla ? [] : sinAsignar), ...proximos].map((ot) => (
               <Tarjeta key={ot.id} ot={ot} hoy={hoy} />
             ))}

@@ -100,7 +100,7 @@ export default function ClienteNuevoRapido({
         className={cls}
       />
       <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre de la persona" className={cls} />
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Teléfono / WhatsApp" className={cls} />
         <input value={localidad} onChange={(e) => setLocalidad(e.target.value)} placeholder="Localidad" className={cls} />
       </div>

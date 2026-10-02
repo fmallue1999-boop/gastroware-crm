@@ -163,7 +163,7 @@ export default async function ContactosPage({
     const int = interesDe.get(cli.id);
     const esCliente = cli.estado === "cliente_activo";
     return (
-      <div key={cli.id} className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
+      <div key={cli.id} className="flex min-w-0 items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
         <LinkContacto id={cli.id} interes={int?.id} className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5">
             <span className="truncate text-[16px] font-extrabold">{cli.nombre_comercial}</span>
@@ -233,7 +233,7 @@ export default async function ContactosPage({
         {recientes.length > 0 && (
           <>
             <p className="text-xs font-bold uppercase tracking-wide text-piedra">Últimos movimientos</p>
-            <div className="grid gap-2 lg:grid-cols-2">{recientes.map(tarjeta)}</div>
+            <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">{recientes.map(tarjeta)}</div>
           </>
         )}
         <p className="text-xs font-bold uppercase tracking-wide text-piedra">{tituloLista}</p>
@@ -254,7 +254,7 @@ export default async function ContactosPage({
             )}
           </p>
         ) : (
-          <div className="grid gap-2 lg:grid-cols-2">{clientes.map(tarjeta)}</div>
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">{clientes.map(tarjeta)}</div>
         )}
 
         {!busqueda && vista !== "espera" && paginas > 1 && (
