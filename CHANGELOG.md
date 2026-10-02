@@ -3,6 +3,10 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.20.2 — 2 de octubre de 2026
+
+- /pedidos: la etiqueta del paso (`proximoPasoVenta`) era `shrink-0` sin corte y medía 379 px ("Registrar el cobro (o pedir condición a dirección)"): ahora max-w 50%, en dos renglones si hace falta. Verificado a 390 px: Contactos, Mi día, Consumibles, Servicio, Ventas, Tablero y Cobranzas sin desborde.
+
 ## v1.20.1 — 2 de octubre de 2026
 
 Reporte de dirección con captura del iPhone: "se rompió algo en mobile, se sube el footer y queda raro" (en Contactos).

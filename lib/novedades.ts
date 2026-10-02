@@ -19,6 +19,12 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.20.2",
+    fecha: "2026-10-02",
+    titulo: "Ventas en el celular",
+    cambios: ["En el tablero de ventas, la etiqueta del próximo paso (ej: “Registrar el cobro…”) se acomoda en dos renglones y ya no hace la pantalla más ancha en el celular."],
+  },
+  {
     version: "1.20.1",
     fecha: "2026-10-02",
     titulo: "Arreglo en el celular: la barra de abajo",
