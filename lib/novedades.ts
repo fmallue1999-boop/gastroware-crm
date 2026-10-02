@@ -19,6 +19,14 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.20.3",
+    fecha: "2026-10-02",
+    titulo: "Las notas se guardan siempre",
+    cambios: [
+      "Anotar algo en un contacto que estaba para hoy ya no te frena: la nota se guarda y después te sugiere elegir el próximo contacto (un toque y enviar).",
+    ],
+  },
+  {
     version: "1.20.2",
     fecha: "2026-10-02",
     titulo: "Ventas en el celular",

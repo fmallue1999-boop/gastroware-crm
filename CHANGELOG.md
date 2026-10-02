@@ -3,6 +3,13 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.20.3 — 2 de octubre de 2026
+
+Dirección no pudo anotar en un interés "Llamar hoy": el control de v1.19.1 bloqueaba la nota hasta elegir el próximo paso (y el aviso quedaba abajo, tapado por el teclado).
+
+- RegistrarActividad: la nota se guarda siempre; si el interés vencía hoy o estaba atrasado y no se eligió próximo, después de guardar queda abierto "Próximo paso" con el aviso "✓ Anotado. ¿Cuándo lo volvés a contactar?". "Mantener" sigue siendo solo para fechas futuras.
+- anotarContacto: se quitó el rechazo del servidor.
+
 ## v1.20.2 — 2 de octubre de 2026
 
 - /pedidos: la etiqueta del paso (`proximoPasoVenta`) era `shrink-0` sin corte y medía 379 px ("Registrar el cobro (o pedir condición a dirección)"): ahora max-w 50%, en dos renglones si hace falta. Verificado a 390 px: Contactos, Mi día, Consumibles, Servicio, Ventas, Tablero y Cobranzas sin desborde.

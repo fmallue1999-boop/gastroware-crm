@@ -87,6 +87,7 @@ export default function RegistrarActividad({
   const [motivoPerdida, setMotivoPerdida] = useState<string>(MOTIVOS_PERDIDA[0]);
   const [abrirProximo, setAbrirProximo] = useState(variante === "caja");
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
   // Sin tocar nada del próximo paso: si hay uno vigente, se mantiene
@@ -124,14 +125,10 @@ export default function RegistrarActividad({
     e?.preventDefault();
     if (!hayAlgo || pending) return;
     setError(null);
+    setAviso(null);
     const interes = sobre || oportunidadId || null;
-    if (interes && vencido && !cerrar && !volverEl && !sinFecha && (texto.trim() || medio)) {
-      setAbrirProximo(true);
-      setError(
-        `Estaba para ${actual!.fecha === hoy ? "hoy" : `el ${fechaCorta(actual!.fecha!)}`}: elegí cuándo es el próximo contacto (o “Sin próximo”).`
-      );
-      return;
-    }
+    // v1.20.3: nunca se bloquea la nota. Si estaba para hoy o atrasado y no se eligió el próximo, después de guardar se sugiere elegirlo
+    const sugerirProximo = Boolean(interes && vencido && !cerrar && !volverEl && !sinFecha);
     startTransition(async () => {
       const res = await anotarContacto(clienteId, texto, cerrar ? null : volverEl || null, {
         oportunidadId: interes,
@@ -164,9 +161,10 @@ export default function RegistrarActividad({
       setSinFecha(false);
       setMotivo("");
       setCerrar(false);
-      setAbrirProximo(variante === "caja");
+      setAbrirProximo(variante === "caja" || sugerirProximo);
       setOk(true);
       setTimeout(() => setOk(false), 2000);
+      if (sugerirProximo) setAviso("✓ Anotado. ¿Cuándo lo volvés a contactar? Elegí abajo y tocá enviar.");
       onGuardado?.();
       router.refresh();
     });
@@ -326,6 +324,7 @@ export default function RegistrarActividad({
         {filaMedio}
         {filaResultado}
         {cierre}
+        {aviso && <p className="text-sm font-bold text-verde">{aviso}</p>}
         {abrirProximo && panelProximo}
         <div className="flex items-center gap-2">
           <input
@@ -374,6 +373,7 @@ export default function RegistrarActividad({
         placeholder="Qué pasó (opcional si elegiste el resultado)"
         className="w-full rounded-2xl border border-borde bg-white px-4 py-3 text-base outline-none focus:border-marino"
       />
+      {aviso && <p className="text-sm font-bold text-verde">{aviso}</p>}
       {panelProximo}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button
