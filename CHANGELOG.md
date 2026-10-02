@@ -3,6 +3,14 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.20.1 — 2 de octubre de 2026
+
+Reporte de dirección con captura del iPhone: "se rompió algo en mobile, se sube el footer y queda raro" (en Contactos).
+
+- Causa principal: las grillas de listas (`grid gap-2 lg:grid-cols-2`) en el celular tienen una sola columna implícita `auto`, que crece hasta el ancho mínimo del contenido; un texto con `truncate` (nowrap) mide todo su largo, así que un movimiento largo ensanchaba la lista. Medido en producción a 390 px: "Últimos movimientos" de 2.065 px y la página de 2.082 px de ancho (5 veces la pantalla); con el arreglo, 339 px y la página igual a la pantalla.
+- Arreglo: `grid-cols-1` (minmax(0, 1fr)) en las 40 grillas de una columna en el celular (app y components); la tarjeta de Contactos con `min-w-0`.
+- TecladoAbierto: mide visualViewport y, si al cerrar el teclado el borde de abajo visible queda más abajo que la ventana (iPhone), baja lo fijo de abajo esa diferencia (--ajuste-abajo, clase .fijo-abajo en BottomNav y BotonFlotante) y da un toque al scroll para que se reacomode.
+
 ## v1.20.0 — 2 de octubre de 2026
 
 Pedido de dirección: "que en consumibles me permita eliminar una vez suspendido" (sin migración: la política recurrencias_all ya permite borrar a quien ve el cliente; tareas.recurrencia_id es on delete set null).

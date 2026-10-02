@@ -176,7 +176,7 @@ export default async function EquipoPage({
         </div>
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <section className="rounded-2xl border border-borde bg-white shadow-sm p-4">
           <h2 className="mb-2 text-sm font-semibold">Fotos</h2>
           <FotosEquipo equipoId={e.id} fotos={fotos} />

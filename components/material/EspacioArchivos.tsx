@@ -216,7 +216,7 @@ export default function EspacioArchivos({
           </div>
         )}
         {archivos.length ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {archivos.map((a) => (
               <div key={a.id} className="overflow-hidden rounded-xl border border-borde bg-white">
                 <button type="button" onClick={() => abrir(a)} className="relative block aspect-video w-full bg-black" aria-label={`Ver ${a.nombre}`}>

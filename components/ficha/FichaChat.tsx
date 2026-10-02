@@ -529,7 +529,7 @@ export default async function FichaChat({
         </p>
       )}
       <DatosClienteForm cliente={c} />
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <SucursalesCliente clienteId={c.id} sucursales={sucursales} />
         <DocumentosEntidad entidad="cliente" entidadId={c.id} documentos={documentos} puedeBorrar />
       </div>

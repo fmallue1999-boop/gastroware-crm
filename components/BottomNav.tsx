@@ -11,7 +11,7 @@ export default function BottomNav({ rol = "comercial", paraHoy = 0 }: { rol?: st
   const { celular } = menuDe(rol);
 
   return (
-    <nav className="ocultar-con-teclado fixed bottom-0 inset-x-0 z-20 border-t border-borde bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+    <nav className="ocultar-con-teclado fijo-abajo fixed bottom-0 inset-x-0 z-20 border-t border-borde bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto grid max-w-2xl grid-cols-4">
         {celular.map((item) => {
           const Icono = ICONOS_MENU[item.icono];

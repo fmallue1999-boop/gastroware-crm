@@ -274,7 +274,7 @@ export default function VentaConsumiblesForm({
       {/* Datos de la venta */}
       <section className="space-y-2">
         <p className={seccion}>La venta</p>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <label className="text-[14px] font-bold">
             Fecha de compra
             <input type="date" max={hoy} value={fecha} onChange={(e) => setFecha(e.target.value)} className={cls} />

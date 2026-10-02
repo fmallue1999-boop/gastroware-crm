@@ -56,7 +56,7 @@ export default async function MaterialPage({ searchParams }: { searchParams: Pro
         </section>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {arbol.marcas.map((m) => (
               <Link
                 key={m.id}

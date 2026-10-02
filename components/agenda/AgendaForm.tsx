@@ -139,7 +139,7 @@ export default function AgendaForm({
       </label>
 
       {/* Cuándo */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="block">
           <span className={etiqueta}>{tipo === "pago" ? "Vence el" : "Fecha"}</span>
           <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={cls} />
@@ -267,7 +267,7 @@ export default function AgendaForm({
       </div>
 
       {/* Aviso y repetición */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block">
           <span className={`${etiqueta} flex items-center gap-1.5`}>
             <Bell className="h-4 w-4" /> Aviso

@@ -41,7 +41,7 @@ function Grupo({
         {titulo}
         <span className="font-extrabold normal-case text-tinta">{textoMontos(sumar(lista))}</span>
       </h2>
-      <div className="grid gap-2 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {lista.map((f) => (
           <CobranzaFila key={f.id} f={f} hoy={hoy} puedeAprobar={puedeAprobar} />
         ))}

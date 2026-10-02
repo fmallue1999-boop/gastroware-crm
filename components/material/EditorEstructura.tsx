@@ -136,7 +136,7 @@ export function EditorProducto({
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
-      <div className="grid gap-1.5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         <select value={cat} onChange={(e) => setCat(e.target.value)} className={input} aria-label="Categoría">
           {categorias.map((c) => (
             <option key={c.id} value={c.id}>

@@ -60,7 +60,7 @@ export default function NuevaOperacion({
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <button type="button" onClick={() => setEquipos(true)} className={opcion}>
           <Refrigerator className="h-5 w-5 shrink-0 text-azul" />
           <span>

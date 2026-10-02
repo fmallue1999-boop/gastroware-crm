@@ -22,7 +22,7 @@ function Grupo({ titulo, casos, color, iaOn }: { titulo: string; casos: CasoVist
         <span className={`rounded-full px-2 py-0.5 ${color}`}>{casos.length}</span>
         {titulo}
       </h2>
-      <div className="grid gap-2 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {casos.map((c) => (
           <CasoTarjeta key={c.id} caso={c} iaOn={iaOn} />
         ))}

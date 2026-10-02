@@ -122,7 +122,7 @@ export default function MarcaAdmin({ inicial, puedeEditar }: { inicial: Marca; p
 
         <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="text-lg font-extrabold">Colores</h2>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {TEMAS.map((t) => (
               <button
                 key={t.id}
@@ -168,7 +168,7 @@ export default function MarcaAdmin({ inicial, puedeEditar }: { inicial: Marca; p
 
         <section className="space-y-4 rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="text-lg font-extrabold">Logos</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SubidaLogo
               titulo="Para fondo oscuro"
               ayuda="Barra lateral de la computadora. Ideal: SVG o PNG claro con fondo transparente."

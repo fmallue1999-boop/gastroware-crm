@@ -176,7 +176,7 @@ export default function FichaContenidoForm({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className={etiqueta}>
           Fecha *
           <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} disabled={soloMirar} className={`${inputCls} mt-1 font-normal`} />
