@@ -873,6 +873,8 @@ export async function anotarContacto(
     motivo?: string | null;
     /** Con quién se habló. */
     contactoId?: string | null;
+    /** Se anota y se cierra el interés (no hace falta próximo paso). */
+    cierra?: boolean;
   }
 ) {
   const contenido = texto.trim();
@@ -896,6 +898,15 @@ export async function anotarContacto(
     !!volverEl,
     contenido
   );
+
+  // Si estaba para hoy o atrasado y se lo contactó, no puede quedar igual:
+  // hay que decir cuándo es el próximo contacto (o "sin próximo") (v1.19.1)
+  if (interes && (contenido || medio) && !volverEl && !sinFecha && !opciones?.cierra) {
+    const { data: estado } = await supabase.from("oportunidades").select("proximo_contacto").eq("id", interes.id).maybeSingle();
+    const vence = (estado?.proximo_contacto as string | null | undefined) ?? null;
+    if (vence && vence <= hoyISO())
+      return { error: "Este interés estaba para hoy o atrasado: elegí cuándo es el próximo contacto (o “Sin próximo”)" };
+  }
 
   // Fecha anterior, para dejar registro si se reprograma
   let previo: string | null = null;
