@@ -18,10 +18,16 @@ export function CadenciaInteres({
   interes,
   fechaPropuesta,
   hoy,
+  conNoRespondio = true,
+  children,
 }: {
   interes: { id: string; etapa: string; proximo_contacto?: string | null };
   fechaPropuesta: string | null;
   hoy: string;
+  /** En lista de espera no se muestra "No respondió". */
+  conNoRespondio?: boolean;
+  /** Más botones en la misma fila (v1.21: Reprogramar). */
+  children?: React.ReactNode;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -54,14 +60,17 @@ export function CadenciaInteres({
           {sug.nota} · {fechaCorta(sug.fecha)}
         </button>
       )}
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => correr(() => noRespondio(interes.id), (r) => `Intento anotado. Próximo: ${r.fecha ? fechaCorta(r.fecha) : ""}`)}
-        className="min-h-10 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold text-tinta disabled:opacity-50"
-      >
-        No respondió
-      </button>
+      {conNoRespondio && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => correr(() => noRespondio(interes.id), (r) => `Intento anotado. Próximo: ${r.fecha ? fechaCorta(r.fecha) : ""}`)}
+          className="min-h-10 rounded-xl border border-borde bg-white px-3 text-[14px] font-bold text-tinta disabled:opacity-50"
+        >
+          No respondió
+        </button>
+      )}
+      {children}
       {msg && <span className={`text-[14px] font-bold ${msg.error ? "text-red-600" : "text-verde"}`}>{msg.texto}</span>}
     </div>
   );

@@ -23,7 +23,7 @@ import TarjetaRepuesto from "@/components/repuestos/TarjetaRepuesto";
 import { cargarSolicitudes } from "@/lib/servidor/repuestos";
 import { nombreLinea, notasSinContacto, textoActividad } from "@/lib/actividad";
 import { cantidadTexto, reposicionEstimada } from "@/lib/consumibles";
-import InteresFijado, { type VersionCot } from "@/components/ficha/InteresFijado";
+import InteresFijado, { type MovimientoInteres, type VersionCot } from "@/components/ficha/InteresFijado";
 import FichaTabs, { IrAPestana, type Pestana } from "@/components/ficha/FichaTabs";
 import NuevaOperacion from "@/components/ficha/NuevaOperacion";
 import AsignarVendedor from "@/components/AsignarVendedor";
@@ -184,6 +184,23 @@ export default async function FichaChat({
   const personas = (personasRes.data ?? []) as Persona[];
   const nombrePersona = new Map(personas.map((p) => [p.id, p.nombre]));
   const principalPersona = personas[0] ?? null;
+  // Los movimientos de cada interés con quién los hizo (v1.21), lo más nuevo primero
+  const movimientosDe = new Map<string, MovimientoInteres[]>();
+  for (const a of actividades) {
+    if (!a.oportunidad_id) continue;
+    const lista = movimientosDe.get(a.oportunidad_id) ?? [];
+    lista.push({
+      id: a.id,
+      tipo: a.tipo,
+      contenido: a.contenido,
+      medio: a.medio,
+      resultado: a.resultado,
+      created_at: a.created_at,
+      autor: a.created_by ? (nombres.get(a.created_by) ?? null) : null,
+      conPersona: a.contacto_id ? (nombrePersona.get(a.contacto_id) ?? null) : null,
+    });
+    movimientosDe.set(a.oportunidad_id, lista);
+  }
 
   const abiertas = oportunidades.filter((o) => (ETAPAS_ABIERTAS as readonly string[]).includes(o.etapa));
   const ventas = oportunidades.filter((o) => o.etapa === "ganada");
@@ -288,6 +305,8 @@ export default async function FichaChat({
   const repuestosAbiertos = solicitudesRep.filter((s) => !["ganada", "perdida"].includes(s.estado));
   const interesesVenta = abiertas.filter((o) => !solicitudesRep.some((s) => s.oportunidad_id === o.id));
   const nombreDeOpp = new Map(oportunidades.map((o) => [o.id, nombreProductos(o)]));
+  const enTarjeta = new Set(interesesVenta.map((o) => o.id));
+  const otrosRecientes = recientes.filter((a) => !a.oportunidad_id || !enTarjeta.has(a.oportunidad_id));
 
   // --- Operaciones: lo que está abierto con este cliente y "Nueva operación"
   const operaciones = (
@@ -314,6 +333,7 @@ export default async function FichaChat({
           miId={miId}
           responsableNombre={o.comercial_id ? nombres.get(o.comercial_id) ?? null : null}
           ahoraMs={ahoraMs}
+          movimientos={movimientosDe.get(o.id) ?? []}
         />
       ))}
       {ventasEnCurso.map((o) => (
@@ -345,10 +365,10 @@ export default async function FichaChat({
         <p className="rounded-2xl bg-white px-4 py-5 text-center text-[15px] text-piedra shadow-sm">No hay operaciones abiertas con este cliente.</p>
       )}
       <NuevaOperacion clienteId={c.id} productosEquipos={productosDeLinea(productos, "equipos")} stockInfo={stockInfo} tareaHref={tareaHref} />
-      {actividades.length > 0 && (
+      {otrosRecientes.length > 0 && (
         <div className="pt-1">
-          <p className={titulo}>Últimos movimientos</p>
-          <div className="flex flex-col gap-2">{recientes.slice(-3).map(burbuja)}</div>
+          <p className={titulo}>{interesesVenta.length ? "Otros movimientos del cliente" : "Últimos movimientos"}</p>
+          <div className="flex flex-col gap-2">{otrosRecientes.slice(-3).map(burbuja)}</div>
           <div className="mt-2 text-center">
             <IrAPestana a="historial">Ver todo el historial ({actividades.length})</IrAPestana>
           </div>

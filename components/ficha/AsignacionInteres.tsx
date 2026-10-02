@@ -12,28 +12,24 @@ import { veTodo } from "@/lib/puestos";
 /**
  * Dónde se entrega y quién atiende la consulta (manual 1.1 paso 2). Sin
  * lugar de entrega queda "sin asignar"; el vendedor que recibe una de otro
- * territorio la pasa con "No es de mi territorio". Muestra si falta el
- * primer contacto (dentro de la hora).
+ * territorio la pasa con "No es de mi territorio". El aviso de primer
+ * contacto pendiente es PrimerContacto (v1.21: va en el recuadro del próximo paso).
  */
 export default function AsignacionInteres({
   interes,
   rol,
   miId,
   responsableNombre,
-  ahoraMs,
 }: {
   interes: {
     id: string;
     cliente_id?: string;
     zona_entrega?: string | null;
     comercial_id: string | null;
-    asignado_at?: string | null;
-    primer_contacto_at?: string | null;
   };
   rol: string;
   miId: string;
   responsableNombre: string | null;
-  ahoraMs: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -42,20 +38,6 @@ export default function AsignacionInteres({
   const [msg, setMsg] = useState<{ texto: string; error?: boolean } | null>(null);
   const esMia = interes.comercial_id === miId;
   const puedeAsignar = veTodo(rol) || !interes.comercial_id;
-
-  /** Primer contacto hecho: queda anotado y el próximo paso es cotizar hoy. */
-  function contactado(medio: string) {
-    if (!interes.cliente_id) return;
-    setMsg(null);
-    startTransition(async () => {
-      const r = await anotarContacto(interes.cliente_id!, "", hoyISO(), { oportunidadId: interes.id, medio, resultado: "conversamos", accion: "cotizar" });
-      if (r && "error" in r && r.error) setMsg({ texto: r.error, error: true });
-      else {
-        setMsg({ texto: "Primer contacto anotado ✓" });
-        router.refresh();
-      }
-    });
-  }
 
   function enviar(accion: "asignar" | "no_es_mio") {
     if (!zona) return;
@@ -106,9 +88,6 @@ export default function AsignacionInteres({
       </div>
     );
 
-  const sinPrimerContacto = !interes.primer_contacto_at && interes.asignado_at;
-  const demora = sinPrimerContacto ? ahoraMs - Date.parse(interes.asignado_at!) : 0;
-
   return (
     <div className="mt-1">
       <p className="flex flex-wrap items-center gap-x-1.5 text-[14px] text-tinta/80">
@@ -121,35 +100,68 @@ export default function AsignacionInteres({
           </button>
         )}
       </p>
-      {sinPrimerContacto && (
-        <div className={`mt-1.5 space-y-1.5 rounded-xl px-3 py-2 ${demora > 3600000 ? "bg-red-50" : "bg-ambar-soft"}`}>
-          <p className={`text-[14px] font-bold ${demora > 3600000 ? "text-red-600" : "text-ambar"}`}>
-            Sin primer contacto · asignada {transcurrido(interes.asignado_at!, ahoraMs)}
-          </p>
-          {interes.cliente_id && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[13px] font-semibold">Ya lo contacté por:</span>
-              {[
-                { medio: "whatsapp", texto: "WhatsApp" },
-                { medio: "llamada", texto: "Llamada" },
-                { medio: "email", texto: "Email" },
-              ].map((m) => (
-                <button
-                  key={m.medio}
-                  type="button"
-                  disabled={pending}
-                  onClick={() => contactado(m.medio)}
-                  className="min-h-9 rounded-full border border-borde bg-white px-3 text-[13px] font-bold text-tinta disabled:opacity-50"
-                >
-                  {m.texto}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
       {cambiando && selector(esMia && !veTodo(rol) ? "no_es_mio" : "asignar", esMia && !veTodo(rol) ? "Pasarla" : "Reasignar")}
       {msg && <p className={`mt-1 text-[14px] font-bold ${msg.error ? "text-red-600" : "text-verde"}`}>{msg.texto}</p>}
+    </div>
+  );
+}
+
+/**
+ * Falta el primer contacto (manual 1.1: dentro de la hora). "Ya lo contacté
+ * por…" lo anota y deja el próximo paso en cotizar hoy.
+ */
+export function PrimerContacto({
+  interes,
+  ahoraMs,
+}: {
+  interes: { id: string; cliente_id?: string; asignado_at?: string | null };
+  ahoraMs: number;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [msg, setMsg] = useState<{ texto: string; error?: boolean } | null>(null);
+  if (!interes.asignado_at) return null;
+  const demora = ahoraMs - Date.parse(interes.asignado_at);
+
+  function contactado(medio: string) {
+    if (!interes.cliente_id) return;
+    setMsg(null);
+    startTransition(async () => {
+      const r = await anotarContacto(interes.cliente_id!, "", hoyISO(), { oportunidadId: interes.id, medio, resultado: "conversamos", accion: "cotizar" });
+      if (r && "error" in r && r.error) setMsg({ texto: r.error, error: true });
+      else {
+        setMsg({ texto: "Primer contacto anotado ✓" });
+        router.refresh();
+      }
+    });
+  }
+
+  return (
+    <div className="mt-1 space-y-1.5">
+      <p className={`text-[13px] font-bold ${demora > 3600000 ? "text-red-600" : "text-ambar"}`}>
+        Sin primer contacto · asignada {transcurrido(interes.asignado_at, ahoraMs)}
+      </p>
+      {interes.cliente_id && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[13px] font-semibold">Ya lo contacté por:</span>
+          {[
+            { medio: "whatsapp", texto: "WhatsApp" },
+            { medio: "llamada", texto: "Llamada" },
+            { medio: "email", texto: "Email" },
+          ].map((m) => (
+            <button
+              key={m.medio}
+              type="button"
+              disabled={pending}
+              onClick={() => contactado(m.medio)}
+              className="min-h-9 rounded-full border border-borde bg-white px-3 text-[13px] font-bold text-tinta disabled:opacity-50"
+            >
+              {m.texto}
+            </button>
+          ))}
+        </div>
+      )}
+      {msg && <p className={`text-[13px] font-bold ${msg.error ? "text-red-600" : "text-verde"}`}>{msg.texto}</p>}
     </div>
   );
 }

@@ -19,6 +19,17 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.21.0",
+    fecha: "2026-10-02",
+    titulo: "Tarjeta del interés renovada y “Para hoy” en el embudo",
+    cambios: [
+      "Cada interés en la ficha muestra sus movimientos (notas, llamadas, WhatsApp, cotizaciones, reprogramaciones) con quién los hizo y cuándo; los últimos 5 y “Ver los N movimientos”.",
+      "Arriba, el recuadro del próximo paso con los botones rápidos: primer contacto (“Ya lo contacté por…”), No respondió y Reprogramar. Después Cotizar, Me compró y No se dio en una fila.",
+      "Con el lápiz se cambian el producto y cuánto le interesa (antes estaba abajo, en “Más opciones”). Lo que se usa poco (mensaje con IA, lista de espera, financiación, calculadora, eliminar) quedó en “⋯”.",
+      "El embudo tiene primero la columna “Para hoy”: lo que hay que contactar hoy y lo atrasado, con su etapa. Cuando lo reprogramás vuelve a su columna. Si ya lo contactaste hoy pero falta el próximo paso, queda al final con “✓ Contactado hoy”.",
+    ],
+  },
+  {
     version: "1.20.3",
     fecha: "2026-10-02",
     titulo: "Las notas se guardan siempre",

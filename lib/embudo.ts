@@ -25,10 +25,13 @@ export type TarjetaEmbudo = {
   closed_at: string | null;
   created_at: string;
   comercial_id: string | null;
+  /** v1.21: ya tuvo una nota hoy (contactado) pero sigue vencido: falta el próximo paso. */
+  contactado_hoy?: boolean;
 };
 
-export type ColumnaEmbudo = "nueva" | "cotizada" | "seguimiento" | "espera" | "ganada";
+export type ColumnaEmbudo = "hoy" | "nueva" | "cotizada" | "seguimiento" | "espera" | "ganada";
 export const COLUMNAS_EMBUDO: { key: ColumnaEmbudo; label: string }[] = [
+  { key: "hoy", label: "Para hoy" },
   { key: "nueva", label: "Interesados" },
   { key: "cotizada", label: "Cotizados" },
   { key: "seguimiento", label: "En seguimiento" },
@@ -117,6 +120,48 @@ export function mesActual(): string {
   return hoyISO().slice(0, 7);
 }
 
+const ORDEN_NIVEL: Record<string, number> = { caliente: 0, tibio: 1, frio: 2 };
+const porNivel = (a: TarjetaEmbudo, b: TarjetaEmbudo) => (ORDEN_NIVEL[a.nivel ?? ""] ?? 3) - (ORDEN_NIVEL[b.nivel ?? ""] ?? 3);
+
+/** Le toca hoy: vencido (hoy o antes) o en lista de espera con "Llegó stock". */
+export function tocaHoy(t: Pick<TarjetaEmbudo, "etapa" | "proximo_contacto" | "proximo_nota">, hoy: string): boolean {
+  if (t.etapa === "espera" && t.proximo_nota === "Llegó stock") return true;
+  return Boolean(t.proximo_contacto && t.proximo_contacto <= hoy);
+}
+
+/**
+ * Reparte los intereses abiertos en columnas (v1.21): lo que toca hoy va a
+ * "Para hoy" (y sale de su etapa hasta que se reprograma); arriba lo más
+ * atrasado, después los de hoy por hora y nivel, y al final los que ya se
+ * contactaron hoy pero no tienen próximo paso. El resto, por etapa: primero
+ * lo que tiene fecha (lo más cercano arriba), después por nivel.
+ */
+export function repartirColumnas(abiertas: TarjetaEmbudo[], hoy: string): Omit<Record<ColumnaEmbudo, TarjetaEmbudo[]>, "ganada"> {
+  const col: Omit<Record<ColumnaEmbudo, TarjetaEmbudo[]>, "ganada"> = { hoy: [], nueva: [], cotizada: [], seguimiento: [], espera: [] };
+  for (const t of abiertas) {
+    if (tocaHoy(t, hoy)) col.hoy.push(t);
+    else if (t.etapa in col && t.etapa !== "hoy") col[t.etapa as Exclude<ColumnaEmbudo, "ganada" | "hoy">].push(t);
+  }
+  col.hoy.sort((a, b) => {
+    if (Boolean(a.contactado_hoy) !== Boolean(b.contactado_hoy)) return a.contactado_hoy ? 1 : -1;
+    const fa = a.proximo_contacto ?? hoy;
+    const fb = b.proximo_contacto ?? hoy;
+    if (fa !== fb) return fa < fb ? -1 : 1;
+    const ha = a.proximo_hora ?? "";
+    const hb = b.proximo_hora ?? "";
+    if (ha !== hb) return ha < hb ? -1 : 1;
+    return porNivel(a, b);
+  });
+  const ordenar = (a: TarjetaEmbudo, b: TarjetaEmbudo) => {
+    const fa = a.proximo_contacto ?? "9999";
+    const fb = b.proximo_contacto ?? "9999";
+    if (fa !== fb) return fa < fb ? -1 : 1;
+    return porNivel(a, b);
+  };
+  for (const k of ["nueva", "cotizada", "seguimiento", "espera"] as const) col[k].sort(ordenar);
+  return col;
+}
+
 /**
  * Todo lo que muestra el embudo: los intereses abiertos por etapa, los
  * vendidos del mes, y los números de arriba. Filtrado por vendedor si se
@@ -161,38 +206,38 @@ export async function cargarEmbudo(
   const { data: vendData } = await qVend;
   const vendidos = ((vendData ?? []) as unknown as Fila[]).map(aTarjeta);
 
-  const columnas: Record<ColumnaEmbudo, TarjetaEmbudo[]> = {
-    nueva: [],
-    cotizada: [],
-    seguimiento: [],
-    espera: [],
-    ganada: vendidos,
-  };
-  for (const f of abiertos) {
-    const t = aTarjeta(f);
-    if (t.etapa in columnas) columnas[t.etapa as ColumnaEmbudo].push(t);
+  const todas = abiertos.map(aTarjeta);
+  // Los que tocan hoy y ya tuvieron una nota hoy: contactados, falta el próximo paso
+  const vencidas = todas.filter((t) => tocaHoy(t, hoy)).map((t) => t.id);
+  const contactadas = new Set<string>();
+  const desdeHoy = new Date(`${hoy}T00:00:00-03:00`).toISOString();
+  for (let i = 0; i < vencidas.length; i += 150) {
+    const { data } = await supabase
+      .from("actividades")
+      .select("oportunidad_id")
+      .in("oportunidad_id", vencidas.slice(i, i + 150))
+      .eq("tipo", "nota")
+      .not("created_by", "is", null)
+      .gte("created_at", desdeHoy);
+    for (const a of (data ?? []) as { oportunidad_id: string }[]) contactadas.add(a.oportunidad_id);
   }
-  // Orden dentro de cada columna: primero lo que tiene fecha (más urgente arriba), después por nivel
-  const ORDEN_NIVEL: Record<string, number> = { caliente: 0, tibio: 1, frio: 2 };
-  const ordenar = (a: TarjetaEmbudo, b: TarjetaEmbudo) => {
-    const fa = a.proximo_contacto ?? "9999";
-    const fb = b.proximo_contacto ?? "9999";
-    if (fa !== fb) return fa < fb ? -1 : 1;
-    return (ORDEN_NIVEL[a.nivel ?? ""] ?? 3) - (ORDEN_NIVEL[b.nivel ?? ""] ?? 3);
-  };
-  for (const k of ["nueva", "cotizada", "seguimiento", "espera"] as ColumnaEmbudo[]) columnas[k].sort(ordenar);
+  for (const t of todas) if (contactadas.has(t.id)) t.contactado_hoy = true;
+
+  const columnas: Record<ColumnaEmbudo, TarjetaEmbudo[]> = { ...repartirColumnas(todas, hoy), ganada: vendidos };
 
   const montos = (lista: TarjetaEmbudo[]) =>
     sumarPorMoneda(lista.map((t) => ({ monto: t.monto, moneda: t.moneda })));
   const totales = {
+    hoy: montos(columnas.hoy),
     nueva: montos(columnas.nueva),
     cotizada: montos(columnas.cotizada),
     seguimiento: montos(columnas.seguimiento),
     espera: montos(columnas.espera),
     ganada: montos(columnas.ganada),
   };
-  const abiertasTarjetas = [...columnas.nueva, ...columnas.cotizada, ...columnas.seguimiento, ...columnas.espera];
-  const productosEspera = Array.from(new Set(columnas.espera.map((t) => t.interes))).slice(0, 3);
+  const abiertasTarjetas = todas;
+  const enEspera = todas.filter((t) => t.etapa === "espera");
+  const productosEspera = Array.from(new Set(enEspera.map((t) => t.interes))).slice(0, 3);
 
   return {
     columnas,
@@ -204,7 +249,7 @@ export async function cargarEmbudo(
       montoAbierto: montos(abiertasTarjetas),
       vendidosMes: vendidos.length,
       montoVendidoMes: totales.ganada,
-      enEspera: columnas.espera.length,
+      enEspera: enEspera.length,
       productosEspera,
     },
     mes,
