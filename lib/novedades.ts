@@ -19,6 +19,16 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.23.0",
+    fecha: "2026-10-02",
+    titulo: "Espacios en Material y pedidos a marketing con aprobación",
+    cambios: [
+      "Material: marketing crea espacios para subir contenido de cualquier tipo (presentaciones, redes, banners, manuales…): generales en el inicio de Material, de una marca o de un producto. Se les cambia el nombre o se borran, y cualquier archivo se puede mover de un espacio a otro con “Mover”.",
+      "Pedidos a marketing: se pide → marketing lo toma, lo hace y sube lo que hizo → lo manda a aprobar → dirección aprueba o pide cambios (con qué corregir) → aprobado, queda solo en Material (en el espacio que elija marketing o en “Pedidos aprobados”) y marketing lo acomoda donde quiera.",
+      "Dirección ve lo que espera aprobación en Aprobaciones (con el contador del menú), en Mi día y en el menú “Pedidos a marketing”. Cada pedido tiene su página con lo que se pidió, los archivos, la corrección y dónde quedó.",
+    ],
+  },
+  {
     version: "1.22.0",
     fecha: "2026-10-02",
     titulo: "Stock apartado y corregir el paso de una venta",

@@ -1,19 +1,26 @@
 import Link from "next/link";
-import { ChevronRight, FileText, Table2 } from "lucide-react";
+import { ChevronRight, FileText, Folder, Table2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { buscarMaterial } from "@/lib/material";
-import { cargarArbol } from "@/lib/servidor/material";
+import { cargarArbol, espaciosDe, puedeGestionarMaterial } from "@/lib/servidor/material";
 import { BuscadorMaterial } from "@/components/material/Navegacion";
+import { NuevoEspacio } from "@/components/material/EspaciosPropios";
 
 /**
  * Material, la biblioteca comercial (v1.11): buscador, una tarjeta grande
- * por marca y la tabla general de videos por producto.
+ * por marca y la tabla general de videos por producto. v1.23: los espacios
+ * generales que crea marketing (presentaciones, redes, pedidos aprobados…).
  */
 export default async function MaterialPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams;
   const busqueda = q?.trim() ?? "";
   const supabase = await createClient();
-  const [arbol, { data: rol }] = await Promise.all([cargarArbol(supabase), supabase.rpc("fn_rol")]);
+  const [arbol, { data: rol }, espacios, gestiona] = await Promise.all([
+    cargarArbol(supabase),
+    supabase.rpc("fn_rol"),
+    espaciosDe(supabase, "general"),
+    puedeGestionarMaterial(supabase),
+  ]);
   const cargaFichas = ["marketing", "direccion", "admin"].includes((rol as string) ?? "");
   const resultados = busqueda ? buscarMaterial(busqueda, arbol) : [];
 
@@ -26,7 +33,7 @@ export default async function MaterialPage({ searchParams }: { searchParams: Pro
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight">Material</h1>
-        <p className="text-[15px] text-piedra">Videos, imágenes y fichas de cada producto, listos para mandar al cliente.</p>
+        <p className="text-[15px] text-piedra">Videos, imágenes, fichas y todo el contenido de marketing, listo para mandar al cliente.</p>
       </div>
       <BuscadorMaterial q={busqueda} />
 
@@ -71,6 +78,29 @@ export default async function MaterialPage({ searchParams }: { searchParams: Pro
               </Link>
             ))}
           </div>
+          {(espacios.length > 0 || gestiona) && (
+            <section className="space-y-2">
+              <h2 className="text-xs font-extrabold tracking-[0.15em] text-piedra">ESPACIOS</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {espacios.map((e) => (
+                  <Link key={e.id} href={`/material/espacio/${e.id}`} className="flex items-center gap-3 rounded-2xl border border-borde bg-white p-4 shadow-sm hover:bg-crema">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-celeste-soft text-azul">
+                      <Folder className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[16px] font-extrabold">{e.nombre}</span>
+                      <span className="block truncate text-sm text-piedra">
+                        {e.cantidad} archivo{e.cantidad === 1 ? "" : "s"}
+                        {e.descripcion ? ` · ${e.descripcion}` : ""}
+                      </span>
+                    </span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-piedra" />
+                  </Link>
+                ))}
+              </div>
+              {gestiona && <NuevoEspacio ambito="general" irAlCrear />}
+            </section>
+          )}
           <Link
             href="/material/por-producto"
             className="flex items-center gap-3 rounded-2xl border border-borde bg-white p-4 shadow-sm hover:bg-crema"

@@ -521,18 +521,21 @@ export const TAREAS: Tarea[] = [
   },
   {
     id: "pedir-material",
-    titulo: "Pedirle material a marketing",
+    titulo: "Pedirle contenido a marketing",
     pasos: [
-      { texto: "Más → Pedidos de material → “Pedir material”: qué necesitás, para qué y para cuándo.", href: "/marketing/pedidos", boton: "Pedir material" },
-      { texto: "Marketing compromete una fecha y te avisa cuando está listo." },
+      { texto: "Pedidos a marketing → “Pedir contenido”: qué necesitás, para qué y para cuándo.", href: "/marketing/pedidos", boton: "Pedir contenido" },
+      { texto: "Marketing lo hace, lo sube y lo manda a aprobar. Dirección lo aprueba o pide cambios." },
+      { texto: "Aprobado, queda en Material y te llega el aviso." },
     ],
   },
   {
     id: "atender-pedidos",
-    titulo: "Atender los pedidos de material",
+    titulo: "Atender los pedidos a marketing",
     pasos: [
-      { texto: "En Pedidos de material: poné la fecha en que lo entregás y “En curso”.", href: "/marketing/pedidos", boton: "Ir a Pedidos" },
-      { texto: "Cuando está listo, “Entregado”: le llega el aviso a quien lo pidió." },
+      { texto: "Abrí el pedido: poné la fecha en que lo das y “Lo tomo”.", href: "/marketing/pedidos", boton: "Ir a Pedidos" },
+      { texto: "Subí lo que hiciste (imágenes, videos, PDF…) y elegí en qué espacio de Material va a quedar." },
+      { texto: "“Mandar a aprobar”: dirección lo aprueba o te pide cambios. Si pide cambios, corregís y lo volvés a mandar." },
+      { texto: "Aprobado, pasa solo a Material: de ahí lo movés o acomodás donde quieras." },
     ],
   },
   {
@@ -709,7 +712,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
     titulo: "Marketing y contenido",
     resumen: "Contenido, material comercial, videos por modelo y campañas.",
     abreEn: { texto: "Mi día", href: "/hoy" },
-    cadaDia: ["Calendario de contenidos: lo de la semana y lo que volvió con re-edición.", "Pedidos de material con fecha.", "Modelos sin video instructivo.", "Consultas del mes por canal."],
+    cadaDia: ["Calendario de contenidos: lo de la semana y lo que volvió con re-edición.", "Pedidos a marketing: los nuevos y los que volvieron con cambios.", "Modelos sin video instructivo.", "Consultas del mes por canal."],
     tareas: ["contenidos", "material-cargar", "material", "atender-pedidos", "videos", "nueva-consulta"],
   },
   distribuidor: {

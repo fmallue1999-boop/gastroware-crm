@@ -49,7 +49,7 @@ export const SUGERENCIAS_IA: Record<Puesto, string[]> = {
   ],
   marketing: [
     "¿Qué tengo en la agenda esta semana?",
-    "¿Qué pedidos de material tengo pendientes?",
+    "¿Qué pedidos a marketing tengo pendientes?",
     "¿De qué modelos falta el video?",
     "¿Qué productos del catálogo no tienen descripción completa?",
   ],

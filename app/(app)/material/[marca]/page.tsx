@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { ChevronRight, FileCheck2, ImageIcon, Pencil, PlayCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ESPACIOS_MARCA } from "@/lib/material";
-import { archivosDe, cargarArbol, puedeGestionarMaterial, resumenPorProducto, type Categoria, type ProductoMaterial, type Resumen } from "@/lib/servidor/material";
+import { archivosDe, archivosDeEspacios, cargarArbol, espaciosDe, puedeGestionarMaterial, resumenPorProducto, type Categoria, type ProductoMaterial, type Resumen } from "@/lib/servidor/material";
+import EspaciosPropios from "@/components/material/EspaciosPropios";
 import { BuscadorMaterial, MigasMaterial } from "@/components/material/Navegacion";
 import EspacioArchivos from "@/components/material/EspacioArchivos";
 import { EditorCategoria, EditorProducto, NuevaCategoria, NuevoProducto } from "@/components/material/EditorEstructura";
@@ -26,11 +27,13 @@ export default async function MarcaMaterialPage({ params, searchParams }: { para
   const categorias = arbol.categorias.filter((c) => c.marca_id === marca.id);
   const idsCat = new Set(categorias.map((c) => c.id));
   const productos = arbol.productos.filter((p) => idsCat.has(p.categoria_id));
-  const [resumen, archivosMarca, { data: catalogo }] = await Promise.all([
+  const [resumen, archivosMarca, { data: catalogo }, espaciosMarca] = await Promise.all([
     resumenPorProducto(supabase, productos.map((p) => p.id)),
     archivosDe(supabase, "marca", marca.id),
     editando ? supabase.from("productos").select("id, nombre").eq("activo", true).order("nombre") : Promise.resolve({ data: [] }),
+    espaciosDe(supabase, "marca", marca.id),
   ]);
+  const archivosEspacios = Object.fromEntries(await archivosDeEspacios(supabase, espaciosMarca.map((e) => e.id)));
 
   const deSeccion = (s: string) => categorias.filter((c) => c.seccion === s);
   const columnas: { titulo: string; seccion: "productos" | "accesorios" }[] = [{ titulo: "PRODUCTOS", seccion: "productos" }];
@@ -70,6 +73,7 @@ export default async function MarcaMaterialPage({ params, searchParams }: { para
               />
             </div>
           ))}
+          <EspaciosPropios ambito="marca" ambitoId={marca.id} espacios={espaciosMarca} archivos={archivosEspacios} puedeGestionar={gestiona} />
         </section>
 
         {columnas.map((col) => {

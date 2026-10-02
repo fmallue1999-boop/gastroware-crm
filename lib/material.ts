@@ -5,7 +5,20 @@
 
 export type EspacioMarca = "catalogo" | "logo" | "tipografias";
 export type EspacioProducto = "videos" | "imagenes" | "ficha";
-export type Espacio = EspacioMarca | EspacioProducto;
+/** v1.23: "propio" = archivos de un espacio creado por marketing; "entrega" = lo que marketing entrega de un pedido. */
+export type EspacioLibre = "propio" | "entrega";
+export type Espacio = EspacioMarca | EspacioProducto | EspacioLibre;
+/** Dueño de los archivos: la marca, el producto, un espacio propio o un pedido de contenido. */
+export type DuenoArchivo = "marca" | "producto" | "espacio" | "pedido";
+export type AmbitoEspacio = "general" | "marca" | "producto";
+
+/** Qué espacio corresponde a cada dueño (la base lo exige igual). */
+export function espacioValido(dueno: DuenoArchivo, espacio: string): boolean {
+  if (dueno === "marca") return ["catalogo", "logo", "tipografias"].includes(espacio);
+  if (dueno === "producto") return ["videos", "imagenes", "ficha"].includes(espacio);
+  if (dueno === "espacio") return espacio === "propio";
+  return espacio === "entrega";
+}
 export type VideoTipo = "usar" | "configurar" | "lavar" | "otro";
 
 export const ESPACIOS_MARCA: { value: EspacioMarca; label: string; detalle: string }[] = [
@@ -24,7 +37,7 @@ export const VIDEO_TIPOS: { value: VideoTipo; label: string }[] = [
 export const videoTipoDe = (t: string | null | undefined) => VIDEO_TIPOS.find((v) => v.value === t) ?? VIDEO_TIPOS[3];
 export const esVideoTipo = (t: string | null | undefined): t is VideoTipo => VIDEO_TIPOS.some((v) => v.value === t);
 export const esEspacio = (e: string | null | undefined): e is Espacio =>
-  ["catalogo", "logo", "tipografias", "videos", "imagenes", "ficha"].includes(e ?? "");
+  ["catalogo", "logo", "tipografias", "videos", "imagenes", "ficha", "propio", "entrega"].includes(e ?? "");
 export const esEspacioMarca = (e: string): e is EspacioMarca => ["catalogo", "logo", "tipografias"].includes(e);
 
 /** Qué archivos acepta cada espacio (null = cualquiera). */

@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileArchive, FileText, ImageIcon, Play, RefreshCw, Trash2, Upload } from "lucide-react";
-import { borrarArchivoMaterial, cambiarTipoVideo, registrarArchivosMaterial } from "@/lib/actions";
-import { VIDEO_TIPOS, aceptaArchivo, acceptDe, videoTipoDe, type Espacio, type VideoTipo } from "@/lib/material";
+import { FileArchive, FileText, FolderInput, ImageIcon, Play, RefreshCw, Trash2, Upload } from "lucide-react";
+import { borrarArchivoMaterial, cambiarTipoVideo, destinosMaterial, moverArchivoMaterial, registrarArchivosMaterial, type DestinoMaterial } from "@/lib/actions";
+import { VIDEO_TIPOS, aceptaArchivo, acceptDe, videoTipoDe, type DuenoArchivo, type Espacio, type VideoTipo } from "@/lib/material";
 import { esImagen, esVideo } from "@/lib/contenidos";
 import { nombreSeguro, pesoTexto, subirArchivo } from "@/lib/subir";
 import Visor from "@/components/VisorMedios";
@@ -13,10 +13,20 @@ import type { ArchivoMaterial } from "@/lib/servidor/material";
 
 type Pendiente = { clave: string; nombre: string; tamano: number; avance: number; error?: string };
 
+// Los destinos para "Mover" se piden una sola vez por página
+const destinosCache: { pedido: Promise<DestinoMaterial[]> | null } = { pedido: null };
+function cargarDestinos() {
+  if (!destinosCache.pedido) destinosCache.pedido = destinosMaterial();
+  return destinosCache.pedido;
+}
+
 /**
  * Un espacio de archivos de Material (v1.11): catálogo, logo y tipografías
  * de la marca, o videos, imágenes y ficha del producto. Todos ven, descargan
  * y comparten; marketing y dirección suben, cambian y borran.
+ * v1.23: espacios propios ("propio") y lo entregado de un pedido ("entrega")
+ * aceptan cualquier archivo; fotos y videos en grilla, el resto en lista.
+ * "Mover" pasa un archivo a otro espacio sin volver a subirlo.
  */
 export default function EspacioArchivos({
   dueno,
@@ -28,7 +38,7 @@ export default function EspacioArchivos({
   tipoInicial,
   vacio,
 }: {
-  dueno: "marca" | "producto";
+  dueno: DuenoArchivo;
   duenoId: string;
   espacio: Espacio;
   archivos: ArchivoMaterial[];
@@ -45,7 +55,31 @@ export default function EspacioArchivos({
   const [pendientes, setPendientes] = useState<Pendiente[]>([]);
   const [visor, setVisor] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [moviendo, setMoviendo] = useState<ArchivoMaterial | null>(null);
+  const [destinos, setDestinos] = useState<DestinoMaterial[] | null>(null);
+  const [destino, setDestino] = useState("");
   const medios = archivos.filter((a) => esImagen(a.mime) || esVideo(a.mime));
+  const puedeMover = puedeGestionar && dueno !== "pedido";
+
+  function empezarMover(a: ArchivoMaterial) {
+    setMoviendo(a);
+    setDestino("");
+    setError(null);
+    cargarDestinos()
+      .then((d) => setDestinos(d))
+      .catch(() => setError("No se pudieron cargar los espacios"));
+  }
+
+  function mover() {
+    const d = destinos?.find((x) => x.clave === destino);
+    if (!moviendo || !d) return;
+    startTransition(async () => {
+      const r = await moverArchivoMaterial(moviendo.id, { dueno: d.dueno, duenoId: d.duenoId, espacio: d.espacio });
+      if (r && "error" in r && r.error) setError(r.error);
+      else setMoviendo(null);
+      router.refresh();
+    });
+  }
 
   function subir(files: FileList | null) {
     if (!files?.length) return;
@@ -118,6 +152,20 @@ export default function EspacioArchivos({
     if (i >= 0) setVisor(i);
   };
 
+  const moverBtn = (a: ArchivoMaterial) =>
+    puedeMover && (
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => empezarMover(a)}
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-borde bg-white text-piedra"
+        aria-label={`Mover ${a.nombre} a otro espacio`}
+        title="Mover a otro espacio"
+      >
+        <FolderInput className="h-4 w-4" />
+      </button>
+    );
+
   const borrarBtn = (a: ArchivoMaterial) =>
     puedeGestionar && (
       <button
@@ -146,6 +194,7 @@ export default function EspacioArchivos({
           )}
           <AccionesArchivo url={f.url} nombre={f.nombre} mime={f.mime} />
           {botonSubir("Reemplazar", <RefreshCw className="h-4 w-4" />)}
+          {moverBtn(f)}
           {borrarBtn(f)}
         </div>
         <p className="truncate text-xs text-piedra">{f.nombre}</p>
@@ -185,6 +234,7 @@ export default function EspacioArchivos({
                   </p>
                   <span className="flex shrink-0 gap-1">
                     <AccionesArchivo url={a.url} nombre={a.nombre} mime={a.mime} compacto />
+                    {moverBtn(a)}
                     {borrarBtn(a)}
                   </span>
                 </div>
@@ -248,6 +298,7 @@ export default function EspacioArchivos({
                     )}
                     <span className="flex gap-1">
                       <AccionesArchivo url={a.url} nombre={a.nombre} mime={a.mime} compacto />
+                      {moverBtn(a)}
                       {borrarBtn(a)}
                     </span>
                   </div>
@@ -262,6 +313,64 @@ export default function EspacioArchivos({
         ) : (
           <p className="text-[15px] text-piedra">{vacio ?? "Todavía no hay videos."}</p>
         )}
+      </div>
+    );
+  } else if (espacio === "propio" || espacio === "entrega") {
+    // Cualquier archivo: fotos y videos en grilla (se abren en el visor), el resto en lista
+    const otros = archivos.filter((a) => !esImagen(a.mime) && !esVideo(a.mime));
+    contenido = (
+      <div className="space-y-2">
+        {botonSubir("Subir archivos")}
+        {medios.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {medios.map((a) => (
+              <div key={a.id} className="overflow-hidden rounded-xl border border-borde bg-white">
+                <button type="button" onClick={() => abrir(a)} className="relative block aspect-square w-full bg-crema" aria-label={`Ver ${a.nombre}`}>
+                  {a.url && esImagen(a.mime) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.url} alt={a.nombre} loading="lazy" className="h-full w-full object-cover" />
+                  ) : a.url ? (
+                    <>
+                      <video src={`${a.url}#t=0.5`} preload="metadata" muted playsInline className="h-full w-full bg-black object-contain" />
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white">
+                          <Play className="h-5 w-5" />
+                        </span>
+                      </span>
+                    </>
+                  ) : (
+                    <ImageIcon className="mx-auto h-6 w-6 text-piedra" />
+                  )}
+                </button>
+                <div className="flex items-center justify-between gap-1 px-2 py-1.5">
+                  <p className="min-w-0 truncate text-[12px] text-piedra" title={a.nombre}>
+                    {a.nombre}
+                  </p>
+                  <span className="flex shrink-0 gap-1">
+                    <AccionesArchivo url={a.url} nombre={a.nombre} mime={a.mime} compacto />
+                    {moverBtn(a)}
+                    {borrarBtn(a)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {otros.map((a) => (
+          <div key={a.id} className="flex items-center gap-2 rounded-xl bg-crema px-2.5 py-2">
+            <a href={a.url ?? "#"} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-piedra">
+              <FileText className="h-4 w-4" />
+            </a>
+            <a href={a.url ? linkDescarga(a.url, a.nombre) : "#"} className="min-w-0 flex-1 truncate text-[14px] font-semibold hover:underline" title={a.nombre}>
+              {a.nombre}
+              {a.tamano ? <span className="font-normal text-piedra"> · {pesoTexto(a.tamano)}</span> : null}
+            </a>
+            <AccionesArchivo url={a.url} nombre={a.nombre} mime={a.mime} compacto />
+            {moverBtn(a)}
+            {borrarBtn(a)}
+          </div>
+        ))}
+        {!archivos.length && <p className="text-sm text-piedra">{vacio ?? "Vacío por ahora."}</p>}
       </div>
     );
   } else {
@@ -284,6 +393,7 @@ export default function EspacioArchivos({
               {a.nombre}
             </a>
             <AccionesArchivo url={a.url} nombre={a.nombre} mime={a.mime} compacto />
+            {moverBtn(a)}
             {borrarBtn(a)}
           </div>
         ))}
@@ -295,6 +405,39 @@ export default function EspacioArchivos({
 
   return (
     <div className="space-y-2">
+      {moviendo && (
+        <div className="space-y-2 rounded-xl border border-marino/30 bg-celeste-soft p-3">
+          <p className="text-[14px] font-bold">
+            Mover “<span className="break-all">{moviendo.nombre}</span>” a:
+          </p>
+          {destinos === null ? (
+            <p className="text-sm text-piedra">Cargando los espacios…</p>
+          ) : (
+            <select value={destino} onChange={(e) => setDestino(e.target.value)} className="min-h-11 w-full rounded-xl border border-borde bg-white px-3 text-[15px]" aria-label="Espacio de destino">
+              <option value="">Elegí el espacio…</option>
+              {[...new Set(destinos.map((d) => d.grupo))].map((g) => (
+                <optgroup key={g} label={g}>
+                  {destinos
+                    .filter((d) => d.grupo === g && !(d.dueno === dueno && d.duenoId === duenoId && d.espacio === espacio))
+                    .map((d) => (
+                      <option key={d.clave} value={d.clave}>
+                        {d.etiqueta}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+          )}
+          <div className="flex gap-2">
+            <button type="button" disabled={pending || !destino} onClick={mover} className="min-h-10 rounded-xl bg-marino px-4 text-[14px] font-bold text-white disabled:opacity-50">
+              {pending ? "Moviendo…" : "Mover"}
+            </button>
+            <button type="button" onClick={() => setMoviendo(null)} className="min-h-10 rounded-xl border border-borde bg-white px-4 text-[14px]">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
       {contenido}
       {pendientes.map((p) => (
         <div key={p.clave} className="rounded-xl border border-borde bg-white px-3 py-2 text-sm">

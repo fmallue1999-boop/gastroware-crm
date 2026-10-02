@@ -38,7 +38,7 @@ export default async function AprobacionesPage() {
   const { data: rol } = await supabase.rpc("fn_rol");
   if (!esGestor(rol as string)) redirect("/");
 
-  const [{ data }, { data: usuarios }, { data: resueltasData }, { data: contenidosData }] = await Promise.all([
+  const [{ data }, { data: usuarios }, { data: resueltasData }, { data: contenidosData }, { data: pedidosData }] = await Promise.all([
     supabase
       .from("cotizacion_versiones")
       .select(
@@ -58,7 +58,14 @@ export default async function AprobacionesPage() {
       .select("id, nombre, cuenta, fecha, tipo, objetivo, copy, correccion, created_by, archivos:contenido_archivos(path, mime, nombre)")
       .eq("estado", "pendiente")
       .order("fecha"),
+    supabase.from("pedidos_material").select("id, titulo, detalle, pedido_por, tomado_por, enviado_at").eq("estado", "para_aprobar").order("enviado_at"),
   ]);
+  const pedidosAprobar = (pedidosData ?? []) as { id: string; titulo: string; detalle: string | null; pedido_por: string | null; tomado_por: string | null; enviado_at: string | null }[];
+  const { data: archivosPed } = pedidosAprobar.length
+    ? await supabase.from("material_archivos").select("dueno_id").eq("dueno", "pedido").in("dueno_id", pedidosAprobar.map((x) => x.id))
+    : { data: [] };
+  const archivosDePedido = new Map<string, number>();
+  for (const a of (archivosPed ?? []) as { dueno_id: string }[]) archivosDePedido.set(a.dueno_id, (archivosDePedido.get(a.dueno_id) ?? 0) + 1);
   type ContenidoPendiente = {
     id: string;
     nombre: string;
@@ -99,6 +106,34 @@ export default async function AprobacionesPage() {
           {rol !== "direccion" ? " Los aprueba dirección general." : ""}
         </p>
       </div>
+
+      {/* Pedidos a marketing (v1.23): lo que marketing hizo y espera aprobación */}
+      <section className="space-y-2">
+        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-piedra">
+          Pedidos a marketing para aprobar ({pedidosAprobar.length})
+          <Link href="/marketing/pedidos" className="normal-case text-marino underline">
+            Ver todos
+          </Link>
+        </h2>
+        {pedidosAprobar.length === 0 ? (
+          <p className="rounded-2xl bg-white px-4 py-4 text-center text-[15px] font-bold text-verde shadow-sm">No hay pedidos esperando.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {pedidosAprobar.map((pm) => (
+              <Link key={pm.id} href={`/marketing/pedidos/${pm.id}`} className="block rounded-2xl bg-white p-4 shadow-sm hover:bg-crema/50">
+                <p className="text-[16px] font-extrabold">{pm.titulo}</p>
+                {pm.detalle && <p className="line-clamp-2 text-[14px] text-tinta/80">{pm.detalle}</p>}
+                <p className="mt-1 text-[13px] text-piedra">
+                  {pm.pedido_por ? `Lo pidió ${nombre.get(pm.pedido_por) ?? "—"}` : "Pedido"}
+                  {pm.tomado_por ? ` · lo hizo ${nombre.get(pm.tomado_por) ?? "marketing"}` : ""} · {archivosDePedido.get(pm.id) ?? 0} archivo
+                  {(archivosDePedido.get(pm.id) ?? 0) === 1 ? "" : "s"}
+                </p>
+                <p className="mt-2 inline-flex min-h-10 items-center rounded-xl bg-violeta px-4 text-[14px] font-bold text-white">Revisar y aprobar</p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Calendario de contenidos */}
       <section className="space-y-2">

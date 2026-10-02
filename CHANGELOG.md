@@ -3,6 +3,14 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.23.0 — 2 de octubre de 2026
+
+Pedido de dirección: "que marketing pueda subir distinto tipo de contenido en Material y crear espacios" y "la solicitud de contenido: se pide, marketing lo realiza y lo sube, yo lo apruebo o pido modificaciones (hoy no me deja verlo) y después queda en Material y lo acomodan" (migración 045_espacios_y_pedidos_contenido.sql).
+
+- Migración 045: material_espacios (ámbito general/marca/producto, RLS: ven todos, escribe fn_gestiona_material); material_archivos acepta dueño "espacio" (espacio "propio") y "pedido" (espacio "entrega") con restricciones por par, y pedido_id (de qué pedido salió); borrar un espacio borra sus archivos y borrar marca/producto borra sus espacios; espacio general "Pedidos aprobados". pedidos_material: estados para_aprobar/cambios/aprobado/cancelado (además de pedido/en_curso/entregado), tomado_por, enviado_at, correccion, revisado_por/at, espacio_destino_id; trigger fn_pedido_material_guardia (solo dirección aprueba, pide cambios y escribe la corrección; cancelar también quien lo pidió).
+- Acciones: crearEspacioMaterial / editarEspacioMaterial / borrarEspacioMaterial, destinosMaterial + moverArchivoMaterial (valida el tipo para espacios fijos; la ficha reemplaza), registrarArchivosMaterial para espacios y pedidos (solo mientras se trabaja). Pedidos: actualizarPedidoMaterial (tomar y fecha), elegirDestinoPedido, enviarPedidoAprobar (con archivos; avisa a dirección), decidirPedidoContenido (aprobado → los archivos pasan al espacio elegido o a "Pedidos aprobados"; cambios con corrección; cancelado; avisa a marketing y a quien lo pidió), cancelarPedidoMaterial. Antes dirección no recibía el aviso si había alguien de marketing.
+- UI: EspacioArchivos con vista mixta (fotos y videos en grilla, el resto en lista, cualquier tipo) y "Mover"; EspaciosPropios / NuevoEspacio / CabeceraEspacio; /material con la sección ESPACIOS, /material/espacio/[id], espacios en la marca (columna de identidad) y en el producto (como secciones). /marketing/pedidos agrupado por estado y /marketing/pedidos/[id] con archivos, AccionesPedido y dónde quedó. Aprobaciones con "Pedidos a marketing para aprobar"; contador del menú; Mi día de dirección y de marketing; menú de dirección con "Pedidos a marketing"; textos de Más y de la guía. Tests: tests/unit/pedidos-contenido.test.ts.
+
 ## v1.22.0 — 2 de octubre de 2026
 
 Pedido de dirección: "que me permita poner un apartado cuando hay clientes que compraron pero todavía no entregamos" (eligió: reservar el stock) y "que dirección pueda cambiar de estado una venta (se mandó una a preparar por error)" (eligió: permiso por persona). Migración 044_corrige_ventas.sql.
