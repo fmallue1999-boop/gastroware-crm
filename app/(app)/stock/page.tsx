@@ -1,22 +1,26 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
+import { CATEGORIAS_PRODUCTO, PEDIDO_ESTADOS } from "@/lib/constants";
+import { unidadesDeVenta, ventasSinEntregar, type VentaSinEntregar } from "@/lib/stock";
 import { fechaCorta, linkWhatsApp } from "@/lib/format";
 import { BotonLlego, IngresosProducto, StockEditable } from "@/components/StockAdmin";
 import { PuntoNivel } from "@/components/PuntoNivel";
 import type { IngresoStock, Producto } from "@/lib/types";
 
 type Esperando = { id: string; nombre: string; telefono: string | null; nivel: string | null };
+type Apartado = { clienteId: string; nombre: string; cantidad: number; paso: string };
 
 /**
- * Stock para todo el equipo (Etapa 1, 1.6): por producto, Hay / Llega /
- * Esperan. Administración carga cantidades e ingresos previstos y toca
- * "Llegó" cuando entra la mercadería: los que esperan pasan a Hoy.
+ * Stock para todo el equipo (Etapa 1, 1.6): por producto, Hay / Apartado /
+ * Disponible / Llega / Esperan. Apartado (v1.22) = vendido y todavía no
+ * entregado, con a quién. Administración carga cantidades e ingresos
+ * previstos y toca "Llegó" cuando entra la mercadería: los que esperan pasan
+ * a Hoy (si queda algo disponible después de lo vendido).
  */
 export default async function StockPage() {
   const supabase = await createClient();
-  const [{ data: prods }, { data: ingresosData }, { data: esperas }, { data: rol }] =
+  const [{ data: prods }, { data: ingresosData }, { data: esperas }, { data: rol }, { data: sinEntregar }] =
     await Promise.all([
       supabase
         .from("productos")
@@ -35,6 +39,7 @@ export default async function StockPage() {
         .select("producto_id, temperatura, cliente:clientes(id, nombre_comercial, telefono)")
         .eq("etapa", "espera"),
       supabase.rpc("fn_rol"),
+      ventasSinEntregar(supabase, "id, pedido_estado, producto_id, productos_extra, items:oportunidad_items(producto_id, cantidad), cliente:clientes(id, nombre_comercial)"),
     ]);
   const productos = (prods ?? []) as Producto[];
   const ingresos = (ingresosData ?? []) as IngresoStock[];
@@ -55,6 +60,20 @@ export default async function StockPage() {
       telefono: o.cliente.telefono,
       nivel: o.temperatura,
     });
+  }
+
+  // Lo vendido y sin entregar, por producto y con a quién
+  const apartadoPor = new Map<string, Apartado[]>();
+  for (const v of (sinEntregar ?? []) as unknown as (VentaSinEntregar & {
+    pedido_estado: string | null;
+    cliente: { id: string; nombre_comercial: string } | null;
+  })[]) {
+    if (!v.cliente) continue;
+    const paso = PEDIDO_ESTADOS.find((p) => p.value === (v.pedido_estado ?? "comprometido"))?.label ?? "Vendido";
+    for (const u of unidadesDeVenta(v)) {
+      if (!apartadoPor.has(u.productoId)) apartadoPor.set(u.productoId, []);
+      apartadoPor.get(u.productoId)!.push({ clienteId: v.cliente.id, nombre: v.cliente.nombre_comercial, cantidad: u.cantidad, paso });
+    }
   }
 
   const grupos = Object.entries(CATEGORIAS_PRODUCTO)
@@ -89,6 +108,9 @@ export default async function StockPage() {
               {g.items.map((p) => {
                 const ing = ingresos.filter((i) => i.producto_id === p.id);
                 const esperando = esperaPor.get(p.id) ?? [];
+                const apartados = apartadoPor.get(p.id) ?? [];
+                const apartado = apartados.reduce((s, a) => s + a.cantidad, 0);
+                const disponible = p.stock - apartado;
                 return (
                   <div key={p.id} className="border-b border-borde/60 px-3.5 py-3 last:border-0">
                     <p className="text-[15px] font-semibold">{p.nombre}</p>
@@ -104,6 +126,38 @@ export default async function StockPage() {
                         )}
                       </div>
                       <div className="min-w-0">
+                        <p className={etiqueta}>Apartado</p>
+                        {apartado === 0 ? (
+                          <p className="text-2xl font-bold text-piedra">0</p>
+                        ) : (
+                          <details className="group">
+                            <summary className="min-h-9 cursor-pointer list-none text-2xl font-bold text-violeta underline [&::-webkit-details-marker]:hidden">
+                              {apartado}
+                            </summary>
+                            <div className="mt-1 space-y-1">
+                              {apartados.map((a, k) => (
+                                <p key={`${a.clienteId}-${k}`} className="text-sm">
+                                  <Link href={`/clientes/${a.clienteId}`} className="underline">
+                                    {a.nombre}
+                                  </Link>
+                                  <span className="text-piedra">
+                                    {" "}
+                                    · {a.cantidad} · {a.paso}
+                                  </span>
+                                </p>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                      <div>
+                        <p className={etiqueta}>Disponible</p>
+                        <p className={`text-2xl font-bold ${disponible > 0 ? "text-verde" : disponible === 0 ? "text-ambar" : "text-red-600"}`}>{disponible}</p>
+                        {disponible < 0 && <p className="text-xs font-bold text-red-600">faltan {-disponible} para lo vendido</p>}
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-3 gap-2">
+                      <div className="col-span-2 min-w-0">
                         <p className={etiqueta}>Llega</p>
                         {esGestor ? (
                           <IngresosProducto productoId={p.id} ingresos={ing} />

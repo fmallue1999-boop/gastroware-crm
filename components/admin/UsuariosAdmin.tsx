@@ -107,6 +107,16 @@ function FilaUsuario({
               Ve el calendario de contenidos
             </label>
           )}
+          <label className="flex min-h-11 items-center gap-2 text-[13px] font-semibold" title="Puede volver una venta a otro paso (por ejemplo, un cobro registrado por error)">
+            <input
+              type="checkbox"
+              checked={Boolean(u.corrige_ventas)}
+              disabled={pending}
+              onChange={(e) => cambiar({ corrige_ventas: e.target.checked })}
+              className="h-5 w-5"
+            />
+            Puede corregir ventas
+          </label>
         <button
           type="button"
           disabled={pending}

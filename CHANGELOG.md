@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.22.0 — 2 de octubre de 2026
+
+Pedido de dirección: "que me permita poner un apartado cuando hay clientes que compraron pero todavía no entregamos" (eligió: reservar el stock) y "que dirección pueda cambiar de estado una venta (se mandó una a preparar por error)" (eligió: permiso por persona). Migración 044_corrige_ventas.sql.
+
+- lib/stock: VentaSinEntregar, unidadesDeVenta, apartadoPorProducto, ventasSinEntregar (etapa ganada, pedido_estado distinto de entregado); InfoStock con apartado y disponible; textoStock sobre lo disponible ("Hay 3 disponibles (2 apartadas)", "Sin disponibles (2 apartadas), …", "llegan 10 el 15 nov (4 ya vendidas)"). Tests en tests/unit/stock.test.ts.
+- /stock: Hay · Apartado (desplegable con cliente, unidades y paso) · Disponible (rojo con "faltan N" si es negativo); Llega y Esperan abajo.
+- recibirIngresoStock: avisa a la lista de espera solo si stock − apartado > 0 (si no, devuelve el aviso de que cubrió ventas ya hechas).
+- Migración 044: usuarios.corrige_ventas (protegido en fn_protege_usuarios como ve_contenidos) y activado para dos usuarios de dirección. Administración → Usuarios: tilde "Puede corregir ventas".
+- corregirPasoVenta(id, estado, motivo): exige corrige_ventas y motivo; cualquier paso; a Vendido/Facturado deja la factura sin cobrar (cobro y condición), antes del despacho borra despachado_at, sale de Entregado → devuelve stock, a Entregado → descuenta; movimiento "Venta corregida: de X a Y · Motivo: …". VentaPaso: "Cambiar paso (corrección)" con el efecto de cada destino (tablero de ventas y ficha).
+
 ## v1.21.2 — 2 de octubre de 2026
 
 Nueva captura del iPhone de dirección: la caja de notas y la barra de abajo flotando a mitad de pantalla, y la tarjeta del interés todavía en la versión anterior a v1.21 (la app instalada no se había recargado).

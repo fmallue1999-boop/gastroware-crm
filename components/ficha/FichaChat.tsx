@@ -149,7 +149,7 @@ export default async function FichaChat({
       .eq("cliente_id", id)
       .order("created_at", { ascending: false })
       .limit(30),
-    supabase.from("usuarios").select("id, nombre, rol, activo"),
+    supabase.from("usuarios").select("id, nombre, rol, activo, corrige_ventas"),
     infoStockPorProducto(supabase),
     supabase
       .from("facturas")
@@ -175,7 +175,7 @@ export default async function FichaChat({
   const oportunidades = (oportunidadesRes.data ?? []) as unknown as Oportunidad[];
   const actividades = (actividadesRes.data ?? []) as unknown as Actividad[];
   const productos = (productosRes.data ?? []) as Producto[];
-  const usuarios = (usuariosRes.data ?? []) as { id: string; nombre: string; rol: string; activo: boolean }[];
+  const usuarios = (usuariosRes.data ?? []) as { id: string; nombre: string; rol: string; activo: boolean; corrige_ventas?: boolean }[];
   const nombres = new Map(usuarios.map((u) => [u.id, u.nombre]));
   const vendedores = usuarios
     .filter((u) => u.activo && ["comercial", "direccion", "admin"].includes(u.rol))
@@ -352,6 +352,7 @@ export default async function FichaChat({
             pedirSerie={serieFaltante.has(o.id)}
             videoUrl={o.producto?.video_url ?? null}
             sucursales={sucursales}
+            puedeCorregir={Boolean(usuarios.find((u) => u.id === miId)?.corrige_ventas)}
             compacto
           />
           {esGestor && (

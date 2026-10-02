@@ -19,6 +19,16 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.22.0",
+    fecha: "2026-10-02",
+    titulo: "Stock apartado y corregir el paso de una venta",
+    cambios: [
+      "Lo vendido que todavía no se entregó queda apartado para ese cliente. En Stock se ve Hay · Apartado (y para quién) · Disponible. Al cotizar o cargar una consulta, “Hay” muestra lo disponible (ej: “Hay 3 disponibles (2 apartadas)” o “Sin stock, llegan 10 el 15 nov (4 ya vendidas)”).",
+      "Cuando llega mercadería, a la lista de espera se le avisa solo si sobra algo después de cubrir lo ya vendido.",
+      "Quien tiene “Puede corregir ventas” (se tilda en Administración → Usuarios) puede cambiar una venta de paso con “Cambiar paso (corrección)”, con el motivo. Si vuelve a Facturado, la factura queda sin cobrar; si sale de Entregado, vuelve el stock.",
+    ],
+  },
+  {
     version: "1.21.2",
     fecha: "2026-10-02",
     titulo: "Celular: la barra de abajo y aviso de versión nueva",

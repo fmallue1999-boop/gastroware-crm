@@ -35,6 +35,8 @@ export interface Usuario {
   territorio?: string | null;
   /** Migración 035: ve el calendario de contenidos (marketing y dirección siempre). */
   ve_contenidos?: boolean;
+  /** Migración 044: puede volver una venta a otro paso (corrección). */
+  corrige_ventas?: boolean;
 }
 
 export interface Distribuidor {

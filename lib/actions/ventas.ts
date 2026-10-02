@@ -477,26 +477,66 @@ export async function entregarVenta(oportunidadId: string) {
 }
 
 /**
- * Corrección de dirección: vuelve la venta a un paso anterior (por ejemplo,
- * un despacho cargado por error). Si sale de Entregado, devuelve el stock.
+ * Corrección del paso de una venta (v1.22: la hace quien tiene "Puede
+ * corregir ventas" en Administración → Usuarios). Lleva la venta a cualquier
+ * paso y deja todo coherente: si vuelve a antes del cobro (Vendido o
+ * Facturado), la factura queda sin cobrar; si vuelve a antes del despacho,
+ * se borra la fecha de despacho; si sale de Entregado vuelve el stock, y si
+ * pasa a Entregado se descuenta. Queda en el historial con el motivo.
  */
-export async function corregirPasoVenta(oportunidadId: string, estado: PedidoEstado) {
+export async function corregirPasoVenta(oportunidadId: string, estado: PedidoEstado, motivo?: string) {
+  const texto = motivo?.trim() ?? "";
+  if (!texto) return { error: "Contá por qué se corrige (ej: el cobro se registró por error)" };
+  if (!PEDIDO_ESTADOS.some((p) => p.value === estado)) return { error: "Paso inválido" };
   const supabase = await createClient();
-  if (!esGestor(await puestoActual(supabase))) return { error: "Solo dirección corrige el paso de una venta" };
   const user = await usuarioActual();
+  const { data: yo } = await supabase.from("usuarios").select("corrige_ventas").eq("id", user?.id ?? "").maybeSingle();
+  if (!yo?.corrige_ventas) return { error: "Corregir el paso de una venta requiere el permiso “Puede corregir ventas” (Administración → Usuarios)" };
   const v = await cargarVenta(supabase, oportunidadId);
   if (!v) return { error: "No se encontró la venta" };
   if (v.etapa !== "ganada") return { error: "La venta se sigue una vez vendida" };
+  const antes = v.pedido_estado ?? "comprometido";
+  if (antes === estado) return { error: "La venta ya está en ese paso" };
+
   const update: Record<string, unknown> = { pedido_estado: estado };
   if (estado !== "entregado") update.entregado_at = null;
+  else update.entregado_at = new Date().toISOString();
+  if (["comprometido", "facturado", "preparar_envio"].includes(estado)) update.despachado_at = null;
   const { error } = await supabase.from("oportunidades").update(update).eq("id", oportunidadId);
   if (error) return { error: error.message };
-  if (v.pedido_estado === "entregado" && estado !== "entregado") {
-    const unidades = await unidadesVendidas(supabase, v);
-    await Promise.all(unidades.map((u) => supabase.rpc("fn_ajustar_stock", { p_producto_id: u.productoId, p_delta: u.cantidad })));
+
+  const extras: string[] = [];
+  // Antes del cobro: la factura queda sin cobrar (y sin condición aprobada)
+  if (["comprometido", "facturado"].includes(estado)) {
+    const { data: facturas } = await supabase
+      .from("facturas")
+      .select("id, cobro_estado, condicion_aprobada_at")
+      .eq("oportunidad_id", oportunidadId);
+    const tocar = ((facturas ?? []) as { id: string; cobro_estado: string; condicion_aprobada_at: string | null }[]).filter(
+      (f) => f.cobro_estado === "cobrado" || f.condicion_aprobada_at
+    );
+    if (tocar.length) {
+      const { error: eFac } = await supabase
+        .from("facturas")
+        .update({ cobro_estado: "pendiente", cobrado_at: null, condicion_aprobada_at: null, condicion_aprobada_por: null, condicion_nota: null })
+        .in(
+          "id",
+          tocar.map((f) => f.id)
+        );
+      if (eFac) return { error: `dejar la factura sin cobrar: ${eFac.message}` };
+      extras.push("la factura quedó sin cobrar");
+    }
   }
-  const label = PEDIDO_ESTADOS.find((p) => p.value === estado)?.label ?? estado;
-  await movimiento(supabase, v, `Venta corregida por dirección: vuelve a ${label}`, user?.id);
+  // Stock: sale de Entregado → vuelve; pasa a Entregado → se descuenta
+  if (antes === "entregado" || estado === "entregado") {
+    const unidades = await unidadesVendidas(supabase, v);
+    const signo = antes === "entregado" ? 1 : -1;
+    await Promise.all(unidades.map((u) => supabase.rpc("fn_ajustar_stock", { p_producto_id: u.productoId, p_delta: signo * u.cantidad })));
+    extras.push(signo > 0 ? "volvió al stock" : "se descontó del stock");
+  }
+  const de = PEDIDO_ESTADOS.find((p) => p.value === antes)?.label ?? antes;
+  const a = PEDIDO_ESTADOS.find((p) => p.value === estado)?.label ?? estado;
+  await movimiento(supabase, v, [`Venta corregida: de ${de} a ${a}`, `Motivo: ${texto}`, ...extras].join(" · "), user?.id);
   revalidatePath("/", "layout");
   return { ok: true as const };
 }
