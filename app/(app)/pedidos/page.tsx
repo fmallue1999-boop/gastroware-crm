@@ -47,9 +47,10 @@ export default async function VentasPage({
       .limit(400),
     supabase.from("productos").select("id, nombre"),
     infoStockPorProducto(supabase),
-    supabase.from("usuarios").select("rol").eq("id", user?.id ?? "").maybeSingle(),
+    supabase.from("usuarios").select("rol, corrige_ventas").eq("id", user?.id ?? "").maybeSingle(),
   ]);
   const rol = (yo?.rol as string | undefined) ?? "comercial";
+  const puedeCorregir = Boolean((yo as { corrige_ventas?: boolean } | null)?.corrige_ventas);
   const ventas = (data ?? []) as unknown as Oportunidad[];
   const productos = (prods ?? []) as Pick<Producto, "id" | "nombre">[];
   const ids = ventas.map((o) => o.id);
@@ -138,6 +139,7 @@ export default async function VentasPage({
             pedirSerie={serieFaltante.has(o.id)}
             videoUrl={o.producto?.video_url ?? null}
             sucursales={lugaresDe.get(o.cliente_id) ?? []}
+            puedeCorregir={puedeCorregir}
             compacto
           />
         </div>

@@ -6,6 +6,7 @@ import { ArrowRight, Check, PlayCircle, Plus } from "lucide-react";
 import {
   aprobarCondicion,
   cargarFactura,
+  corregirPasoVenta,
   crearSucursal,
   despacharVenta,
   entregarVenta,
@@ -14,7 +15,7 @@ import {
   prepararVenta,
   registrarCobro,
 } from "@/lib/actions";
-import { FORMAS_PAGO_VENTA, RELEVAMIENTO_INSTALACION, VENTA_PASOS } from "@/lib/constants";
+import { FORMAS_PAGO_VENTA, PEDIDO_ESTADOS, RELEVAMIENTO_INSTALACION, VENTA_PASOS } from "@/lib/constants";
 import { dinero, fechaCorta, sumarDias } from "@/lib/format";
 import { esGestor, factura as puedeFacturar } from "@/lib/puestos";
 import { pasoDe } from "@/lib/ventas";
@@ -66,6 +67,15 @@ export type FacturaDatos = {
   condicion_aprobada_at: string | null;
 };
 
+/** Qué pasa al corregir hacia cada paso (v1.22). */
+const EFECTO_CORRECCION: Record<string, string> = {
+  comprometido: "Vuelve a Vendido · para facturar. Si tenía el cobro registrado, la factura queda sin cobrar.",
+  facturado: "Vuelve a Facturado · esperando cobro. Si tenía el cobro registrado (o la condición aprobada), la factura queda sin cobrar.",
+  preparar_envio: "Queda A preparar: el depósito la prepara y administración la despacha.",
+  despachado: "Queda Despachada, esperando la confirmación de entrega.",
+  entregado: "Queda Entregada: se descuenta del stock.",
+};
+
 const TRANSPORTES = ["Flete propio", "Transporte / expreso", "Correo", "Lo lleva el técnico", "Retira el cliente"];
 const COBRO_TEXTO: Record<string, string> = {
   pendiente: "cobro pendiente",
@@ -91,6 +101,7 @@ export default function VentaPaso({
   videoUrl = null,
   sucursales = [],
   compacto = false,
+  puedeCorregir = false,
 }: {
   venta: VentaDatos;
   rol: string;
@@ -99,11 +110,15 @@ export default function VentaPaso({
   pedirSerie?: boolean;
   videoUrl?: string | null;
   sucursales?: LugarEntrega[];
+  /** v1.22: tiene el permiso "Puede corregir ventas" (cambia la venta de paso). */
+  puedeCorregir?: boolean;
   compacto?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [abierto, setAbierto] = useState<null | "informar" | "facturar" | "cobro" | "condicion" | "remito" | "despachar">(null);
+  const [abierto, setAbierto] = useState<null | "informar" | "facturar" | "cobro" | "condicion" | "remito" | "despachar" | "corregir">(null);
+  const [destino, setDestino] = useState<PedidoEstado | "">("");
+  const [motivoCorreccion, setMotivoCorreccion] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ texto: string; alerta: boolean } | null>(null);
 
@@ -628,6 +643,55 @@ export default function VentaPaso({
         </div>
       )}
       {cuerpo}
+      {puedeCorregir &&
+        (abierto === "corregir" ? (
+          <div className="mt-2 space-y-2 rounded-xl border border-violeta/30 bg-violeta-soft p-3">
+            <p className="text-[14px] font-bold">Cambiar el paso de esta venta</p>
+            <select value={destino} onChange={(e) => setDestino(e.target.value as PedidoEstado | "")} className={inputCls} aria-label="Nuevo paso">
+              <option value="">¿A qué paso va?…</option>
+              {PEDIDO_ESTADOS.filter((p) => p.value !== estado).map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            {destino && <p className="text-[13px] text-tinta/80">{EFECTO_CORRECCION[destino]}</p>}
+            <input
+              value={motivoCorreccion}
+              onChange={(e) => setMotivoCorreccion(e.target.value)}
+              placeholder="Motivo (ej: el cobro se registró por error)"
+              className={inputCls}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={pending || !destino || !motivoCorreccion.trim()}
+                onClick={() =>
+                  destino &&
+                  correr(() => corregirPasoVenta(venta.id, destino, motivoCorreccion), `Pasó a ${PEDIDO_ESTADOS.find((p) => p.value === destino)?.label ?? destino}`)
+                }
+                className={btn}
+              >
+                {pending ? "Guardando…" : "Cambiar paso"}
+              </button>
+              <button type="button" onClick={() => setAbierto(null)} className={btnSec}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setDestino("");
+              setMotivoCorreccion("");
+              setAbierto("corregir");
+            }}
+            className="mt-1.5 inline-flex min-h-9 items-center text-[13px] font-semibold text-piedra underline hover:text-marino"
+          >
+            Cambiar paso (corrección)
+          </button>
+        ))}
       {aviso && (
         <p className={`mt-1.5 text-[14px] font-bold ${aviso.alerta ? "text-ambar" : "text-verde"}`}>
           {aviso.alerta ? "" : "✓ "}

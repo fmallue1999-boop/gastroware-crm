@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirGestor } from "@/lib/auth";
 import { hoyISO } from "@/lib/format";
 import { NOTA_LLEGO_STOCK } from "@/lib/pendientes";
+import { apartadoPorProducto, ventasSinEntregar, type VentaSinEntregar } from "@/lib/stock";
 import { puestoActual, usuarioActual } from "./comun";
 
 // =====================================================================
@@ -83,6 +84,10 @@ export async function recibirIngresoStock(ingresoId: string) {
     .eq("id", ingresoId);
   if (e2) return { error: e2.message };
 
+  // v1.22: lo que llega cubre primero lo ya vendido; a la lista de espera se le avisa si sobra
+  const { data: sinEntregar } = await ventasSinEntregar(supabase);
+  const apartado = apartadoPorProducto((sinEntregar ?? []) as unknown as VentaSinEntregar[])[ing.producto_id] ?? 0;
+  const disponible = Number(nuevo ?? 0) - apartado;
   const { data: esperando } = await supabase
     .from("oportunidades")
     .select("id, cliente_id")
@@ -90,7 +95,7 @@ export async function recibirIngresoStock(ingresoId: string) {
     .eq("producto_id", ing.producto_id);
   const nombreProducto =
     (ing.producto as unknown as { nombre: string } | null)?.nombre ?? "el producto";
-  if (esperando?.length) {
+  if (esperando?.length && disponible > 0) {
     // El técnico no edita intereses: el aviso a la lista de espera lo hace el sistema
     let db: typeof supabase = supabase;
     if (rol === "tecnico") {
@@ -119,7 +124,15 @@ export async function recibirIngresoStock(ingresoId: string) {
     );
   }
   revalidatePath("/", "layout");
-  return { ok: true as const, stock: nuevo as number, avisados: esperando?.length ?? 0 };
+  return {
+    ok: true as const,
+    stock: nuevo as number,
+    avisados: disponible > 0 ? (esperando?.length ?? 0) : 0,
+    aviso:
+      esperando?.length && disponible <= 0
+        ? `Lo que llegó cubre ventas ya hechas (${apartado} apartadas): no se avisó a la lista de espera`
+        : undefined,
+  };
 }
 
 export async function borrarIngresoStock(ingresoId: string) {
