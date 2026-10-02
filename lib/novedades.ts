@@ -19,6 +19,14 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.19.1",
+    fecha: "2026-10-02",
+    titulo: "Un contacto hecho ya no queda “para hoy”",
+    cambios: [
+      "Si un interés estaba para hoy (o atrasado) y anotás que lo contactaste, el sistema te pide el próximo paso: cuándo lo volvés a contactar o “Sin próximo”. Antes quedaba con la fecha de hoy y seguía apareciendo para contactar.",
+    ],
+  },
+  {
     version: "1.19.0",
     fecha: "2026-10-01",
     titulo: "Nueva venta con cliente y CUIT",

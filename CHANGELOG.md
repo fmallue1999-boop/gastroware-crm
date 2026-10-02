@@ -3,6 +3,13 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.19.1 — 2 de octubre de 2026
+
+Caso reportado por dirección: un interés del plan de octubre (vencía hoy, "cotizar") seguía en "para contactar hoy" después de que el vendedor anotó la visita. Causa: RegistrarActividad consideraba "vigente" un próximo contacto con fecha = hoy y, sin elegir próximo paso, lo mantenía (y anotarContacto no toca la fecha si no viene una nueva); con un interés atrasado pasaba lo mismo.
+
+- RegistrarActividad: "Mantener" solo para fechas futuras; si el interés vence hoy o está atrasado y se anota un contacto (texto o medio) sin próximo paso, abre "Próximo paso" y pide elegir fecha o "Sin próximo" (el botón dice "Elegí el próximo"). Al cerrar el interés no hace falta.
+- anotarContacto: mismo control del lado del servidor (opción cierra para el cierre).
+
 ## v1.19.0 — 1 de octubre de 2026
 
 Pedido de dirección: "para cargar nueva venta, que te solicite cargar cliente o cargar uno nuevo para poner CUIT" (sin migración).

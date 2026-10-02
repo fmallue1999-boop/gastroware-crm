@@ -71,7 +71,9 @@ export default function RegistrarActividad({
       const i = intereses.find((x) => x.id === (sobre || oportunidadId));
       return i ? { fecha: i.proximo ?? null, accion: i.accion ?? null } : null;
     })();
-  const hayProximoVigente = Boolean(actual?.fecha && actual.fecha >= hoy);
+  // "Mantener" solo una fecha futura: si estaba para hoy o atrasado y se lo contactó, hay que elegir el próximo (v1.19.1)
+  const hayProximoVigente = Boolean(actual?.fecha && actual.fecha > hoy);
+  const vencido = Boolean(actual?.fecha && actual.fecha <= hoy);
 
   const [medio, setMedio] = useState<Medio | null>(null);
   const [resultado, setResultado] = useState<Resultado | null>(null);
@@ -123,10 +125,18 @@ export default function RegistrarActividad({
     if (!hayAlgo || pending) return;
     setError(null);
     const interes = sobre || oportunidadId || null;
+    if (interes && vencido && !cerrar && !volverEl && !sinFecha && (texto.trim() || medio)) {
+      setAbrirProximo(true);
+      setError(
+        `Estaba para ${actual!.fecha === hoy ? "hoy" : `el ${fechaCorta(actual!.fecha!)}`}: elegí cuándo es el próximo contacto (o “Sin próximo”).`
+      );
+      return;
+    }
     startTransition(async () => {
       const res = await anotarContacto(clienteId, texto, cerrar ? null : volverEl || null, {
         oportunidadId: interes,
         sinFecha: cerrar ? false : sinFecha,
+        cierra: cerrar,
         medio,
         resultado,
         accion,
@@ -170,7 +180,9 @@ export default function RegistrarActividad({
         ? [nombreAccion(accion), volverEl === hoy ? "hoy" : fechaCorta(volverEl)].filter(Boolean).join(" · ")
         : hayProximoVigente
           ? `Sigue: ${fechaCorta(actual!.fecha)}`
-          : "Próximo";
+          : vencido
+            ? "Elegí el próximo"
+            : "Próximo";
 
   // --- Piezas ---
   const selectorInteres =
