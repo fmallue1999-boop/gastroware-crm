@@ -3,6 +3,13 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.20.0 — 2 de octubre de 2026
+
+Pedido de dirección: "que en consumibles me permita eliminar una vez suspendido" (sin migración: la política recurrencias_all ya permite borrar a quien ve el cliente; tareas.recurrencia_id es on delete set null).
+
+- Acción eliminarReposicion(ids): solo gestores (esGestor); solo planes suspendidos (activa = false); cancela las tareas abiertas del plan, borra las recurrencias y deja en la ficha una actividad cambio_etapa "Reposición eliminada por dirección: … (estaba suspendida: motivo)".
+- GrupoReposicion: botón "Eliminar" con confirmación junto a "Reactivar" cuando el grupo está suspendido y puedeEliminar; /consumibles lo pasa según el puesto del usuario.
+
 ## v1.19.1 — 2 de octubre de 2026
 
 Caso reportado por dirección: un interés del plan de octubre (vencía hoy, "cotizar") seguía en "para contactar hoy" después de que el vendedor anotó la visita. Causa: RegistrarActividad consideraba "vigente" un próximo contacto con fecha = hoy y, sin elegir próximo paso, lo mantenía (y anotarContacto no toca la fecha si no viene una nueva); con un interés atrasado pasaba lo mismo.

@@ -19,6 +19,15 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.20.0",
+    fecha: "2026-10-02",
+    titulo: "Eliminar una reposición suspendida",
+    cambios: [
+      "En Consumibles, una reposición suspendida tiene “Eliminar” (solo dirección), además de “Reactivar”. Se borra el plan con sus avisos pendientes y deja de figurar. En la ficha del cliente queda anotado qué se eliminó.",
+      "Una reposición activa primero se suspende y después se puede eliminar.",
+    ],
+  },
+  {
     version: "1.19.1",
     fecha: "2026-10-02",
     titulo: "Un contacto hecho ya no queda “para hoy”",

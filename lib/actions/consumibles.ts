@@ -10,7 +10,8 @@ import { createClient } from "@/lib/supabase/server";
 import { fechaCorta, hoyISO } from "@/lib/format";
 import { MEDIOS, RESULTADOS, textoActividad } from "@/lib/actividad";
 import { cantidadTexto, fechaContacto, ANTICIPACION_POR_DEFECTO } from "@/lib/consumibles";
-import { usuarioActual } from "./comun";
+import { esGestor } from "@/lib/puestos";
+import { puestoActual, usuarioActual } from "./comun";
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -184,6 +185,34 @@ export async function suspenderReposicion(ids: string[], motivo: string) {
     cliente_id: lista[0].cliente_id,
     tipo: "nota",
     contenido: `Reposición suspendida: ${nombresProductos(lista)} (${motivo.trim()})`,
+    created_by: user?.id ?? null,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Eliminar reposiciones suspendidas (v1.20, solo dirección y administración):
+ * se borra el plan y se cancelan sus avisos pendientes. En la ficha queda el
+ * registro de qué se eliminó. Una reposición activa primero se suspende.
+ */
+export async function eliminarReposicion(ids: string[]) {
+  const supabase = await createClient();
+  if (!esGestor(await puestoActual(supabase))) return { error: "Solo dirección puede eliminar una reposición" };
+  const { data } = await supabase.from("recurrencias").select("id, cliente_id, activa, motivo_suspension, producto:productos(nombre)").in("id", ids);
+  const lista = (data ?? []) as unknown as (PlanBase & { activa: boolean; motivo_suspension: string | null })[];
+  if (!lista.length) return { error: "No se encontró la reposición" };
+  if (lista.some((p) => p.activa)) return { error: "Primero suspendela: solo se eliminan reposiciones suspendidas" };
+  const user = await usuarioActual();
+  await supabase.from("tareas").update({ cancelada: true }).in("recurrencia_id", ids).is("completada_at", null);
+  const { error } = await supabase.from("recurrencias").delete().in("id", ids);
+  if (error) return { error: error.message };
+  const motivos = [...new Set(lista.map((p) => p.motivo_suspension).filter(Boolean))].join(", ");
+  await supabase.from("actividades").insert({
+    cliente_id: lista[0].cliente_id,
+    // No cuenta como contacto en los informes
+    tipo: "cambio_etapa",
+    contenido: `Reposición eliminada por dirección: ${nombresProductos(lista)}${motivos ? ` (estaba suspendida: ${motivos})` : ""}`,
     created_by: user?.id ?? null,
   });
   revalidatePath("/", "layout");
