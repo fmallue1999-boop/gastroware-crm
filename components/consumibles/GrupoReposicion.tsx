@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MessageCircle, Phone, SlidersHorizontal } from "lucide-react";
-import { ajustarReposicion, contactoReposicion, cotizarReposicion, reactivarReposicion, suspenderReposicion } from "@/lib/actions";
+import { MessageCircle, Phone, SlidersHorizontal, Trash2 } from "lucide-react";
+import { ajustarReposicion, contactoReposicion, cotizarReposicion, eliminarReposicion, reactivarReposicion, suspenderReposicion } from "@/lib/actions";
 import { MEDIOS, RESULTADOS, RESULTADOS_POR_MEDIO, type Medio, type Resultado } from "@/lib/actividad";
 import { cantidadTexto, estadoPlan, MOTIVOS_SUSPENSION, reposicionEstimada } from "@/lib/consumibles";
 import { diasEntre } from "@/lib/agenda";
@@ -33,14 +33,17 @@ export default function GrupoReposicion({
   planes,
   hoy,
   usuarios = [],
+  puedeEliminar = false,
 }: {
   planes: PlanVista[];
   hoy: string;
   usuarios?: { id: string; nombre: string }[];
+  /** v1.20: dirección puede eliminar una reposición suspendida. */
+  puedeEliminar?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [modo, setModo] = useState<null | "anotar" | "reprogramar" | "suspender" | "ajustar">(null);
+  const [modo, setModo] = useState<null | "anotar" | "reprogramar" | "suspender" | "ajustar" | "eliminar">(null);
   const [medio, setMedio] = useState<Medio | null>(null);
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [nota, setNota] = useState("");
@@ -141,6 +144,11 @@ export default function GrupoReposicion({
           <button type="button" disabled={pending} onClick={() => correr(() => reactivarReposicion(primero.id, sumarDias(7)), "Reactivada: contactar en 7 días")} className={boton}>
             Reactivar
           </button>
+          {puedeEliminar && (
+            <button type="button" onClick={() => setModo(modo === "eliminar" ? null : "eliminar")} className={`${boton} text-red-700`}>
+              <Trash2 className="h-4 w-4" /> Eliminar
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
@@ -225,6 +233,26 @@ export default function GrupoReposicion({
           >
             Reprogramar
           </button>
+        </div>
+      )}
+
+      {modo === "eliminar" && (
+        <div className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3">
+          <p className="text-[15px] font-bold text-red-800">¿Eliminar {planes.length > 1 ? "estas reposiciones" : "esta reposición"}?</p>
+          <p className="text-[13px] text-red-800/80">Se borra el plan y deja de figurar en Consumibles. En la ficha del cliente queda anotado que se eliminó.</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => correr(() => eliminarReposicion(ids), "Eliminada")}
+              className="min-h-10 flex-1 rounded-xl bg-red-700 px-4 text-[14px] font-bold text-white disabled:opacity-50"
+            >
+              {pending ? "Eliminando…" : "Sí, eliminar"}
+            </button>
+            <button type="button" onClick={() => setModo(null)} className={boton}>
+              No
+            </button>
+          </div>
         </div>
       )}
 

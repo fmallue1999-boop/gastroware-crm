@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDays, List, Plus, Rows3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hoyISO } from "@/lib/format";
+import { esGestor } from "@/lib/puestos";
 import { cuando, masDias, semanasDelMes } from "@/lib/agenda";
 import { agruparPorCliente } from "@/lib/consumibles";
 import { cargarPlanes, numerosConsumibles, type PlanVista } from "@/lib/servidor/consumibles";
@@ -49,9 +50,10 @@ export default async function ConsumiblesPage({ searchParams }: { searchParams: 
         ? cargarPlanes(supabase, { desde: semanas[0][0], hasta: semanas[semanas.length - 1][6], responsable: soloMios ? yo : null })
         : cargarPlanes(supabase, { incluirSuspendidos: true, responsable: soloMios ? yo : null }),
     numerosConsumibles(supabase, hoy),
-    supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
+    supabase.from("usuarios").select("id, nombre, rol").eq("activo", true).order("nombre"),
   ]);
-  const equipo = (usuarios ?? []) as { id: string; nombre: string }[];
+  const equipo = ((usuarios ?? []) as { id: string; nombre: string; rol: string }[]).map(({ id, nombre }) => ({ id, nombre }));
+  const puedeEliminar = esGestor(((usuarios ?? []) as { id: string; rol: string }[]).find((u) => u.id === yo)?.rol);
 
   const grupos = agruparPorCliente(planes);
   const vencidos = grupos.filter((g) => g[0].proxima_alerta < hoy);
@@ -76,7 +78,7 @@ export default async function ConsumiblesPage({ searchParams }: { searchParams: 
         </h2>
         <div className="grid gap-2 lg:grid-cols-2">
           {lista.map((g) => (
-            <GrupoReposicion key={g.map((x) => x.id).join("-")} planes={g} hoy={hoy} usuarios={equipo} />
+            <GrupoReposicion key={g.map((x) => x.id).join("-")} planes={g} hoy={hoy} usuarios={equipo} puedeEliminar={puedeEliminar} />
           ))}
         </div>
       </section>
@@ -156,7 +158,7 @@ export default async function ConsumiblesPage({ searchParams }: { searchParams: 
           <section className="space-y-2">
             <h2 className="text-[17px] font-extrabold first-letter:uppercase">{cuando(diaElegido, hoy)}</h2>
             {agruparPorCliente(planes.filter((x) => x.proxima_alerta === diaElegido)).map((g) => (
-              <GrupoReposicion key={g.map((x) => x.id).join("-")} planes={g} hoy={hoy} usuarios={equipo} />
+              <GrupoReposicion key={g.map((x) => x.id).join("-")} planes={g} hoy={hoy} usuarios={equipo} puedeEliminar={puedeEliminar} />
             ))}
             {!planes.some((x) => x.proxima_alerta === diaElegido) && (
               <p className="rounded-2xl bg-white px-4 py-4 text-center text-[15px] text-piedra shadow-sm">Nada para contactar este día.</p>
@@ -171,7 +173,7 @@ export default async function ConsumiblesPage({ searchParams }: { searchParams: 
           {agruparPorCliente(planes, 100000)
             .sort((a, b) => (a[0].cliente?.nombre_comercial ?? "").localeCompare(b[0].cliente?.nombre_comercial ?? ""))
             .map((g) => (
-              <GrupoReposicion key={g.map((x) => x.id).join("-")} planes={g} hoy={hoy} usuarios={equipo} />
+              <GrupoReposicion key={g.map((x) => x.id).join("-")} planes={g} hoy={hoy} usuarios={equipo} puedeEliminar={puedeEliminar} />
             ))}
         </div>
       )}
