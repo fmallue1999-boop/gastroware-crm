@@ -3,6 +3,14 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.21.0 — 2 de octubre de 2026
+
+Pedido de dirección (con captura y propuesta aprobada): "que en embudo aparezcan los que hay que contactar hoy" y "repensar la parte de cada contacto: que se vean los movimientos, notas y de quién son; lo de productos de abajo quedó de versiones anteriores" (sin migración).
+
+- InteresFijado rehecho: cabecera (nivel, producto, etapa, línea) con lápiz (nivel + productos/texto, antes en "Más opciones") y "⋯" (IA, lista de espera, calculadora, financiación, eliminar); AsignacionInteres solo con lugar de entrega y quién atiende; recuadro del próximo paso coloreado (atrasado/hoy/futuro) con PrimerContacto (nuevo, exportado de AsignacionInteres), CadenciaInteres (children + conNoRespondio) y Reprogramar (PanelReprogramar en línea); cotización vigente; Cotizar/Nueva versión, Me compró, No se dio en grilla de 3; "Movimientos" del interés (MovimientoInteres: autor o "Sistema", hoy/ayer con hora, medio · resultado o tipo, con quién), 5 visibles + "Ver los N".
+- FichaChat: arma movimientosDe por interés con nombres de usuarios y personas; abajo de las operaciones "Otros movimientos del cliente" solo con lo que no está en una tarjeta.
+- Embudo: columna "hoy" primera (COLUMNAS_EMBUDO), repartirColumnas/tocaHoy puros (tests/unit/embudo-hoy.test.ts): vencidos y "Llegó stock" salen de su etapa; orden atrasados → hoy (sin hora primero, por hora, por nivel) → contactados hoy (nota de usuario hoy, contactado_hoy) al final. Tarjeta con etiqueta de etapa en "Para hoy"; no se puede soltar en "Para hoy"; en PC columnas con auto-cols minmax(200px) y scroll horizontal. KPIs desde todas las tarjetas.
+
 ## v1.20.3 — 2 de octubre de 2026
 
 Dirección no pudo anotar en un interés "Llamar hoy": el control de v1.19.1 bloqueaba la nota hasta elegir el próximo paso (y el aviso quedaba abajo, tapado por el teclado).

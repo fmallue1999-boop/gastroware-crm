@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, FileText, MessageCircle } from "lucide-react";
 import { cambiarEtapa, ultimosMovimientos } from "@/lib/actions";
 import { COLUMNAS_EMBUDO, type ColumnaEmbudo, type TarjetaEmbudo } from "@/lib/embudo";
-import { MOTIVOS_PERDIDA, PEDIDO_ESTADOS } from "@/lib/constants";
+import { ETAPAS, MOTIVOS_PERDIDA, PEDIDO_ESTADOS } from "@/lib/constants";
 import { textoMontos } from "@/lib/dinero";
 import { dinero, fechaCorta, haceCuanto, linkWhatsApp } from "@/lib/format";
 import { PuntoNivel, textoProximo } from "@/components/PuntoNivel";
@@ -17,6 +17,7 @@ import type { Etapa } from "@/lib/types";
 type Mov = { id: string; contenido: string; created_at: string; quien: string | null };
 
 const COLOR_CAB: Record<ColumnaEmbudo, string> = {
+  hoy: "bg-marino",
   nueva: "bg-azul",
   cotizada: "bg-violeta",
   seguimiento: "bg-ambar",
@@ -24,6 +25,7 @@ const COLOR_CAB: Record<ColumnaEmbudo, string> = {
   ganada: "bg-verde",
 };
 const COLOR_ARO: Record<ColumnaEmbudo, string> = {
+  hoy: "ring-marino",
   nueva: "ring-azul",
   cotizada: "ring-violeta",
   seguimiento: "ring-ambar",
@@ -33,8 +35,9 @@ const COLOR_ARO: Record<ColumnaEmbudo, string> = {
 const TOPE = 25;
 
 /**
- * El embudo (pantalla principal, rediseño aprobado por dirección). En PC, cinco
- * columnas con color: cada tarjeta se despliega ahí mismo para ver lo último
+ * El embudo (pantalla principal, rediseño aprobado por dirección). v1.21:
+ * primero "Para hoy" (lo que toca contactar hoy y lo atrasado, con su etapa;
+ * vuelve a su columna cuando se reprograma). En PC, columnas con color: cada tarjeta se despliega ahí mismo para ver lo último
  * que pasó y actuar, y se puede arrastrar de una columna a otra. En celular,
  * las etapas apiladas: una se abre a la vez.
  */
@@ -95,15 +98,16 @@ export default function EmbudoBoard({
     const t = Object.values(columnas)
       .flat()
       .find((x) => x.id === id);
-    if (!t || t.etapa === destino) return;
+    if (!t || destino === "hoy" || t.etapa === destino) return;
     const label = COLUMNAS_EMBUDO.find((c) => c.key === destino)?.label ?? destino;
     correr(() => cambiarEtapa(id, destino as Etapa), destino === "ganada" ? "Venta registrada" : `Pasó a ${label}`);
   }
 
   const chip = "inline-flex min-h-10 items-center justify-center rounded-xl px-3 text-[14px] font-bold disabled:opacity-50";
 
-  const Tarjeta = ({ t }: { t: TarjetaEmbudo }) => {
+  const Tarjeta = ({ t, enHoy = false }: { t: TarjetaEmbudo; enHoy?: boolean }) => {
     const vendida = t.etapa === "ganada";
+    const etapaTexto = ETAPAS.find((e) => e.value === t.etapa)?.label ?? t.etapa;
     const expandida = abierta === t.id;
     const prox = textoProximo(t.proximo_contacto, t.proximo_nota, hoy, t.proxima_accion, t.proximo_hora);
     const llegoStock = t.etapa === "espera" && t.proximo_nota === "Llegó stock";
@@ -134,9 +138,12 @@ export default function EmbudoBoard({
               </p>
             ) : llegoStock ? (
               <p className="mt-0.5 text-[13px] font-bold text-verde">Llegó stock · contactar hoy</p>
+            ) : t.contactado_hoy ? (
+              <p className="mt-0.5 text-[13px] font-bold text-verde">✓ Contactado hoy · falta el próximo paso</p>
             ) : (
               <p className={`mt-0.5 text-[13px] ${prox.clase}`}>{prox.texto}</p>
             )}
+            {enHoy && <span className="mt-1 inline-block rounded-full bg-crema px-2 py-0.5 text-[11px] font-bold text-piedra">{etapaTexto}</span>}
           </div>
           <button
             type="button"
@@ -250,10 +257,10 @@ export default function EmbudoBoard({
     return (
       <>
         {visible.map((t) => (
-          <Tarjeta key={t.id} t={t} />
+          <Tarjeta key={t.id} t={t} enHoy={col === "hoy"} />
         ))}
         {lista.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-borde p-3 text-center text-xs text-piedra">Nada acá</p>
+          <p className="rounded-2xl border border-dashed border-borde p-3 text-center text-xs text-piedra">{col === "hoy" ? "Nada para hoy" : "Nada acá"}</p>
         )}
         {lista.length > TOPE && !verTodo[col] && (
           <button
@@ -276,12 +283,13 @@ export default function EmbudoBoard({
         </p>
       )}
 
-      {/* Computadora: cinco columnas, se puede arrastrar */}
-      <div className="hidden lg:grid lg:grid-cols-5 lg:items-start lg:gap-3">
+      {/* Computadora: las columnas una al lado de la otra, se puede arrastrar entre etapas */}
+      <div className="hidden lg:grid lg:auto-cols-[minmax(200px,1fr)] lg:grid-flow-col lg:items-start lg:gap-3 lg:overflow-x-auto lg:pb-2">
         {COLUMNAS_EMBUDO.map((c) => (
           <div
             key={c.key}
             onDragOver={(e) => {
+              if (c.key === "hoy") return;
               e.preventDefault();
               if (sobre !== c.key) setSobre(c.key);
             }}
