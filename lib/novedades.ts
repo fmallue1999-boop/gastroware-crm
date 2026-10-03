@@ -19,6 +19,17 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.24.0",
+    fecha: "2026-10-02",
+    titulo: "Conversación en cada cotización y Servicio técnico en el celular",
+    cambios: [
+      "Cada cotización tiene su conversación: un chat interno del equipo para anotar cosas o conversar sobre la cotización (no sale en el PDF). Está en el interés, debajo de la cotización, en la pestaña Cotizaciones y en Aprobaciones, para hablar de una propuesta antes de aprobarla.",
+      "Con @ le avisás a alguien: escribí @ y elegí a la persona (o tocá el botón @). Le llega “te mencionó” a la campana y al celular. Al vendedor, a quien armó la cotización y a los que ya escribieron también les llega el aviso de que hay un mensaje nuevo.",
+      "El botón “Conversación” muestra cuántos mensajes hay y cuántos son nuevos para vos; adentro, la raya “Nuevos” marca desde dónde no leíste. Los mensajes nuevos aparecen solos mientras está abierta, y cada uno puede borrar los suyos.",
+      "En el celular, “Más” ahora muestra todas las secciones de tu menú que no entran en la barra de abajo (por ejemplo Servicio técnico, Consumibles y Repuestos para dirección, o Campañas y Contactos para marketing). “Services” pasa a llamarse “Servicio técnico”.",
+    ],
+  },
+  {
     version: "1.23.0",
     fecha: "2026-10-02",
     titulo: "Espacios en Material y pedidos a marketing con aprobación",

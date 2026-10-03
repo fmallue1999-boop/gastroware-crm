@@ -9,6 +9,7 @@ import { cambiarEtapa, cambiarProductoInteres, setTemperatura } from "@/lib/acti
 import { ETAPAS, MOTIVOS_PERDIDA, NIVELES_INTERES } from "@/lib/constants";
 import { dinero, fechaCorta, diasDesde } from "@/lib/format";
 import BotonesPdfCotizacion from "@/components/BotonesPdfCotizacion";
+import ConversacionCotizacion from "@/components/ConversacionCotizacion";
 import IAMensaje from "@/components/IAMensaje";
 import { SelectorProductos, chipCls } from "@/components/InteresAgregar";
 import { COLOR_ETAPA, PuntoNivel, textoProximo } from "@/components/PuntoNivel";
@@ -89,6 +90,7 @@ export default function InteresFijado({
   responsableNombre = null,
   ahoraMs = 0,
   movimientos = [],
+  charlas = {},
 }: {
   interes: Oportunidad;
   nombre: string;
@@ -105,6 +107,8 @@ export default function InteresFijado({
   ahoraMs?: number;
   /** Lo que pasó con este interés, lo más nuevo primero. */
   movimientos?: MovimientoInteres[];
+  /** Mensajes de la conversación de cada cotización (total y sin leer). */
+  charlas?: Record<string, { total: number; sinLeer: number }>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -300,6 +304,11 @@ export default function InteresFijado({
               )}
             </div>
           )}
+          <ConversacionCotizacion
+            cotizacionId={vigente.cotizacion_id}
+            total={charlas[vigente.cotizacion_id]?.total ?? 0}
+            sinLeer={charlas[vigente.cotizacion_id]?.sinLeer ?? 0}
+          />
         </div>
       )}
 

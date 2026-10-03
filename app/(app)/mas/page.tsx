@@ -38,6 +38,19 @@ import { cerrarSesion } from "@/lib/actions";
 import PushToggle from "@/components/PushToggle";
 import { versionCorta } from "@/lib/novedades";
 import { nombrePuesto, veTodo, esGestor as esGestorPuesto } from "@/lib/puestos";
+import { menuDe } from "@/lib/navegacion";
+import { ICONOS_MENU } from "@/components/iconosMenu";
+
+/** Qué es cada sección del menú, para listarla acá. */
+const DETALLE_SECCION: Record<string, string> = {
+  "/": "Los intereses de tus contactos, por etapa",
+  "/hoy": "Lo que tenés para hoy",
+  "/clientes": "Todos los contactos y clientes",
+  "/servicio": "Services, órdenes de trabajo y técnicos",
+  "/consumibles": "A quién contactar para reponer consumibles",
+  "/repuestos": "Solicitudes de repuestos: validación, cotización y pedido",
+  "/marketing": "Segmentos y campañas por email y WhatsApp",
+};
 
 function MenuLink({
   href,
@@ -78,6 +91,23 @@ export default async function MasPage() {
   const rol = yo?.rol ?? "comercial";
   const esAdmin = esGestorPuesto(rol);
   const esTecnico = rol === "tecnico";
+  const veContenidos = ["marketing", "direccion", "admin"].includes(rol) || !!yo?.ve_contenidos;
+
+  // Lo que esta página ya muestra para este puesto (abajo)
+  const enEstaPagina = new Set([
+    "/material", "/tareas", "/asistente", "/guia", "/pedidos", "/casos", "/marketing/pedidos", "/stock", "/movimientos", "/equipos",
+    ...(veTodo(rol) ? ["/cobranzas"] : []),
+    ...(esAdmin ? ["/aprobaciones", "/informes", "/tablero", "/marketing"] : []),
+    ...(rol === "comercial" ? ["/informe"] : []),
+    ...(veContenidos ? ["/contenidos"] : []),
+    ...(esAdmin || rol === "marketing" ? ["/marketing/videos"] : []),
+  ]);
+  // Lo del menú de la computadora que no entra en la barra del celular ni está
+  // más abajo: así en el celular se llega a todo (ej.: Servicio técnico)
+  const menu = menuDe(rol, { veContenidos: !!yo?.ve_contenidos });
+  const otras = menu.lateral.filter(
+    (i) => i.href !== "/mas" && !menu.celular.some((c) => c.href === i.href) && !enEstaPagina.has(i.href)
+  );
 
   return (
     <div className="space-y-5">
@@ -114,6 +144,17 @@ export default async function MasPage() {
         detalle="Qué cambió en cada versión"
       />
 
+      {otras.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">
+            Secciones de tu menú
+          </h2>
+          {otras.map((i) => (
+            <MenuLink key={i.href} href={i.href} icono={ICONOS_MENU[i.icono]} titulo={i.label} detalle={DETALLE_SECCION[i.href] ?? ""} />
+          ))}
+        </section>
+      )}
+
       <section className="space-y-2">
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-piedra">
           Circuitos del manual
@@ -132,7 +173,7 @@ export default async function MasPage() {
         {esAdmin && (
           <MenuLink href="/informes" icono={ClipboardList} titulo="Informes comerciales" detalle="Los informes de los lunes de cada vendedor, para responder" />
         )}
-        {(["marketing", "direccion", "admin"].includes(rol) || yo?.ve_contenidos) && (
+        {veContenidos && (
           <MenuLink href="/contenidos" icono={CalendarRange} titulo="Calendario de contenidos" detalle="Lo que se publica en redes, por día: historias y feed, con su aprobación" />
         )}
         <MenuLink href="/marketing/pedidos" icono={Palette} titulo="Pedidos a marketing" detalle="Pedirle contenido a marketing (folletos, videos, posteos…) y aprobarlo" />
