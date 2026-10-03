@@ -409,6 +409,14 @@ export interface OrdenTrabajo {
   horas_cobrar?: number | null;
   cobro_como?: string | null;
   concepto_factura?: string | null;
+  /** v1.28: dirección autorizó no cobrarla / la dio de baja (con el motivo). */
+  sin_cargo?: boolean;
+  sin_cargo_motivo?: string | null;
+  sin_cargo_por?: string | null;
+  sin_cargo_at?: string | null;
+  baja_motivo?: string | null;
+  baja_por?: string | null;
+  baja_at?: string | null;
   cliente?: Cliente;
   equipo?: Equipo | null;
   tecnico?: { id: string; nombre: string } | null;

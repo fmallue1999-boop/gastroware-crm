@@ -10,7 +10,7 @@ import { consultarIA } from "@/lib/core/ia";
 import { exigirGestor } from "@/lib/auth";
 import { hoyISO, normalizarTelefono, sumarMeses } from "@/lib/format";
 import { controlaServicio, factura } from "@/lib/puestos";
-import { conceptoFinal, cuentaOT, esCobroComo } from "@/lib/servicio-cobro";
+import { conceptoFinal, cuentaOT, esCobroComo, motivoCompleto } from "@/lib/servicio-cobro";
 import { avisar, puestoActual, usuarioActual, usuariosDePuesto, type SupabaseServidor } from "./comun";
 import { buscarClientePorTelefono } from "./contactos";
 
@@ -874,7 +874,7 @@ export async function guardarReclamoGarantia(otId: string, estado: string, nota?
 /** Lo que entra en la cuenta de la orden: horas a cobrar × tarifa + ítems facturables aprobados. */
 async function cuentaDeOT(
   supabase: SupabaseServidor,
-  ot: { id: string; cobertura: string; horas_cobrar?: number | null; cobro_como?: string | null }
+  ot: { id: string; cobertura: string; horas_cobrar?: number | null; cobro_como?: string | null; sin_cargo?: boolean | null }
 ) {
   const [{ data: tiempos }, { data: items }, { data: cfg }] = await Promise.all([
     supabase.from("ot_tiempos").select("minutos").eq("ot_id", ot.id),
@@ -889,9 +889,9 @@ const CERRADAS = ["facturado", "cerrado", "cancelado"];
 
 /** Si ya estaba aprobada para facturar, el total se recalcula con lo corregido. */
 async function recalcularTotal(supabase: SupabaseServidor, otId: string) {
-  const { data: ot } = await supabase.from("ordenes_trabajo").select("id, estado, cobertura, horas_cobrar, cobro_como").eq("id", otId).maybeSingle();
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("id, estado, cobertura, horas_cobrar, cobro_como, sin_cargo").eq("id", otId).maybeSingle();
   if (ot?.estado !== "aprobado_facturar") return;
-  const { total } = await cuentaDeOT(supabase, ot as { id: string; cobertura: string; horas_cobrar: number | null; cobro_como: string | null });
+  const { total } = await cuentaDeOT(supabase, ot as { id: string; cobertura: string; horas_cobrar: number | null; cobro_como: string | null; sin_cargo: boolean });
   await supabase.from("ordenes_trabajo").update({ total }).eq("id", otId);
 }
 
@@ -1011,4 +1011,88 @@ export async function iaConceptoOT(otId: string, cobroComo: string | null, horas
   const nombres: Record<string, string> = { mano_de_obra: "Mano de obra", movilidad: "Movilidad", visita: "Visita técnica", diagnostico: "Diagnóstico" };
   const como = cobro ? ` (${nombres[cobro]})` : horas > 0 && ot.cobertura !== "facturable" ? " (Mano de obra)" : "";
   return { ok: true as const, concepto: `ST ${ot.numero} - ${que.charAt(0).toUpperCase() + que.slice(1)}${porGarantia}${como}` };
+}
+
+// =====================================================================
+// Lo que autoriza dirección: no cobrar y dar de baja (v1.28)
+// =====================================================================
+
+const TERMINADA = ["finalizado_tecnico", "revision_admin", "aprobado_facturar"];
+
+/** Deja el motivo en el historial de estados (el renglón lo crea la base) y en los movimientos del cliente. */
+async function dejarConstancia(supabase: SupabaseServidor, ot: { id: string; cliente_id: string; numero: number }, hacia: string | null, texto: string) {
+  const user = await usuarioActual();
+  if (hacia) {
+    const { data: ultimo } = await supabase.from("status_history").select("id").eq("ot_id", ot.id).eq("hacia", hacia).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (ultimo) await supabase.from("status_history").update({ observacion: texto }).eq("id", ultimo.id);
+  }
+  await supabase.from("actividades").insert({ cliente_id: ot.cliente_id, tipo: "service", contenido: `Service ${ot.numero}: ${texto}`, created_by: user?.id ?? null });
+}
+
+async function nombreDe(supabase: SupabaseServidor, id: string | undefined) {
+  const { data } = await supabase.from("usuarios").select("nombre").eq("id", id ?? "").maybeSingle();
+  return (data?.nombre as string | undefined) ?? "dirección";
+}
+
+/**
+ * Dirección autoriza no cobrar la orden, con el motivo. Queda en $0; si el
+ * trabajo ya está terminado, se puede cerrar en el mismo paso.
+ */
+export async function noCobrarOT(otId: string, motivo: string, detalle: string | null, cerrar: boolean) {
+  const supabase = await createClient();
+  if ((await puestoActual(supabase)) !== "direccion") return { error: "No cobrar una orden lo autoriza dirección" };
+  const texto = motivoCompleto(motivo, detalle);
+  if (!texto) return { error: motivo === "Otro" ? "Contá el motivo" : "Elegí el motivo" };
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("id, numero, cliente_id, estado").eq("id", otId).maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  if (["facturado", "cerrado", "cancelado"].includes(ot.estado)) return { error: "La orden ya está facturada, cerrada o dada de baja" };
+  const cierra = cerrar && TERMINADA.includes(ot.estado);
+  const { error } = await supabase
+    .from("ordenes_trabajo")
+    .update({ sin_cargo: true, sin_cargo_motivo: texto, total: 0, ...(cierra ? { estado: "cerrado" } : {}) })
+    .eq("id", otId);
+  if (error) return { error: error.message };
+  const user = await usuarioActual();
+  await dejarConstancia(supabase, ot, cierra ? "cerrado" : null, `sin cargo, autorizado por ${await nombreDe(supabase, user?.id)}. Motivo: ${texto}${cierra ? " (cerrada sin facturar)" : ""}`);
+  revalidatePath("/", "layout");
+  return { ok: true as const, cerrada: cierra };
+}
+
+/** Dirección vuelve atrás el "no cobrar" (antes de cerrar la orden). */
+export async function volverACobrarOT(otId: string) {
+  const supabase = await createClient();
+  if ((await puestoActual(supabase)) !== "direccion") return { error: "Eso lo decide dirección" };
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("id, numero, cliente_id, estado").eq("id", otId).maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  if (["facturado", "cerrado", "cancelado"].includes(ot.estado)) return { error: "La orden ya está cerrada" };
+  // Antes de aprobarla el total se calcula solo; aprobada, se recalcula abajo
+  const { error } = await supabase
+    .from("ordenes_trabajo")
+    .update({ sin_cargo: false, sin_cargo_motivo: null, ...(ot.estado !== "aprobado_facturar" ? { total: null } : {}) })
+    .eq("id", otId);
+  if (error) return { error: error.message };
+  await recalcularTotal(supabase, otId);
+  const user = await usuarioActual();
+  await dejarConstancia(supabase, ot, null, `se vuelve a cobrar (${await nombreDe(supabase, user?.id)})`);
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Dirección da de baja (anula) la orden, con el motivo, en cualquier estado antes de facturarla. */
+export async function darDeBajaOT(otId: string, motivo: string, detalle: string | null) {
+  const supabase = await createClient();
+  if ((await puestoActual(supabase)) !== "direccion") return { error: "Dar de baja una orden lo decide dirección" };
+  const texto = motivoCompleto(motivo, detalle);
+  if (!texto) return { error: motivo === "Otro" ? "Contá el motivo" : "Elegí el motivo" };
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("id, numero, cliente_id, estado, tecnico_id").eq("id", otId).maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  if (["facturado", "cerrado", "cancelado"].includes(ot.estado)) return { error: "La orden ya está facturada, cerrada o dada de baja" };
+  const { error } = await supabase.from("ordenes_trabajo").update({ estado: "cancelado", baja_motivo: texto }).eq("id", otId);
+  if (error) return { error: error.message };
+  const user = await usuarioActual();
+  await dejarConstancia(supabase, ot, "cancelado", `dada de baja por ${await nombreDe(supabase, user?.id)}. Motivo: ${texto}`);
+  if (ot.tecnico_id)
+    await avisar(supabase, [ot.tecnico_id as string], { tipo: "ot_baja", titulo: `Se dio de baja el service ${ot.numero}: ${texto}`, url: `/servicio/${otId}` }, user?.id);
+  revalidatePath("/", "layout");
+  return { ok: true as const };
 }

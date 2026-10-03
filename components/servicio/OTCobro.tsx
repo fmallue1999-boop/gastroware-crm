@@ -126,6 +126,12 @@ export default function OTCobro({
           <span className="text-piedra">Repuestos y gastos facturables aprobados</span>
           <span>{dinero(cuenta.itemsTotal)}</span>
         </p>
+        {cuenta.bonificado > 0 && (
+          <p className="flex justify-between gap-2 font-semibold text-ambar">
+            <span>Sin cargo (autorizado por dirección)</span>
+            <span>−{dinero(cuenta.bonificado)}</span>
+          </p>
+        )}
         <p className="flex justify-between gap-2 border-t border-borde pt-1 font-semibold">
           <span>Total {ot.total != null && !editable ? "" : ot.estado === "aprobado_facturar" ? "" : "estimado"}</span>
           <span>{dinero(totalVisible)}</span>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { conceptoFinal, conceptoSugerido, cuentaOT, horasACobrar, resumenTrabajo } from "@/lib/servicio-cobro";
+import { conceptoFinal, conceptoSugerido, cuentaOT, horasACobrar, motivoCompleto, resumenTrabajo } from "@/lib/servicio-cobro";
 
 describe("horas a cobrar (v1.27)", () => {
   it("automático: las trabajadas si es facturable; nada en garantía o contrato", () => {
@@ -56,5 +56,21 @@ describe("concepto para facturar (v1.27)", () => {
     const ot = { numero: 5, tipo: "garantia", cobertura: "garantia", trabajo_realizado: "Cambio de luz", cobro_como: "movilidad" };
     expect(conceptoFinal({ ...ot, concepto_factura: "ST 5 - Visita por garantía" }, 1)).toBe("ST 5 - Visita por garantía");
     expect(conceptoFinal({ ...ot, concepto_factura: "  " }, 1)).toBe("ST 5 - Cambio de luz por garantía (Movilidad)");
+  });
+});
+
+describe("sin cargo y motivos (v1.28)", () => {
+  it("sin cargo: se ve lo que salía y el total queda en $0", () => {
+    const items = [{ cantidad: 1, precio_unit: 5000, estado: "facturable", aprobado_admin: true }];
+    const c = cuentaOT({ cobertura: "facturable", horas_cobrar: 1, sin_cargo: true }, 60, 10000, items);
+    expect(c).toMatchObject({ manoObra: 10000, itemsTotal: 5000, bonificado: 15000, total: 0 });
+    expect(cuentaOT({ cobertura: "facturable", horas_cobrar: 1 }, 60, 10000, items)).toMatchObject({ bonificado: 0, total: 15000 });
+  });
+  it("el motivo: elegido + detalle; en 'Otro' el detalle es obligatorio", () => {
+    expect(motivoCompleto("Cortesía al cliente", "cliente de años")).toBe("Cortesía al cliente: cliente de años");
+    expect(motivoCompleto("Duplicada o cargada por error", "")).toBe("Duplicada o cargada por error");
+    expect(motivoCompleto("Otro", "  ")).toBeNull();
+    expect(motivoCompleto("Otro", "se mudó")).toBe("se mudó");
+    expect(motivoCompleto("", "algo")).toBeNull();
   });
 });

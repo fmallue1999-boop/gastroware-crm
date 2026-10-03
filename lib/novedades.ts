@@ -19,6 +19,17 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.28.0",
+    fecha: "2026-10-03",
+    titulo: "Dirección autoriza no cobrar o dar de baja un service",
+    cambios: [
+      "En cada orden de servicio, dirección tiene “No cobrar” y “Dar de baja”, siempre con el motivo (se elige de una lista y se puede agregar un detalle).",
+      "No cobrar: la orden queda en $0 (se ve lo que salía y “Sin cargo”). Si el trabajo ya está terminado, se cierra sin facturar en el mismo paso; si no, se puede “Volver a cobrarla” antes de cerrarla.",
+      "Dar de baja: se anula en cualquier momento antes de facturar y al técnico asignado le llega el aviso. Se puede reabrir.",
+      "Quién lo autorizó, cuándo y por qué queda en la orden, en su historial y en los movimientos del cliente. Una orden con importe ya no se puede cerrar sin facturar sin esta autorización.",
+    ],
+  },
+  {
     version: "1.27.0",
     fecha: "2026-10-03",
     titulo: "Servicio técnico: corregir órdenes, horas en garantía y concepto para facturar",

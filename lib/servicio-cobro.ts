@@ -14,7 +14,34 @@ export type CobroComo = (typeof COBRO_COMO)[number]["value"];
 export const esCobroComo = (v: string | null | undefined): v is CobroComo => COBRO_COMO.some((c) => c.value === v);
 export const nombreCobro = (v: string | null | undefined) => COBRO_COMO.find((c) => c.value === v)?.label ?? "Mano de obra";
 
-type OTCobro = { cobertura: string; horas_cobrar?: number | string | null; cobro_como?: string | null };
+type OTCobro = { cobertura: string; horas_cobrar?: number | string | null; cobro_como?: string | null; sin_cargo?: boolean | null };
+
+/** v1.28: por qué dirección autoriza no cobrar una orden. */
+export const MOTIVOS_SIN_CARGO = [
+  "Cortesía al cliente",
+  "Error nuestro o del técnico",
+  "Ya se cobró aparte",
+  "Garantía sin cargo",
+  "Otro",
+] as const;
+
+/** v1.28: por qué dirección da de baja una orden. */
+export const MOTIVOS_BAJA = [
+  "Duplicada o cargada por error",
+  "El cliente ya no la quiere",
+  "Se resolvió sin ir",
+  "No corresponde a nosotros",
+  "Otro",
+] as const;
+
+/** "Cortesía al cliente: cliente de años" (el detalle es opcional salvo en "Otro"). */
+export function motivoCompleto(motivo: string, detalle?: string | null): string | null {
+  const m = motivo.trim();
+  const d = (detalle ?? "").trim();
+  if (!m) return null;
+  if (m === "Otro") return d ? d.slice(0, 300) : null;
+  return d ? `${m}: ${d}`.slice(0, 300) : m;
+}
 type ItemCobro = { cantidad: number | string; precio_unit: number | string; estado: string; aprobado_admin: boolean };
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
@@ -36,7 +63,10 @@ export function cuentaOT(ot: OTCobro, minutosTrabajados: number, tarifa: number,
   const itemsTotal = redondear(
     items.filter((i) => i.estado === "facturable" && i.aprobado_admin).reduce((s, i) => s + Number(i.cantidad) * Number(i.precio_unit), 0)
   );
-  return { horasTrabajadas, horas, manual: ot.horas_cobrar !== null && ot.horas_cobrar !== undefined, manoObra, itemsTotal, total: redondear(manoObra + itemsTotal) };
+  const bruto = redondear(manoObra + itemsTotal);
+  // Sin cargo (autorizado por dirección): se ve lo que salía y el total queda en $0
+  const bonificado = ot.sin_cargo ? bruto : 0;
+  return { horasTrabajadas, horas, manual: ot.horas_cobrar !== null && ot.horas_cobrar !== undefined, manoObra, itemsTotal, bonificado, total: redondear(bruto - bonificado) };
 }
 
 const TIPO_TRABAJO: Record<string, string> = {

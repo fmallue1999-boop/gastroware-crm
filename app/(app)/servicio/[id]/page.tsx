@@ -13,6 +13,7 @@ import IAInformeOT from "@/components/IAInformeOT";
 import { iaConfigurada } from "@/lib/core/ia";
 import OTServicioPanel from "@/components/OTServicioPanel";
 import OTCorregir from "@/components/servicio/OTCorregir";
+import OTAutorizar from "@/components/servicio/OTAutorizar";
 import OTCobro from "@/components/servicio/OTCobro";
 import { conceptoFinal, cuentaOT } from "@/lib/servicio-cobro";
 import { controlaServicio, factura } from "@/lib/puestos";
@@ -104,10 +105,16 @@ export default async function OTPage({
     req === "cualquiera" ||
     (req === "gestor" && controla) ||
     (req === "administracion" && administra) ||
-    (req === "tecnico" && (controla || rol === "tecnico"));
+    (req === "tecnico" && (controla || rol === "tecnico")) ||
+    (req === "direccion" && rol === "direccion");
+  // v1.28: dar de baja y no cobrar van por "Lo que autoriza dirección" (con motivo);
+  // cerrar sin facturar, solo si no hay importe, ya se cobró o dirección autorizó no cobrar
+  const puedeCerrarSinFacturar =
+    ot.estado === "aprobado_facturar" && (!(Number(ot.total) > 0) || Boolean(ot.sin_cargo) || Boolean(ot.cobro_ok_at));
   const transicionesGestor = listaTrans
     .filter((t) => puede(t.requiere_rol) && !TRABAJO_TECNICO.includes(t.hacia) && (controla || administra))
-    .map((t) => t.hacia);
+    .map((t) => t.hacia)
+    .filter((h) => h !== "cancelado" && (h !== "cerrado" || ot.estado === "facturado" || puedeCerrarSinFacturar));
   const transicionesTecnico = (esTecnicoAsignado || controla)
     ? listaTrans
         .filter((t) => puede(t.requiere_rol))
@@ -166,6 +173,10 @@ export default async function OTPage({
   const minutos = listaTiempos.reduce((s, t) => s + (t.minutos ?? 0), 0);
   const cuenta = cuentaOT(ot, minutos, tarifa, listaItems);
   const concepto = conceptoFinal(ot, cuenta.horas);
+  // Quién autorizó no cobrar / dio de baja
+  const quienes = [ot.sin_cargo_por, ot.baja_por].filter((x): x is string => Boolean(x));
+  const { data: autorizaron } = quienes.length ? await supabase.from("usuarios").select("id, nombre").in("id", quienes) : { data: [] };
+  const nombreDe = (id: string | null | undefined) => ((autorizaron ?? []) as { id: string; nombre: string }[]).find((u) => u.id === id)?.nombre ?? "dirección";
 
   return (
     <div className="space-y-3">
@@ -219,7 +230,25 @@ export default async function OTPage({
         )}
       </header>
 
-      {controla && !cerradaOT && <OTCorregir ot={ot} />}
+      {ot.estado === "cancelado" && ot.baja_motivo && (
+        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[15px] text-red-700">
+          <span className="font-extrabold">Dada de baja</span> por {nombreDe(ot.baja_por)}
+          {ot.baja_at ? ` el ${fechaCorta(ot.baja_at)}` : ""}. Motivo: {ot.baja_motivo}
+        </p>
+      )}
+      {ot.sin_cargo && (
+        <p className="rounded-2xl border border-ambar/40 bg-ambar-soft px-4 py-3 text-[15px] text-ambar">
+          <span className="font-extrabold">Sin cargo</span>, autorizado por {nombreDe(ot.sin_cargo_por)}
+          {ot.sin_cargo_at ? ` el ${fechaCorta(ot.sin_cargo_at)}` : ""}. Motivo: {ot.sin_cargo_motivo}
+        </p>
+      )}
+
+      {!cerradaOT && (controla || rol === "direccion") && (
+        <div className="flex flex-wrap items-center gap-2">
+          {controla && <OTCorregir ot={ot} />}
+          {rol === "direccion" && <OTAutorizar ot={ot} terminada={["finalizado_tecnico", "revision_admin", "aprobado_facturar"].includes(ot.estado)} />}
+        </div>
+      )}
 
       {(controla || administra) && (
         <OTServicioPanel
@@ -256,7 +285,7 @@ export default async function OTPage({
         minutos={minutos}
         tarifa={tarifa}
         items={listaItems}
-        editable={(controla || administra) && !cerradaOT}
+        editable={(controla || administra) && !cerradaOT && !ot.sin_cargo}
         iaOn={iaConfigurada()}
       />
 
