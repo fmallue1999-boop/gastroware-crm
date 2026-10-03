@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, FileText, MessageCircle } from "lucide-react";
+import { ChevronDown, FileText, MessageCircle, MessagesSquare } from "lucide-react";
 import { cambiarEtapa, ultimosMovimientos } from "@/lib/actions";
 import { COLUMNAS_EMBUDO, type ColumnaEmbudo, type TarjetaEmbudo } from "@/lib/embudo";
 import { ETAPAS, MOTIVOS_PERDIDA, PEDIDO_ESTADOS } from "@/lib/constants";
@@ -45,10 +45,13 @@ export default function EmbudoBoard({
   columnas,
   totales,
   hoy,
+  charlas = {},
 }: {
   columnas: Record<ColumnaEmbudo, TarjetaEmbudo[]>;
   totales: Record<ColumnaEmbudo, Record<string, number>>;
   hoy: string;
+  /** v1.26: mensajes de la conversación del equipo de cada interés (total y sin leer). */
+  charlas?: Record<string, { total: number; sinLeer: number }>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -143,7 +146,21 @@ export default function EmbudoBoard({
             ) : (
               <p className={`mt-0.5 text-[13px] ${prox.clase}`}>{prox.texto}</p>
             )}
-            {enHoy && <span className="mt-1 inline-block rounded-full bg-crema px-2 py-0.5 text-[11px] font-bold text-piedra">{etapaTexto}</span>}
+            {(enHoy || (charlas[t.id]?.total ?? 0) > 0) && (
+              <p className="mt-1 flex flex-wrap items-center gap-1.5">
+                {enHoy && <span className="inline-block rounded-full bg-crema px-2 py-0.5 text-[11px] font-bold text-piedra">{etapaTexto}</span>}
+                {(charlas[t.id]?.total ?? 0) > 0 && (
+                  <Link
+                    href={`/conversacion/${t.id}`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${charlas[t.id].sinLeer > 0 ? "bg-naranja text-white" : "bg-crema text-piedra"}`}
+                    aria-label="Conversación del equipo"
+                  >
+                    <MessagesSquare className="h-3 w-3" />
+                    {charlas[t.id].sinLeer > 0 ? `${charlas[t.id].sinLeer} ${charlas[t.id].sinLeer === 1 ? "nuevo" : "nuevos"}` : charlas[t.id].total}
+                  </Link>
+                )}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -215,6 +232,14 @@ export default function EmbudoBoard({
                     Abrir ficha
                   </LinkContacto>
                 </div>
+                <Link href={`/conversacion/${t.id}`} className={`${chip} w-full gap-1 border border-borde bg-white`}>
+                  <MessagesSquare className="h-4 w-4" /> Conversación del equipo
+                  {(charlas[t.id]?.sinLeer ?? 0) > 0 ? (
+                    <span className="rounded-full bg-naranja px-1.5 text-[11px] font-extrabold text-white">{charlas[t.id].sinLeer}</span>
+                  ) : (charlas[t.id]?.total ?? 0) > 0 ? (
+                    <span className="text-piedra">({charlas[t.id].total})</span>
+                  ) : null}
+                </Link>
                 {vendida ? (
                   <Link href="/pedidos" className={`${chip} w-full border border-borde bg-white`}>
                     Ver la venta

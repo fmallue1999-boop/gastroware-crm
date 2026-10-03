@@ -4,6 +4,7 @@ import { transcurrido } from "@/lib/habiles";
 import { lunesDe } from "@/lib/semana";
 import { esGestor, factura, controlaServicio } from "@/lib/puestos";
 import { cargarCasos } from "@/lib/servidor/casos";
+import { conversacionesConNuevos } from "@/lib/servidor/conversaciones";
 import type { SupabaseServidor } from "@/lib/actions/comun";
 
 /**
@@ -55,6 +56,27 @@ export async function cargarMiDia(
   const vendedor = rol === "comercial" || rol === "direccion";
   const administra = factura(rol);
   const controla = controlaServicio(rol);
+
+  // --- v1.26: conversaciones del equipo con mensajes nuevos (las mías) ---
+  {
+    const nuevas = await conversacionesConNuevos(supabase, userId);
+    if (nuevas.length)
+      bandejas.push(
+        bandeja({
+          clave: "conversaciones",
+          titulo: "Conversaciones con mensajes nuevos",
+          ayuda: "Del equipo, sobre tus intereses",
+          href: `/conversacion/${nuevas[0].oportunidadId}`,
+          tono: "ambar",
+          lista: nuevas.map((c) => ({
+            id: c.oportunidadId,
+            titulo: `${c.cliente} · ${c.que}`,
+            detalle: `${c.sinLeer} ${c.sinLeer === 1 ? "nuevo" : "nuevos"}${c.ultimo ? ` · ${c.ultimo.autor.split(" ")[0]}: ${c.ultimo.texto.slice(0, 60)}` : ""}`,
+            href: `/conversacion/${c.oportunidadId}`,
+          })),
+        })
+      );
+  }
 
   // --- Consumibles: reposiciones a mi cargo para contactar (hoy o atrasadas) ---
   {

@@ -1,31 +1,39 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AtSign, ChevronDown, MessageCircle, Send } from "lucide-react";
-import { borrarMensaje, enviarMensajeCotizacion, leerConversacion, type DatosConversacion } from "@/lib/actions/conversaciones";
+import { AtSign, ChevronDown, ChevronRight, MessagesSquare, Send } from "lucide-react";
+import { borrarMensaje, enviarMensaje, leerConversacion, type DatosConversacion } from "@/lib/actions/conversaciones";
 import { cuandoMensaje, cuantosMensajes, mencionEnCurso, partesMensaje, sugerirPersonas, type Persona } from "@/lib/conversaciones";
+
+/** Lo que se muestra con la conversación cerrada (viene del servidor). */
+export type ResumenCharla = {
+  total: number;
+  sinLeer: number;
+  ultimo: { autor: string; texto: string; at: string; propio: boolean } | null;
+};
 
 /** Cada cuánto se buscan mensajes nuevos mientras está abierta. */
 const CADA_MS = 12000;
 
 /**
- * La conversación de una cotización (v1.24): un chat interno del equipo
- * para anotar y conversar sobre la cotización. Con @ se le avisa a alguien
- * (le llega a la campana y al celular). No sale en el PDF.
- * Cerrada muestra un botón con cuántos mensajes hay y cuántos son nuevos.
+ * La conversación del equipo de un interés (v1.26; antes de la cotización):
+ * un chat interno para anotar y conversar sobre el interés, de la consulta a
+ * la postventa. Con @ se le avisa a alguien (campana y celular). No la ve el
+ * cliente ni sale en el PDF. Cerrada muestra el último mensaje y cuántos son
+ * nuevos; abierta, el chat.
  */
-export default function ConversacionCotizacion({
-  cotizacionId,
-  total = 0,
-  sinLeer = 0,
+export default function ConversacionInteres({
+  oportunidadId,
+  resumen,
   pagina = false,
 }: {
-  cotizacionId: string;
-  total?: number;
-  sinLeer?: number;
+  oportunidadId: string;
+  resumen?: ResumenCharla | null;
   /** En su propia página: siempre abierta y más alta. */
   pagina?: boolean;
 }) {
+  const total = resumen?.total ?? 0;
+  const sinLeer = resumen?.sinLeer ?? 0;
   const [abierta, setAbierta] = useState(pagina);
   const [datos, setDatos] = useState<DatosConversacion | null>(null);
   // Hasta dónde había leído al abrir (para la raya de "nuevos"); no cambia al refrescar
@@ -44,7 +52,7 @@ export default function ConversacionCotizacion({
     if (!abierta) return;
     let vivo = true;
     async function cargar() {
-      const r = await leerConversacion(cotizacionId);
+      const r = await leerConversacion(oportunidadId);
       if (!vivo) return;
       if ("error" in r) {
         setError(r.error);
@@ -66,7 +74,7 @@ export default function ConversacionCotizacion({
       clearInterval(t);
       document.removeEventListener("visibilitychange", alVolver);
     };
-  }, [abierta, cotizacionId]);
+  }, [abierta, oportunidadId]);
 
   // Lo último, a la vista (solo se mueve la lista, no la página)
   const cantidad = datos?.mensajes.length ?? 0;
@@ -122,7 +130,7 @@ export default function ConversacionCotizacion({
     if (!t || pending) return;
     setError(null);
     startTransition(async () => {
-      const r = await enviarMensajeCotizacion(cotizacionId, t);
+      const r = await enviarMensaje(oportunidadId, t);
       if ("error" in r) {
         setError(r.error);
         return;
@@ -145,16 +153,28 @@ export default function ConversacionCotizacion({
   }
 
   if (!abierta) {
+    const ultimo = resumen?.ultimo;
     return (
       <button
         type="button"
         onClick={() => setAbierta(true)}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-borde bg-white px-3.5 text-[15px] font-bold text-tinta"
+        className={`flex min-h-12 w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left ${sinLeer > 0 ? "border-naranja/50 bg-naranja-soft" : "border-borde bg-white"}`}
       >
-        <MessageCircle className="h-4 w-4" />
-        Conversación
-        {total > 0 && <span className="font-normal text-piedra">· {cuantosMensajes(total)}</span>}
-        {sinLeer > 0 && <span className="rounded-full bg-naranja px-2 py-0.5 text-xs font-extrabold text-white">{sinLeer} {sinLeer === 1 ? "nuevo" : "nuevos"}</span>}
+        <MessagesSquare className={`h-5 w-5 shrink-0 ${sinLeer > 0 ? "text-naranja" : "text-piedra"}`} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-extrabold">
+            Conversación del equipo{total > 0 && <span className="font-normal text-piedra"> · {cuantosMensajes(total)}</span>}
+          </span>
+          <span className="block truncate text-[13px] text-piedra">
+            {ultimo ? `${ultimo.propio ? "Vos" : ultimo.autor.split(" ")[0]}: ${ultimo.texto}` : "Interna: anotá algo o preguntale a alguien con @"}
+          </span>
+        </span>
+        {sinLeer > 0 && (
+          <span className="shrink-0 rounded-full bg-naranja px-2 py-0.5 text-xs font-extrabold text-white">
+            {sinLeer} {sinLeer === 1 ? "nuevo" : "nuevos"}
+          </span>
+        )}
+        <ChevronRight className="h-4 w-4 shrink-0 text-piedra/60" />
       </button>
     );
   }
@@ -166,9 +186,9 @@ export default function ConversacionCotizacion({
   return (
     <div className="space-y-2 rounded-2xl border border-borde bg-white p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-[15px] font-extrabold">
-          <MessageCircle className="h-4 w-4" /> Conversación
-          <span className="text-xs font-normal text-piedra">· interna, no sale en el PDF</span>
+        <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[15px] font-extrabold">
+          <MessagesSquare className="h-4 w-4" /> Conversación del equipo
+          <span className="text-xs font-normal text-piedra">· interna: no la ve el cliente</span>
         </p>
         {!pagina && (
           <button type="button" onClick={() => setAbierta(false)} className="inline-flex min-h-9 items-center gap-1 px-1 text-sm text-piedra" aria-label="Cerrar la conversación">

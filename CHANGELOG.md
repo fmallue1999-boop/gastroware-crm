@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.26.0 — 2 de octubre de 2026
+
+Pedido de dirección: "¿cómo se chatea dentro de un interés? Desde el embudo no me deja" y "repensá esto y la relación con dónde lo pusiste: ¿no está repetido? Que quede súper pro". La conversación colgaba de la cotización (sin cotizar no había), estaba dos veces en la misma ficha (interés y pestaña Cotizaciones) y no estaba en el embudo. Migración 048_conversacion_por_interes.sql.
+
+- Migración 048: chats.oportunidad_id (único, cascade) y tipo interes/equipo; las conversaciones de cotización pasan a su interés (si el interés ya tenía, se juntan mensajes y lecturas) y se borra chats.cotizacion_id. RLS: la conversación de un interés la ve quien ve el interés (subconsulta bajo opps_select).
+- lib/conversaciones: veElInteres (igual que opps_select: ven todo dirección/administración/servicio y técnicos; un vendedor, si el cliente no tiene vendedor, es suyo o lo atiende alguien que no vende; marketing y distribuidores no) en lugar de veLaCotizacion. Tests actualizados.
+- Acciones: leerConversacion(oportunidadId), enviarMensaje(oportunidadId, texto) (crea la conversación del interés; avisos "mencion" y "conversacion" con "cliente · producto"; participan el vendedor del interés, quien armó cada versión y los que escribieron), borrarMensaje.
+- lib/servidor/conversaciones: resumenConversaciones por interés con el último mensaje (en tandas de 150; sin lista, todas las que se ven) y conversacionesConNuevos (las de la persona: vendedor del interés, o que ya la abrió/escribió) para Mi día.
+- ConversacionInteres (antes ConversacionCotizacion): cerrada, una fila con "Conversación del equipo · N mensajes", el último mensaje y los nuevos; ícono propio (no el de WhatsApp). En InteresFijado (fuera del recuadro de la cotización, arriba de los movimientos), en las ventas en curso de la ficha y en Aprobaciones; se sacó de la pestaña Cotizaciones. Embudo: contador en la tarjeta (naranja con los nuevos) y "Conversación del equipo" en la tarjeta abierta. /conversacion/[id] (resumen del interés, cotización con PDF y el chat) es adonde llevan avisos y embudo; /cotizaciones/[id] redirige ahí. Mi día: "Conversaciones con mensajes nuevos". Guía actualizada.
+
 ## v1.25.1 — 2 de octubre de 2026
 
 Visto en la prueba de viáticos: una rendición enviada a las 22:40 decía "Enviada el 3 oct".

@@ -8,6 +8,7 @@ import { textoMontos } from "@/lib/dinero";
 import { hoyISO } from "@/lib/format";
 import { filtroQuien } from "@/lib/quien";
 import EmbudoBoard from "@/components/embudo/EmbudoBoard";
+import { resumenConversaciones } from "@/lib/servidor/conversaciones";
 import SelectorQuienDesplegable from "@/components/embudo/SelectorQuienDesplegable";
 import ConPanel from "@/components/ficha/ConPanel";
 import { ETAPAS_ABIERTAS } from "@/lib/constants";
@@ -65,10 +66,13 @@ export default async function EmbudoPage({
   ].filter((a) => a.n > 0);
 
   const { quien, comercialId } = await filtroQuien(userId, esGestor);
-  const [datos, usuariosRes] = await Promise.all([
+  const [datos, usuariosRes, charlasTodas] = await Promise.all([
     cargarEmbudo(supabase, { comercialId, mes }),
     esGestor ? supabase.from("usuarios").select("id, nombre, rol, activo") : Promise.resolve({ data: [] }),
+    resumenConversaciones(supabase, null, userId),
   ]);
+  // Al tablero va lo justo: cuántos mensajes y cuántos nuevos
+  const charlas = Object.fromEntries(Object.entries(charlasTodas).map(([id, r]) => [id, { total: r.total, sinLeer: r.sinLeer }]));
   const vendedores = ((usuariosRes.data ?? []) as { id: string; nombre: string; rol: string; activo: boolean }[])
     .filter((u) => u.activo && ["comercial", "direccion", "admin"].includes(u.rol))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -145,7 +149,7 @@ export default async function EmbudoPage({
           </Link>
         </div>
 
-        <EmbudoBoard columnas={datos.columnas} totales={datos.totales} hoy={hoyISO()} />
+        <EmbudoBoard columnas={datos.columnas} totales={datos.totales} hoy={hoyISO()} charlas={charlas} />
       </div>
     </ConPanel>
   );
