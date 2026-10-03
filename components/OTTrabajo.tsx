@@ -47,6 +47,7 @@ export default function OTTrabajo({
   tiempos,
   repuestos,
   editable,
+  correccion = false,
   firmaUrl,
   transicionesTecnico,
 }: {
@@ -56,6 +57,8 @@ export default function OTTrabajo({
   tiempos: OTTiempo[];
   repuestos: Repuesto[];
   editable: boolean;
+  /** v1.27: dirección o servicio corrigen lo que cargó el técnico (sin cronómetro). */
+  correccion?: boolean;
   firmaUrl: string | null;
   transicionesTecnico: string[];
 }) {
@@ -237,7 +240,14 @@ export default function OTTrabajo({
         </p>
       )}
 
+      {correccion && (
+        <p className="rounded-xl bg-celeste-soft px-3 py-2 text-sm font-semibold text-tinta/80">
+          Corrigiendo lo que cargó el técnico: diagnóstico, trabajo, repuestos y gastos, fotos y remito.
+        </p>
+      )}
+
       {/* Cronómetro */}
+      {!correccion && (
       <div className="rounded-xl bg-crema p-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">
@@ -288,6 +298,7 @@ export default function OTTrabajo({
           </div>
         </details>
       </div>
+      )}
 
       {/* Diagnóstico y trabajo */}
       <div>

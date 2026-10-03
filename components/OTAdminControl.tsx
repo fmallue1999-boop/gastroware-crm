@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { transicionarOT, revisarItemOT } from "@/lib/actions";
 import { dinero } from "@/lib/format";
@@ -18,11 +19,14 @@ export default function OTAdminControl({
   items,
   esGestor,
   transicionesGestor,
+  concepto,
 }: {
   ot: OrdenTrabajo;
   items: OTItem[];
   esGestor: boolean;
   transicionesGestor: string[];
+  /** v1.27: el renglón de la factura ("ST 123 - Cambio de luz por garantía (Movilidad)"). */
+  concepto: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -30,6 +34,8 @@ export default function OTAdminControl({
   const [nroFactura, setNroFactura] = useState("");
   const [vence, setVence] = useState("");
   const [devolviendo, setDevolviendo] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  const aFacturar = Number(ot.total) > 0;
   const [error, setError] = useState<string | null>(null);
 
   function mover(hacia: string, extra?: { observacion?: string; nroFactura?: string; vencimiento?: string | null }) {
@@ -69,13 +75,14 @@ export default function OTAdminControl({
       </p>
       {ot.estado === "aprobado_facturar" && (
         <p className="rounded-xl bg-ambar-soft p-3 text-sm font-medium text-ambar">
-          Remito aprobado: {ot.cobertura === "garantia" ? "en garantía, no se factura al cliente (cerrar)." : "facturar a la razón social del local."}
+          Remito aprobado: {aFacturar ? `facturar ${dinero(Number(ot.total))} a la razón social del local${ot.cobertura === "garantia" ? " (en garantía: lo que se cobra)" : ""}.` : "no hay nada para facturar (cerrar sin facturar)."}
         </p>
       )}
 
       {ot.estado === "facturado" && (
         <p className="rounded-xl bg-verde-soft p-3 text-sm font-medium text-verde">
           Facturada — factura {ot.nro_factura}
+          {ot.concepto_factura ? ` · ${ot.concepto_factura}` : ""}
         </p>
       )}
 
@@ -168,7 +175,26 @@ export default function OTAdminControl({
           </button>
         ))}
 
-      {transicionesGestor.includes("facturado") && ot.cobertura !== "garantia" && (
+      {transicionesGestor.includes("facturado") && aFacturar && (
+        <div className="space-y-2 rounded-xl border border-verde/30 bg-verde-soft/50 p-3">
+          <p className="text-[13px] font-bold text-tinta/80">Para facturar en ZEUS</p>
+          <p className="flex flex-wrap items-center gap-2 text-[15px]">
+            <span className="font-bold">{concepto}</span>
+            <span>· {dinero(Number(ot.total))}</span>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(concepto);
+                  setCopiado(true);
+                  setTimeout(() => setCopiado(false), 1500);
+                } catch {}
+              }}
+              className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-borde bg-white px-2.5 text-[13px] font-bold"
+            >
+              <Copy className="h-3.5 w-3.5" /> {copiado ? "Copiado" : "Copiar"}
+            </button>
+          </p>
         <div className="flex flex-wrap gap-2">
           <input
             type="text"
@@ -194,6 +220,7 @@ export default function OTAdminControl({
             Facturada
           </button>
         </div>
+        </div>
       )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -207,7 +234,7 @@ const ETIQUETAS: Record<string, string> = {
   asignado: "Marcar asignada",
   programado: "Marcar programada",
   aprobado_facturar: "Remito controlado: aprobar para facturar (calcula el total)",
-  cerrado: "Cerrar (sin facturar: garantía, contrato o ya cobrado)",
+  cerrado: "Cerrar sin facturar (garantía sin cargo, contrato o ya cobrado)",
   cancelado: "Anular orden",
   revision_admin: "Reabrir revisión",
   en_proceso: "Reabrir para el técnico",

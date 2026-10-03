@@ -9,8 +9,9 @@ import { createClient } from "@/lib/supabase/server";
 import { consultarIA } from "@/lib/core/ia";
 import { exigirGestor } from "@/lib/auth";
 import { hoyISO, normalizarTelefono, sumarMeses } from "@/lib/format";
-import { controlaServicio } from "@/lib/puestos";
-import { avisar, puestoActual, usuarioActual, usuariosDePuesto } from "./comun";
+import { controlaServicio, factura } from "@/lib/puestos";
+import { conceptoFinal, cuentaOT, esCobroComo } from "@/lib/servicio-cobro";
+import { avisar, puestoActual, usuarioActual, usuariosDePuesto, type SupabaseServidor } from "./comun";
 import { buscarClientePorTelefono } from "./contactos";
 
 // =====================================================================
@@ -175,32 +176,22 @@ export async function transicionarOT(
   }
 
   if (hacia === "aprobado_facturar") {
-    const [{ data: tiempos }, { data: items }, { data: cfg }] =
-      await Promise.all([
-        supabase.from("ot_tiempos").select("minutos").eq("ot_id", otId),
-        supabase
-          .from("ot_items")
-          .select("cantidad, precio_unit, estado, aprobado_admin")
-          .eq("ot_id", otId),
-        supabase.from("config").select("valor").eq("clave", "tarifa_hora").single(),
-      ]);
-    const tarifa = Number(cfg?.valor) || 0;
-    const minutos = (tiempos ?? []).reduce((s, t) => s + (t.minutos ?? 0), 0);
-    const manoObra =
-      ot.cobertura === "garantia" ? 0 : (minutos / 60) * tarifa;
-    const itemsTotal = (items ?? [])
-      .filter((i) => i.estado === "facturable" && i.aprobado_admin)
-      .reduce((s, i) => s + Number(i.cantidad) * Number(i.precio_unit), 0);
-    update.total = Math.round((manoObra + itemsTotal) * 100) / 100;
+    update.total = (await cuentaDeOT(supabase, ot)).total;
     const user = await usuarioActual();
     update.admin_id = user?.id ?? null;
   }
 
+  let concepto: string | null = null;
   if (hacia === "facturado") {
     if (!extra?.nroFactura?.trim())
       return { error: "Cargá el número de factura de ZEUS" };
+    if (!(Number(ot.total) > 0)) return { error: "La orden no tiene nada para facturar: cerrala sin facturar" };
+    const cuenta = await cuentaDeOT(supabase, ot);
+    concepto = conceptoFinal(ot, cuenta.horas);
     update.nro_factura = extra.nroFactura.trim();
     update.facturada_at = new Date().toISOString();
+    // El concepto queda fijo en la orden: es el que se facturó
+    update.concepto_factura = concepto;
     // La factura del remito queda en Cobranzas (a la razón social del local)
     const user = await usuarioActual();
     const { error: errF } = await supabase.from("facturas").insert({
@@ -213,6 +204,7 @@ export async function transicionarOT(
       vencimiento: extra.vencimiento || hoyISO(),
       monto: ot.total,
       moneda: "ARS",
+      concepto,
       created_by: user?.id ?? null,
     });
     if (errF) return { error: `guardar la factura: ${errF.message}` };
@@ -873,4 +865,150 @@ export async function guardarReclamoGarantia(otId: string, estado: string, nota?
   });
   revalidatePath("/", "layout");
   return { ok: true as const };
+}
+
+// =====================================================================
+// Corregir la orden, horas a cobrar y concepto de facturación (v1.27)
+// =====================================================================
+
+/** Lo que entra en la cuenta de la orden: horas a cobrar × tarifa + ítems facturables aprobados. */
+async function cuentaDeOT(
+  supabase: SupabaseServidor,
+  ot: { id: string; cobertura: string; horas_cobrar?: number | null; cobro_como?: string | null }
+) {
+  const [{ data: tiempos }, { data: items }, { data: cfg }] = await Promise.all([
+    supabase.from("ot_tiempos").select("minutos").eq("ot_id", ot.id),
+    supabase.from("ot_items").select("cantidad, precio_unit, estado, aprobado_admin").eq("ot_id", ot.id),
+    supabase.from("config").select("valor").eq("clave", "tarifa_hora").maybeSingle(),
+  ]);
+  const minutos = (tiempos ?? []).reduce((s, t) => s + (t.minutos ?? 0), 0);
+  return cuentaOT(ot, minutos, Number(cfg?.valor) || 0, (items ?? []) as { cantidad: number; precio_unit: number; estado: string; aprobado_admin: boolean }[]);
+}
+
+const CERRADAS = ["facturado", "cerrado", "cancelado"];
+
+/** Si ya estaba aprobada para facturar, el total se recalcula con lo corregido. */
+async function recalcularTotal(supabase: SupabaseServidor, otId: string) {
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("id, estado, cobertura, horas_cobrar, cobro_como").eq("id", otId).maybeSingle();
+  if (ot?.estado !== "aprobado_facturar") return;
+  const { total } = await cuentaDeOT(supabase, ot as { id: string; cobertura: string; horas_cobrar: number | null; cobro_como: string | null });
+  await supabase.from("ordenes_trabajo").update({ total }).eq("id", otId);
+}
+
+const CAMPOS_CORREGIBLES = ["tipo", "cobertura", "prioridad", "problema", "diagnostico", "trabajo_realizado", "remito_nro", "fecha_programada", "tecnico_id"] as const;
+const NOMBRE_CAMPO: Record<string, string> = {
+  tipo: "tipo",
+  cobertura: "cobertura",
+  prioridad: "prioridad",
+  problema: "problema",
+  diagnostico: "diagnóstico",
+  trabajo_realizado: "trabajo realizado",
+  remito_nro: "remito",
+  fecha_programada: "fecha",
+  tecnico_id: "técnico",
+};
+
+/**
+ * Dirección, dirección de administración y servicio técnico corrigen la
+ * orden en cualquier momento antes de facturarla (también lo que cargó el
+ * técnico como "service hecho"). Queda anotado en el historial.
+ */
+export async function corregirOT(otId: string, patch: Partial<Record<(typeof CAMPOS_CORREGIBLES)[number], string | null>>) {
+  const supabase = await createClient();
+  const rol = await puestoActual(supabase);
+  if (!controlaServicio(rol)) return { error: "Las órdenes las corrigen dirección o servicio técnico" };
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("*").eq("id", otId).maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  if (CERRADAS.includes(ot.estado)) return { error: "La orden ya está facturada o cerrada" };
+
+  const cambios: Record<string, string | null> = {};
+  for (const k of CAMPOS_CORREGIBLES) {
+    if (!(k in patch)) continue;
+    const v = typeof patch[k] === "string" ? patch[k]!.trim() || null : null;
+    if ((ot[k] ?? null) !== v) cambios[k] = v;
+  }
+  if (cambios.tipo && !["correctivo", "preventivo", "instalacion", "garantia"].includes(cambios.tipo)) return { error: "Tipo no válido" };
+  if ("tipo" in cambios && !cambios.tipo) delete cambios.tipo;
+  if (cambios.cobertura && !["facturable", "garantia", "contrato"].includes(cambios.cobertura)) return { error: "Cobertura no válida" };
+  if ("cobertura" in cambios && !cambios.cobertura) delete cambios.cobertura;
+  if (cambios.prioridad && !["baja", "normal", "alta", "urgente"].includes(cambios.prioridad)) return { error: "Prioridad no válida" };
+  if ("prioridad" in cambios && !cambios.prioridad) delete cambios.prioridad;
+  if (cambios.fecha_programada && !/^\d{4}-\d{2}-\d{2}$/.test(cambios.fecha_programada)) return { error: "Fecha no válida" };
+  if (!Object.keys(cambios).length) return { ok: true as const, sinCambios: true };
+
+  const { error } = await supabase.from("ordenes_trabajo").update(cambios).eq("id", otId);
+  if (error) return { error: error.message };
+  await recalcularTotal(supabase, otId);
+
+  const user = await usuarioActual();
+  const { data: yo } = await supabase.from("usuarios").select("nombre").eq("id", user?.id ?? "").maybeSingle();
+  await supabase.from("actividades").insert({
+    cliente_id: ot.cliente_id,
+    tipo: "service",
+    contenido: `Service ${ot.numero} corregido por ${yo?.nombre ?? "dirección"}: ${Object.keys(cambios).map((k) => NOMBRE_CAMPO[k] ?? k).join(", ")}`,
+    created_by: user?.id ?? null,
+  });
+  if (cambios.tecnico_id && cambios.tecnico_id !== user?.id)
+    await avisar(supabase, [cambios.tecnico_id], { tipo: "ot_asignada", titulo: `Te asignaron el service ${ot.numero}`, url: `/servicio/${otId}` }, user?.id);
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/**
+ * Las horas que se cobran (también en garantía: ej. la movilidad), cómo se
+ * cobran y el concepto de la factura. Lo cargan dirección, servicio técnico
+ * y administración antes de facturar.
+ */
+export async function guardarCobroOT(otId: string, input: { horas: number | null; cobroComo: string | null; concepto: string | null }) {
+  const supabase = await createClient();
+  const rol = await puestoActual(supabase);
+  if (!controlaServicio(rol) && !factura(rol)) return { error: "El cobro lo definen dirección, servicio técnico o administración" };
+  const { data: ot } = await supabase.from("ordenes_trabajo").select("estado").eq("id", otId).maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  if (CERRADAS.includes(ot.estado)) return { error: "La orden ya está facturada o cerrada" };
+  if (input.horas !== null && (!Number.isFinite(input.horas) || input.horas < 0 || input.horas > 200)) return { error: "Las horas tienen que estar entre 0 y 200" };
+  if (input.cobroComo && !esCobroComo(input.cobroComo)) return { error: "Elegí cómo se cobra" };
+  const { error } = await supabase
+    .from("ordenes_trabajo")
+    .update({
+      horas_cobrar: input.horas === null ? null : Math.round(input.horas * 100) / 100,
+      cobro_como: input.cobroComo || null,
+      concepto_factura: input.concepto?.trim().slice(0, 200) || null,
+    })
+    .eq("id", otId);
+  if (error) return { error: error.message };
+  await recalcularTotal(supabase, otId);
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** La IA propone el concepto de la factura a partir de lo que hizo el técnico ("ST 123 - Cambio de luz por garantía (Movilidad)"). */
+export async function iaConceptoOT(otId: string, cobroComo: string | null, horas: number) {
+  const supabase = await createClient();
+  const user = await usuarioActual();
+  const { data: ot } = await supabase
+    .from("ordenes_trabajo")
+    .select("numero, tipo, cobertura, problema, diagnostico, trabajo_realizado, equipo:equipos(marca_modelo_libre, producto:productos(nombre))")
+    .eq("id", otId)
+    .maybeSingle();
+  if (!ot) return { error: "Orden no encontrada" };
+  if (!ot.trabajo_realizado && !ot.diagnostico && !ot.problema) return { error: "La orden todavía no dice qué se hizo" };
+  const { data: items } = await supabase.from("ot_items").select("descripcion, estado").eq("ot_id", otId);
+  const cobro = horas > 0 && esCobroComo(cobroComo) ? cobroComo : null;
+  const res = await consultarIA<{ que: string }>({
+    supabase,
+    usuarioId: user?.id ?? null,
+    funcion: "concepto_ot",
+    maxTokens: 300,
+    instrucciones: `Escribí en 2 a 6 palabras QUÉ SE HIZO en este service, como renglón de factura en español rioplatense, con sustantivo y sin verbos conjugados: por ejemplo "Cambio de luz", "Reemplazo de resistencia", "Mantenimiento preventivo", "Instalación y puesta en marcha", "Limpieza de cuchillas". Sin número de orden, sin "por garantía", sin horas ni montos, sin punto final. No inventes nada que no esté en las notas.`,
+    contexto: JSON.stringify({ orden: ot, repuestos: items }),
+    esquema: { type: "object", properties: { que: { type: "string" } }, required: ["que"], additionalProperties: false },
+  });
+  if (!res.ok) return { error: res.error };
+  const que = res.datos.que.trim().replace(/[.\s]+$/, "").slice(0, 60);
+  if (!que) return { error: "La IA no propuso nada" };
+  const porGarantia = ot.cobertura === "garantia" ? " por garantía" : ot.cobertura === "contrato" ? " por contrato" : "";
+  const nombres: Record<string, string> = { mano_de_obra: "Mano de obra", movilidad: "Movilidad", visita: "Visita técnica", diagnostico: "Diagnóstico" };
+  const como = cobro ? ` (${nombres[cobro]})` : horas > 0 && ot.cobertura !== "facturable" ? " (Mano de obra)" : "";
+  return { ok: true as const, concepto: `ST ${ot.numero} - ${que.charAt(0).toUpperCase() + que.slice(1)}${porGarantia}${como}` };
 }

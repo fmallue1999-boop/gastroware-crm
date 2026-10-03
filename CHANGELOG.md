@@ -3,6 +3,15 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.27.0 — 3 de octubre de 2026
+
+Pedido de dirección: "que Emilia pueda cambiar las órdenes de servicio", "que se puedan cobrar horas de trabajo en garantía" y "que se determine el concepto para facturarlo: no por horas, sino 'ST XXX - Cambio de luz por garantía (Movilidad)'". Antes la orden solo se editaba mientras el técnico trabajaba (lo cargado como service hecho nunca) y en garantía la mano de obra era siempre $0. Migración 049_cobro_y_concepto_ot.sql.
+
+- Migración 049: ordenes_trabajo.horas_cobrar (null = automático), cobro_como (mano_de_obra/movilidad/visita/diagnostico), concepto_factura; facturas.concepto.
+- lib/servicio-cobro: horasACobrar (a mano manda; si no, trabajadas si es facturable y 0 en garantía/contrato), cuentaOT, resumenTrabajo (primera frase como renglón: "Se cambió la luz" → "Cambio de luz"), conceptoSugerido ("ST n - qué se hizo [por garantía|por contrato] [(cómo se cobra)]"), conceptoFinal. Tests: tests/unit/servicio-cobro.test.ts.
+- Acciones: corregirOT (dirección/admin/servicio, antes de facturar; tipo, cobertura, prioridad, problema y demás; deja un movimiento "Service n corregido por …"; recalcula el total si ya estaba aprobada), guardarCobroOT (también administración), iaConceptoOT. transicionarOT: aprobar para facturar usa cuentaOT (horas a cobrar también en garantía); facturar exige total > 0, fija el concepto en la orden y lo guarda en la factura.
+- Orden: OTCorregir, OTTrabajo en modo corrección (sin cronómetro) en revisión y aprobado para facturar, OTCobro en lugar de "Cuenta" (horas a cobrar, se cobra como, concepto con Copiar y Sugerir con IA). OTAdminControl: se factura lo que tiene importe (también garantía) con "Para facturar en ZEUS" (concepto + importe, Copiar); "Cerrar sin facturar" si no hay importe. Informe de service: las horas que se cobran. Guía: controlar y facturar remito.
+
 ## v1.26.1 — 2 de octubre de 2026
 
 Pregunta de dirección: "¿saltan notificaciones al celu cuando se te asigna un lead o cuando te etiquetan?". Revisado: consulta web (a quien asigna), consulta del territorio (al vendedor), contacto de HOTELGA, menciones con @ y mensajes de la conversación avisan a la campana y al celular. Faltaba el cambio manual de "Lo atiende".

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ClipboardCheck, Cog, FileText, History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { firmarUrl, firmarUrls } from "@/lib/core/storage";
-import { fechaCorta, dinero, hoyISO } from "@/lib/format";
+import { fechaCorta, hoyISO } from "@/lib/format";
 import { TIPOS_OT, COBERTURAS_OT, ESTADOS_OT } from "@/lib/constants";
 import { EstadoOTBadge, PrioridadBadge } from "@/components/Badges";
 import OTTrabajo from "@/components/OTTrabajo";
@@ -12,6 +12,9 @@ import ChecklistsOT from "@/components/ChecklistsOT";
 import IAInformeOT from "@/components/IAInformeOT";
 import { iaConfigurada } from "@/lib/core/ia";
 import OTServicioPanel from "@/components/OTServicioPanel";
+import OTCorregir from "@/components/servicio/OTCorregir";
+import OTCobro from "@/components/servicio/OTCobro";
+import { conceptoFinal, cuentaOT } from "@/lib/servicio-cobro";
 import { controlaServicio, factura } from "@/lib/puestos";
 import { ZONAS_TECNICO_PROPIO } from "@/lib/territorios";
 import type {
@@ -128,9 +131,14 @@ export default async function OTPage({
   }));
   const firmaUrl = await firmarUrl("servicio", ot.firma_path);
 
+  // v1.27: dirección y servicio técnico corrigen lo que hizo el técnico
+  // también cuando ya lo terminó (en revisión o aprobado para facturar)
+  const enCorreccion = controla && ["finalizado_tecnico", "revision_admin", "aprobado_facturar"].includes(ot.estado);
   const editable =
-    ["programado", "asignado", "en_camino", "en_proceso", "esperando_repuesto", "esperando_cliente", "devuelto_tecnico"].includes(ot.estado) &&
-    (esTecnicoAsignado || controla);
+    (["programado", "asignado", "en_camino", "en_proceso", "esperando_repuesto", "esperando_cliente", "devuelto_tecnico"].includes(ot.estado) &&
+      (esTecnicoAsignado || controla)) ||
+    enCorreccion;
+  const cerradaOT = ["facturado", "cerrado", "cancelado"].includes(ot.estado);
 
   // Para asignar: técnicos propios, aliados y si el local está en la zona del técnico propio
   const [{ data: tecnicosData }, { data: aliadosData }, { data: sucursalesData }, { data: facturasOt }] = await Promise.all([
@@ -156,10 +164,8 @@ export default async function OTPage({
   const garantiaVigente =
     ot.equipo?.garantia_hasta && ot.equipo.garantia_hasta >= hoy;
   const minutos = listaTiempos.reduce((s, t) => s + (t.minutos ?? 0), 0);
-  const manoObra = ot.cobertura === "garantia" ? 0 : (minutos / 60) * tarifa;
-  const itemsAprobados = listaItems
-    .filter((i) => i.estado === "facturable" && i.aprobado_admin)
-    .reduce((s, i) => s + Number(i.cantidad) * Number(i.precio_unit), 0);
+  const cuenta = cuentaOT(ot, minutos, tarifa, listaItems);
+  const concepto = conceptoFinal(ot, cuenta.horas);
 
   return (
     <div className="space-y-3">
@@ -213,6 +219,8 @@ export default async function OTPage({
         )}
       </header>
 
+      {controla && !cerradaOT && <OTCorregir ot={ot} />}
+
       {(controla || administra) && (
         <OTServicioPanel
           ot={ot}
@@ -238,37 +246,19 @@ export default async function OTPage({
         tiempos={listaTiempos}
         repuestos={(repuestos ?? []) as Repuesto[]}
         editable={editable}
+        correccion={enCorreccion}
         firmaUrl={firmaUrl}
         transicionesTecnico={transicionesTecnico}
       />
 
-      <section className="rounded-2xl border border-borde bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-semibold">Cuenta</h2>
-        <div className="space-y-1 text-sm">
-          <p className="flex justify-between">
-            <span className="text-piedra">
-              Mano de obra ({(minutos / 60).toFixed(1)} h × {dinero(tarifa)})
-              {ot.cobertura === "garantia" ? " — por garantía" : ""}
-            </span>
-            <span>{dinero(manoObra)}</span>
-          </p>
-          <p className="flex justify-between">
-            <span className="text-piedra">Ítems facturables aprobados</span>
-            <span>{dinero(itemsAprobados)}</span>
-          </p>
-          <p className="flex justify-between border-t border-borde pt-1 font-semibold">
-            <span>
-              Total {ot.total != null ? "" : "estimado"}
-            </span>
-            <span>{dinero(ot.total ?? manoObra + itemsAprobados)}</span>
-          </p>
-          {tarifa === 0 && ot.cobertura !== "garantia" && (
-            <p className="text-xs text-ambar">
-              La tarifa por hora está en $0 — configurala en Administración.
-            </p>
-          )}
-        </div>
-      </section>
+      <OTCobro
+        ot={ot}
+        minutos={minutos}
+        tarifa={tarifa}
+        items={listaItems}
+        editable={(controla || administra) && !cerradaOT}
+        iaOn={iaConfigurada()}
+      />
 
       {iaConfigurada() && (esGestor || esTecnicoAsignado) && (
         <IAInformeOT otId={ot.id} />
@@ -279,6 +269,7 @@ export default async function OTPage({
         items={listaItems}
         esGestor={esGestor}
         transicionesGestor={transicionesGestor}
+        concepto={concepto}
       />
 
       {(ot.firma_path || ot.cerrada_tecnico_at) && (

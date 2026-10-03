@@ -19,6 +19,16 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.27.0",
+    fecha: "2026-10-03",
+    titulo: "Servicio técnico: corregir órdenes, horas en garantía y concepto para facturar",
+    cambios: [
+      "Dirección y servicio técnico pueden corregir una orden en cualquier momento antes de facturarla, también cuando el técnico ya la terminó o la cargó como “service hecho”: “Corregir la orden” (tipo, cobertura, prioridad, problema) y, en el recuadro del técnico, diagnóstico, trabajo, repuestos, fotos y remito. Queda anotado en los movimientos del cliente.",
+      "Nuevo “Cobro y factura” en cada orden: horas a cobrar (si no las tocás: las trabajadas, o ninguna en garantía) y cómo se cobran (mano de obra, movilidad, visita técnica, diagnóstico). En garantía ahora se pueden cobrar horas, por ejemplo la movilidad.",
+      "Concepto para la factura: “ST 123 - Cambio de luz por garantía (Movilidad)”, armado solo a partir de lo que hizo el técnico, con “Sugerir con IA” y editable. Al facturar en ZEUS aparece listo para copiar con el importe, y queda guardado en la factura en Cobranzas. La factura no dice horas: las horas solo dan el importe.",
+    ],
+  },
+  {
     version: "1.26.1",
     fecha: "2026-10-02",
     titulo: "Aviso al cambiar quién atiende un cliente",

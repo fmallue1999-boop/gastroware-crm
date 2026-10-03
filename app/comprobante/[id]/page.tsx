@@ -5,6 +5,7 @@ import { fechaCorta, dinero } from "@/lib/format";
 import { TIPOS_OT, ESTADOS_ITEM_OT } from "@/lib/constants";
 import BotonImprimir from "@/components/BotonImprimir";
 import LogoEmpresa from "@/components/LogoEmpresa";
+import { cuentaOT, nombreCobro } from "@/lib/servicio-cobro";
 import type { OrdenTrabajo, OTItem, OTTiempo } from "@/lib/types";
 
 export default async function ComprobantePage({
@@ -35,12 +36,12 @@ export default async function ComprobantePage({
   const tarifa = Number(cfg?.valor) || 0;
 
   const minutos = listaTiempos.reduce((s, t) => s + (t.minutos ?? 0), 0);
-  const horas = minutos / 60;
   const esGarantia = ot.cobertura === "garantia";
-  const manoObra = esGarantia ? 0 : horas * tarifa;
-  const totalItems = listaItems
-    .filter((i) => i.estado === "facturable" && i.aprobado_admin)
-    .reduce((s, i) => s + Number(i.cantidad) * Number(i.precio_unit), 0);
+  // v1.27: las horas que se cobran (también en garantía, ej. la movilidad)
+  const cuenta = cuentaOT(ot, minutos, tarifa, listaItems);
+  const horas = cuenta.horas > 0 ? cuenta.horas : cuenta.horasTrabajadas;
+  const manoObra = cuenta.manoObra;
+  const totalItems = cuenta.itemsTotal;
 
   const firmaUrl = await firmarUrl("servicio", ot.firma_path);
 
@@ -123,8 +124,8 @@ export default async function ComprobantePage({
         <tbody>
           <tr className="border-b border-borde">
             <td className="py-1.5">
-              Mano de obra ({horas.toFixed(1)} h)
-              {esGarantia ? " — sin cargo por garantía" : ""}
+              {cuenta.horas > 0 ? `${nombreCobro(ot.cobro_como)} (${horas.toFixed(1)} h)` : `Mano de obra (${horas.toFixed(1)} h)`}
+              {cuenta.horas === 0 && esGarantia ? " — sin cargo por garantía" : cuenta.horas === 0 && ot.cobertura === "contrato" ? " — por contrato" : ""}
             </td>
             <td className="py-1.5 text-right">{horas.toFixed(1)}</td>
             <td className="py-1.5 text-right">{dinero(manoObra)}</td>
