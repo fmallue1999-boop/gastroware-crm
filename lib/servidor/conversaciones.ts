@@ -16,21 +16,21 @@ export async function resumenConversaciones(
 ): Promise<Record<string, ResumenConversacion>> {
   const ids = [...new Set(cotizacionIds)];
   if (!ids.length) return {};
-  const { data: convs, error } = await supabase.from("conversaciones").select("id, cotizacion_id").in("cotizacion_id", ids);
+  const { data: convs, error } = await supabase.from("chats").select("id, cotizacion_id").in("cotizacion_id", ids);
   if (error || !convs?.length) return {};
   const convIds = convs.map((c) => c.id as string);
   const [mensajes, lecturas] = await Promise.all([
-    supabase.from("mensajes").select("conversacion_id, autor_id, created_at").in("conversacion_id", convIds).limit(5000),
-    supabase.from("conversacion_lecturas").select("conversacion_id, leido_at").eq("usuario_id", usuarioId).in("conversacion_id", convIds),
+    supabase.from("chat_mensajes").select("chat_id, autor_id, created_at").in("chat_id", convIds).limit(5000),
+    supabase.from("chat_lecturas").select("chat_id, leido_at").eq("usuario_id", usuarioId).in("chat_id", convIds),
   ]);
-  const leido = new Map(((lecturas.data ?? []) as { conversacion_id: string; leido_at: string }[]).map((l) => [l.conversacion_id, l.leido_at]));
+  const leido = new Map(((lecturas.data ?? []) as { chat_id: string; leido_at: string }[]).map((l) => [l.chat_id, l.leido_at]));
   const porConv = new Map<string, ResumenConversacion>();
-  for (const m of (mensajes.data ?? []) as { conversacion_id: string; autor_id: string | null; created_at: string }[]) {
-    const r = porConv.get(m.conversacion_id) ?? { total: 0, sinLeer: 0 };
+  for (const m of (mensajes.data ?? []) as { chat_id: string; autor_id: string | null; created_at: string }[]) {
+    const r = porConv.get(m.chat_id) ?? { total: 0, sinLeer: 0 };
     r.total++;
-    const hasta = leido.get(m.conversacion_id);
+    const hasta = leido.get(m.chat_id);
     if (m.autor_id !== usuarioId && (!hasta || Date.parse(m.created_at) > Date.parse(hasta))) r.sinLeer++;
-    porConv.set(m.conversacion_id, r);
+    porConv.set(m.chat_id, r);
   }
   const res: Record<string, ResumenConversacion> = {};
   for (const c of convs as { id: string; cotizacion_id: string }[]) {

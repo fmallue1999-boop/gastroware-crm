@@ -44,7 +44,7 @@ type Contexto = {
 async function contexto(supabase: SupabaseServidor, cotizacionId: string): Promise<Contexto | null> {
   const { data } = await supabase
     .from("cotizaciones")
-    .select("id, numero, oportunidad:oportunidades(comercial_id, cliente:clientes(nombre_comercial)), versiones:cotizacion_versiones(version, creado_por), conversacion:conversaciones(id)")
+    .select("id, numero, oportunidad:oportunidades(comercial_id, cliente:clientes(nombre_comercial)), versiones:cotizacion_versiones(version, creado_por), chat:chats(id)")
     .eq("id", cotizacionId)
     .maybeSingle();
   if (!data) return null;
@@ -52,9 +52,9 @@ async function contexto(supabase: SupabaseServidor, cotizacionId: string): Promi
     numero: number;
     oportunidad: { comercial_id: string | null; cliente: { nombre_comercial: string } | null } | null;
     versiones: { version: number; creado_por: string | null }[] | null;
-    conversacion: { id: string } | { id: string }[] | null;
+    chat: { id: string } | { id: string }[] | null;
   };
-  const conv = Array.isArray(c.conversacion) ? c.conversacion[0] : c.conversacion;
+  const conv = Array.isArray(c.chat) ? c.chat[0] : c.chat;
   const versiones = c.versiones ?? [];
   return {
     numero: c.numero,
@@ -76,9 +76,9 @@ async function quienesLaVen(supabase: SupabaseServidor, comercialId: string | nu
 
 async function leerMensajes(supabase: SupabaseServidor, conversacionId: string): Promise<MensajeChat[]> {
   const { data } = await supabase
-    .from("mensajes")
+    .from("chat_mensajes")
     .select("id, autor_id, texto, version, created_at, autor:usuarios(nombre)")
-    .eq("conversacion_id", conversacionId)
+    .eq("chat_id", conversacionId)
     .order("created_at", { ascending: true })
     .limit(500);
   return ((data ?? []) as unknown as { id: string; autor_id: string | null; texto: string; version: number | null; created_at: string; autor: { nombre: string | null } | null }[]).map(
@@ -88,8 +88,8 @@ async function leerMensajes(supabase: SupabaseServidor, conversacionId: string):
 
 async function marcarLeida(supabase: SupabaseServidor, conversacionId: string, usuarioId: string) {
   await supabase
-    .from("conversacion_lecturas")
-    .upsert({ conversacion_id: conversacionId, usuario_id: usuarioId, leido_at: new Date().toISOString() }, { onConflict: "conversacion_id,usuario_id" });
+    .from("chat_lecturas")
+    .upsert({ chat_id: conversacionId, usuario_id: usuarioId, leido_at: new Date().toISOString() }, { onConflict: "chat_id,usuario_id" });
 }
 
 /** Los mensajes de la cotización; al leerlos quedan como leídos. */
@@ -105,7 +105,7 @@ export async function leerConversacion(cotizacionId: string): Promise<DatosConve
   if (!ctx.conversacionId) return { mensajes: [], personas, leidoAntes: null, versiones: ctx.versionActual, ...yo };
   const [mensajes, lectura] = await Promise.all([
     leerMensajes(supabase, ctx.conversacionId),
-    supabase.from("conversacion_lecturas").select("leido_at").eq("conversacion_id", ctx.conversacionId).eq("usuario_id", user.id).maybeSingle(),
+    supabase.from("chat_lecturas").select("leido_at").eq("chat_id", ctx.conversacionId).eq("usuario_id", user.id).maybeSingle(),
   ]);
   await marcarLeida(supabase, ctx.conversacionId, user.id);
   return { mensajes, personas, leidoAntes: (lectura.data?.leido_at as string | undefined) ?? null, versiones: ctx.versionActual, ...yo };
@@ -124,19 +124,19 @@ export async function enviarMensajeCotizacion(cotizacionId: string, texto: strin
 
   let conversacionId = ctx.conversacionId;
   if (!conversacionId) {
-    const nueva = await supabase.from("conversaciones").insert({ tipo: "cotizacion", cotizacion_id: cotizacionId }).select("id").maybeSingle();
+    const nueva = await supabase.from("chats").insert({ tipo: "cotizacion", cotizacion_id: cotizacionId }).select("id").maybeSingle();
     // Si otro la creó recién, se usa esa
     conversacionId =
       (nueva.data?.id as string | undefined) ??
-      ((await supabase.from("conversaciones").select("id").eq("cotizacion_id", cotizacionId).maybeSingle()).data?.id as string | undefined) ??
+      ((await supabase.from("chats").select("id").eq("cotizacion_id", cotizacionId).maybeSingle()).data?.id as string | undefined) ??
       null;
     if (!conversacionId) return { error: nueva.error?.message ?? "No se pudo abrir la conversación" };
   }
 
   const todos = await quienesLaVen(supabase, ctx.comercialId);
   const menciones = detectarMenciones(limpio, todos.filter((p) => p.id !== user.id));
-  const { error } = await supabase.from("mensajes").insert({
-    conversacion_id: conversacionId,
+  const { error } = await supabase.from("chat_mensajes").insert({
+    chat_id: conversacionId,
     autor_id: user.id,
     texto: limpio,
     version: ctx.versionActual || null,
@@ -165,7 +165,7 @@ export async function borrarMensaje(mensajeId: string): Promise<{ ok: true } | {
   const supabase = await createClient();
   const user = await usuarioActual();
   if (!user) return { error: "Tenés que entrar de nuevo" };
-  const { data, error } = await supabase.from("mensajes").delete().eq("id", mensajeId).eq("autor_id", user.id).select("id");
+  const { data, error } = await supabase.from("chat_mensajes").delete().eq("id", mensajeId).eq("autor_id", user.id).select("id");
   if (error) return { error: error.message };
   if (!data?.length) return { error: "Solo podés borrar tus mensajes" };
   return { ok: true };
