@@ -3,6 +3,16 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.24.0 — 2 de octubre de 2026
+
+Pedido de dirección: "dentro de cada cotización, algún chat para anotar cosas o conversar acerca de las cotizaciones" (eligió: con notificaciones y @) y "Emilia no ve la parte de servicio" (en el celular, ni la barra de dirección ni Más tenían Servicio). Migración 046_conversaciones.sql.
+
+- Migración 046: conversaciones (tipo cotizacion/equipo; una por cotización, cotizacion_id único con cascade; ultimo_mensaje_at por trigger fn_conversacion_ultimo), mensajes (autor, texto 1–4000, versión de la cotización al escribir, menciones uuid[]), conversacion_lecturas (hasta cuándo leyó cada uno). RLS: la conversación de una cotización la ve quien ve la cotización (subconsulta bajo la política de cotizaciones); escribir solo como uno mismo; borrar solo lo propio; lecturas propias. El tipo "equipo" queda preparado para un chat general.
+- lib/conversaciones: detectarMenciones (nombre completo o primer nombre si no se repite, sin tildes ni mayúsculas, no toma mails), partesMensaje (resaltar), mencionEnCurso + sugerirPersonas (autocompletar), veLaCotizacion (igual que la RLS), cuandoMensaje (hora de Argentina, 24 h). Tests: tests/unit/conversaciones.test.ts.
+- Acciones (lib/actions/conversaciones): leerConversacion (marca leída y devuelve hasta dónde había leído), enviarMensajeCotizacion (crea la conversación si no hay; menciones detectadas en el servidor entre los que ven la cotización; avisos "mencion" a los mencionados y "cotizacion_mensaje" al vendedor, a quien armó cada versión y a los que escribieron, sin repetir ni al autor), borrarMensaje. lib/servidor/conversaciones: resumenConversaciones (total y sin leer por cotización; vacío si falla).
+- UI: ConversacionCotizacion (botón con total y nuevos; burbujas propias/ajenas, raya "Nuevos", "sobre vN" si hay varias versiones, borrar con confirmación, @ con lista navegable con flechas/Enter/Tab, botón @ para el celular, Enter envía y Shift+Enter baja de renglón; busca mensajes nuevos cada 12 s mientras está abierta y a la vista). En InteresFijado (debajo de la cotización), en la pestaña Cotizaciones de la ficha (con la última versión de cada una) y en Aprobaciones (en cada propuesta). Página /cotizaciones/[id] (adonde llevan los avisos) con la cotización, sus PDF y la conversación.
+- Menú: "Services" → "Servicio técnico". Más suma "Secciones de tu menú": lo del menú de la computadora del puesto que no está en la barra del celular ni más abajo en Más (dirección: Consumibles, Repuestos, Servicio técnico; marketing: Campañas, Contactos; etc.).
+
 ## v1.23.0 — 2 de octubre de 2026
 
 Pedido de dirección: "que marketing pueda subir distinto tipo de contenido en Material y crear espacios" y "la solicitud de contenido: se pide, marketing lo realiza y lo sube, yo lo apruebo o pido modificaciones (hoy no me deja verlo) y después queda en Material y lo acomodan" (migración 045_espacios_y_pedidos_contenido.sql).

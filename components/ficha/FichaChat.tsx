@@ -39,6 +39,8 @@ import EliminarOperacion from "@/components/EliminarOperacion";
 import SucursalesCliente from "@/components/SucursalesCliente";
 import DocumentosEntidad from "@/components/DocumentosEntidad";
 import BotonesPdfCotizacion from "@/components/BotonesPdfCotizacion";
+import ConversacionCotizacion from "@/components/ConversacionCotizacion";
+import { resumenConversaciones } from "@/lib/servidor/conversaciones";
 import type {
   Actividad,
   Cliente,
@@ -226,7 +228,13 @@ export default async function FichaChat({
   const versionesPlanas = ((cotData ?? []) as Cotizacion[])
     .flatMap((cot) => (cot.versiones ?? []).map((v) => ({ ...v, oportunidad_id: cot.oportunidad_id, numeroCot: cot.numero })))
     .sort((a, b) => (b.created_at < a.created_at ? -1 : 1));
-  const urlsVersiones = await Promise.all(versionesPlanas.map((v) => firmarUrl("documentos", v.archivo_path)));
+  const [urlsVersiones, charlas] = await Promise.all([
+    Promise.all(versionesPlanas.map((v) => firmarUrl("documentos", v.archivo_path))),
+    resumenConversaciones(supabase, ((cotData ?? []) as Cotizacion[]).map((c) => c.id), miId),
+  ]);
+  // La conversación va con la última versión de cada cotización
+  const ultimaVersion = new Map<string, number>();
+  for (const v of versionesPlanas) ultimaVersion.set(v.cotizacion_id, Math.max(ultimaVersion.get(v.cotizacion_id) ?? 0, v.version));
   const versionesPor = new Map<string, VersionCot[]>();
   versionesPlanas.forEach((v, i) => {
     const lista = versionesPor.get(v.oportunidad_id) ?? [];
@@ -334,6 +342,7 @@ export default async function FichaChat({
           responsableNombre={o.comercial_id ? nombres.get(o.comercial_id) ?? null : null}
           ahoraMs={ahoraMs}
           movimientos={movimientosDe.get(o.id) ?? []}
+          charlas={charlas}
         />
       ))}
       {ventasEnCurso.map((o) => (
@@ -440,6 +449,9 @@ export default async function FichaChat({
                 </a>
               )}
             </div>
+            {ultimaVersion.get(v.cotizacion_id) === v.version && (
+              <ConversacionCotizacion cotizacionId={v.cotizacion_id} total={charlas[v.cotizacion_id]?.total ?? 0} sinLeer={charlas[v.cotizacion_id]?.sinLeer ?? 0} />
+            )}
           </div>
         ))}
         {versionesPlanas.length === 0 && <p className="px-4 py-5 text-center text-[15px] text-piedra">Todavía no hay cotizaciones.</p>}

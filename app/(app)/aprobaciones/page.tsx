@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { dinero, fechaCorta } from "@/lib/format";
 import { esGestor } from "@/lib/puestos";
 import DecidirPropuesta from "@/components/DecidirPropuesta";
+import ConversacionCotizacion from "@/components/ConversacionCotizacion";
+import { resumenConversaciones } from "@/lib/servidor/conversaciones";
 import DecidirContenido from "@/components/contenidos/DecidirContenido";
 import { firmarUrls } from "@/lib/core/storage";
 import { CUENTAS, TIPOS, fechaDMY } from "@/lib/contenidos";
@@ -83,6 +85,10 @@ export default async function AprobacionesPage() {
   const primeraImagen = contenidos.map((c) => [...c.archivos].sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { numeric: true })).find((a) => (a.mime ?? "").startsWith("image/"))?.path ?? null);
   const miniaturas = await firmarUrls("contenidos", primeraImagen);
   const pendientes = (data ?? []) as unknown as Pendiente[];
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const charlas = await resumenConversaciones(supabase, pendientes.map((p) => p.cotizacion?.id ?? "").filter(Boolean), user?.id ?? "");
   const nombre = new Map(((usuarios ?? []) as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]));
   const resueltas = (resueltasData ?? []) as unknown as {
     id: string;
@@ -217,6 +223,11 @@ export default async function AprobacionesPage() {
                 </ul>
                 {(p.forma_pago || p.condiciones) && (
                   <p className="mt-1 text-[14px] text-tinta/80">{[p.forma_pago, p.condiciones].filter(Boolean).join(" · ")}</p>
+                )}
+                {p.cotizacion && (
+                  <div className="mt-2">
+                    <ConversacionCotizacion cotizacionId={p.cotizacion.id} total={charlas[p.cotizacion.id]?.total ?? 0} sinLeer={charlas[p.cotizacion.id]?.sinLeer ?? 0} />
+                  </div>
                 )}
                 {rol === "direccion" ? <DecidirPropuesta versionId={p.id} /> : <p className="mt-2 text-[14px] font-bold text-piedra">Esperando a dirección general.</p>}
               </div>

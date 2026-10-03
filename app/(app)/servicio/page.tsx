@@ -119,7 +119,7 @@ export default async function ServiciosPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-extrabold tracking-tight">
-          Services <AyudaLink tarea={rol === "tecnico" ? "cerrar-trabajo" : "asignar-service"} />
+          Servicio técnico <AyudaLink tarea={rol === "tecnico" ? "cerrar-trabajo" : "asignar-service"} />
         </h1>
         <div className="flex flex-wrap gap-2">
           {veTodo(rol) && (

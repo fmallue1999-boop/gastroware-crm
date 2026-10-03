@@ -43,7 +43,7 @@ const I = {
   ventas: { href: "/pedidos", label: "Ventas", icono: "ventas" },
   cobranzas: { href: "/cobranzas", label: "Cobranzas", icono: "cobranzas" },
   casos: { href: "/casos", label: "Casos", icono: "casos" },
-  services: { href: "/servicio", label: "Services", icono: "services" },
+  services: { href: "/servicio", label: "Servicio técnico", icono: "services" },
   equipos: { href: "/equipos", label: "Equipos", icono: "equipos" },
   stock: { href: "/stock", label: "Stock", icono: "stock" },
   movimientos: { href: "/movimientos", label: "Movimientos", icono: "movimientos" },
