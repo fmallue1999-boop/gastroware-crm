@@ -3,6 +3,12 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.26.1 — 2 de octubre de 2026
+
+Pregunta de dirección: "¿saltan notificaciones al celu cuando se te asigna un lead o cuando te etiquetan?". Revisado: consulta web (a quien asigna), consulta del territorio (al vendedor), contacto de HOTELGA, menciones con @ y mensajes de la conversación avisan a la campana y al celular. Faltaba el cambio manual de "Lo atiende".
+
+- asignarComercial: avisa al vendedor nuevo ("cliente_asignado") si cambió.
+
 ## v1.26.0 — 2 de octubre de 2026
 
 Pedido de dirección: "¿cómo se chatea dentro de un interés? Desde el embudo no me deja" y "repensá esto y la relación con dónde lo pusiste: ¿no está repetido? Que quede súper pro". La conversación colgaba de la cotización (sin cotizar no había), estaba dos veces en la misma ficha (interés y pestaña Cotizaciones) y no estaba en el embudo. Migración 048_conversacion_por_interes.sql.

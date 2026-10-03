@@ -19,6 +19,14 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.26.1",
+    fecha: "2026-10-02",
+    titulo: "Aviso al cambiar quién atiende un cliente",
+    cambios: [
+      "Cuando dirección cambia “Lo atiende” en la ficha, al vendedor nuevo le llega el aviso “Te asignaron un cliente” a la campana y al celular (antes no le llegaba nada).",
+    ],
+  },
+  {
     version: "1.26.0",
     fecha: "2026-10-02",
     titulo: "Conversación del equipo en cada interés",
