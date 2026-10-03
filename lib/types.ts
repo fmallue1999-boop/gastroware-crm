@@ -405,6 +405,10 @@ export interface OrdenTrabajo {
   acta_garantia_desde?: string | null;
   garantia_reclamo?: "a_presentar" | "presentado" | "repuesto_recibido" | "cerrado" | "rechazado" | null;
   garantia_reclamo_nota?: string | null;
+  /** v1.27: horas que se cobran (null = automático), cómo y el concepto de la factura. */
+  horas_cobrar?: number | null;
+  cobro_como?: string | null;
+  concepto_factura?: string | null;
   cliente?: Cliente;
   equipo?: Equipo | null;
   tecnico?: { id: string; nombre: string } | null;
