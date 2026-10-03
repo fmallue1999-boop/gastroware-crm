@@ -3,6 +3,12 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.25.1 — 2 de octubre de 2026
+
+Visto en la prueba de viáticos: una rendición enviada a las 22:40 decía "Enviada el 3 oct".
+
+- fechaCorta (lib/format) formateaba en la zona del proceso: en el servidor (UTC) lo de las 21 a 24 h de Argentina salía con el día siguiente (cotizaciones, ventas, movimientos, rendiciones…). Ahora usa timeZone America/Argentina/Buenos_Aires; las fechas sin hora se toman a las 12:00 UTC. Test en tests/unit/format.test.ts.
+
 ## v1.25.0 — 2 de octubre de 2026
 
 Pedido de dirección: "un área de viáticos para que el vendedor pueda cargar viáticos, comprobantes y demás; quizás que la IA los interprete" (eligió: rendición con aprobación; dirección aprueba, administración reintegra). Migración 047_viaticos.sql.

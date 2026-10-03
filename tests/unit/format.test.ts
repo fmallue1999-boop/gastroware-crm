@@ -8,6 +8,7 @@ import {
   rellenarPlantilla,
   diasDesde,
   linkWhatsApp,
+  fechaCorta,
 } from "@/lib/format";
 
 describe("normalizarTelefono", () => {
@@ -51,6 +52,13 @@ describe("fechas", () => {
   it("sumarMeses calcula garantías", () => {
     expect(sumarMeses(12, "2026-08-03")).toBe("2027-08-03");
     expect(sumarMeses(60, "2026-08-03")).toBe("2031-08-03");
+  });
+  it("fechaCorta va en hora de Argentina (v1.25.1)", () => {
+    // 22:40 del 2 de octubre en Argentina = 01:40 UTC del 3
+    expect(fechaCorta("2026-10-03T01:40:00Z")).toMatch(/^2 oct/);
+    expect(fechaCorta("2026-10-03T03:10:00Z")).toMatch(/^3 oct/);
+    expect(fechaCorta("2026-10-02")).toMatch(/^2 oct/);
+    expect(fechaCorta(null)).toBe("—");
   });
   it("diasDesde nunca es negativo", () => {
     const maniana = sumarDias(1);

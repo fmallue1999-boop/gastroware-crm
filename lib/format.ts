@@ -21,10 +21,15 @@ export function sumarDias(dias: number, desde?: string): string {
   });
 }
 
+/**
+ * "2 oct". Siempre en hora de Argentina: el servidor está en UTC y, sin la
+ * zona, lo de la noche (21 a 24 h) salía con el día siguiente. Una fecha sin
+ * hora se toma al mediodía para que nunca cambie de día.
+ */
 export function fechaCorta(iso: string | null): string {
   if (!iso) return "—";
-  const d = new Date(iso.length <= 10 ? iso + "T12:00:00" : iso);
-  return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+  const d = new Date(iso.length <= 10 ? iso + "T12:00:00Z" : iso);
+  return d.toLocaleDateString("es-AR", { day: "numeric", month: "short", timeZone: "America/Argentina/Buenos_Aires" });
 }
 
 export function diasDesde(iso: string): number {
