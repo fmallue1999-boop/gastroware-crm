@@ -7,6 +7,8 @@ import { esGestor } from "@/lib/puestos";
 import DecidirPropuesta from "@/components/DecidirPropuesta";
 import ConversacionCotizacion from "@/components/ConversacionCotizacion";
 import { resumenConversaciones } from "@/lib/servidor/conversaciones";
+import { cargarRendiciones } from "@/lib/servidor/viaticos";
+import { textoTotales, totalPorMoneda } from "@/lib/viaticos";
 import DecidirContenido from "@/components/contenidos/DecidirContenido";
 import { firmarUrls } from "@/lib/core/storage";
 import { CUENTAS, TIPOS, fechaDMY } from "@/lib/contenidos";
@@ -88,7 +90,10 @@ export default async function AprobacionesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const charlas = await resumenConversaciones(supabase, pendientes.map((p) => p.cotizacion?.id ?? "").filter(Boolean), user?.id ?? "");
+  const [charlas, rendiciones] = await Promise.all([
+    resumenConversaciones(supabase, pendientes.map((p) => p.cotizacion?.id ?? "").filter(Boolean), user?.id ?? ""),
+    cargarRendiciones(supabase, { estados: ["enviada"] }),
+  ]);
   const nombre = new Map(((usuarios ?? []) as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]));
   const resueltas = (resueltasData ?? []) as unknown as {
     id: string;
@@ -234,6 +239,28 @@ export default async function AprobacionesPage() {
             );
           })}
         </div>
+      )}
+
+      {rendiciones.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-piedra">Viáticos para aprobar ({rendiciones.length})</h2>
+          <div className="divide-y divide-borde/70 overflow-hidden rounded-2xl border border-borde bg-white">
+            {rendiciones.map((r) => {
+              const revisados = r.gastos.filter((g) => g.decision).length;
+              return (
+                <Link key={r.id} href={`/viaticos/rendicion/${r.id}`} className="block px-4 py-3 hover:bg-crema/60">
+                  <span className="block text-[16px] font-extrabold">
+                    {r.usuario?.nombre ?? "—"} · rendición N° {r.numero}
+                  </span>
+                  <span className="block text-[14px] text-piedra">
+                    {fechaCorta(r.enviada_at)} · {r.gastos.length} {r.gastos.length === 1 ? "gasto" : "gastos"} · {textoTotales(totalPorMoneda(r.gastos))}
+                    {revisados ? ` · ${revisados} revisados` : ""}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {resueltas.length > 0 && (

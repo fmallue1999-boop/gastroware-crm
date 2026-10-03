@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const EXPIRACION_SEGUNDOS = 3600;
 
-export type Bucket = "servicio" | "documentos" | "cotizaciones" | "contenidos" | "material";
+export type Bucket = "servicio" | "documentos" | "cotizaciones" | "contenidos" | "material" | "viaticos";
 
 export async function firmarUrl(
   bucket: Bucket,

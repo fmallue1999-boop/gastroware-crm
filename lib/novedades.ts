@@ -19,6 +19,18 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.25.0",
+    fecha: "2026-10-02",
+    titulo: "Viáticos: cargar, rendir, aprobar y reintegrar",
+    cambios: [
+      "Nueva sección Viáticos (en el celular, desde Más): “Cargar gasto” → sacale foto al ticket o subí el PDF y la IA completa la fecha, el importe, el comercio, el CUIT, el comprobante y de qué es (combustible, peaje, comida, hotel…). Se revisa y se guarda; también se puede cargar a mano.",
+      "Cada gasto dice cómo se pagó: “Lo pagué yo” (se devuelve), “Tarjeta de la empresa” o “Con un adelanto” (no se devuelven). Si fue por una visita, se elige el cliente.",
+      "Cuando quieras, tildás los gastos y tocás “Rendir”: le llega a dirección, que aprueba o rechaza cada gasto (con el motivo) viendo la foto del comprobante. Está en Aprobaciones, en Mi día y en el número del menú.",
+      "Con todo revisado, a quien rindió le llega qué se aprobó, y a administración lo que hay que devolver. Administración marca “Reintegrado” con la fecha y la persona recibe el aviso.",
+      "“Resumen del mes”: cuánto se gastó, se aprobó y falta revisar, por persona y por tipo de gasto, y “Excel del mes” con todos los gastos (CUIT, comprobante, IVA) para la contabilidad. Cada uno ve lo suyo; dirección y administración, todo.",
+    ],
+  },
+  {
     version: "1.24.0",
     fecha: "2026-10-02",
     titulo: "Conversación en cada cotización y Servicio técnico en el celular",

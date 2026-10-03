@@ -76,6 +76,8 @@ export async function consultarIA<T>(input: {
   maxTokens?: number;
   /** Imagen opcional (visión): base64 sin el prefijo data-url. */
   imagen?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" };
+  /** PDF opcional (ej: un comprobante): base64 sin el prefijo data-url. */
+  documento?: { base64: string };
 }): Promise<{ ok: true; datos: T } | { ok: false; error: string }> {
   const bloqueo = await chequearLimite(input.supabase);
   if (bloqueo) return { ok: false, error: bloqueo };
@@ -93,15 +95,18 @@ export async function consultarIA<T>(input: {
       messages: [
         {
           role: "user",
-          content: input.imagen
-            ? [
-                {
-                  type: "image" as const,
-                  source: { type: "base64" as const, media_type: input.imagen.mediaType, data: input.imagen.base64 },
-                },
-                { type: "text" as const, text: texto },
-              ]
-            : texto,
+          content:
+            input.imagen || input.documento
+              ? [
+                  ...(input.imagen
+                    ? [{ type: "image" as const, source: { type: "base64" as const, media_type: input.imagen.mediaType, data: input.imagen.base64 } }]
+                    : []),
+                  ...(input.documento
+                    ? [{ type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: input.documento.base64 } }]
+                    : []),
+                  { type: "text" as const, text: texto },
+                ]
+              : texto,
         },
       ],
     }, { timeout: 50_000, maxRetries: 1 });

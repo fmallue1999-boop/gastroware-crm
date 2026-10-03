@@ -50,6 +50,7 @@ const DETALLE_SECCION: Record<string, string> = {
   "/consumibles": "A quién contactar para reponer consumibles",
   "/repuestos": "Solicitudes de repuestos: validación, cotización y pedido",
   "/marketing": "Segmentos y campañas por email y WhatsApp",
+  "/viaticos": "Cargá tus gastos con la foto del ticket y rendilos",
 };
 
 function MenuLink({
