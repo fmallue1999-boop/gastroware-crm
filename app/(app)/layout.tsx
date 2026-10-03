@@ -53,15 +53,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (comercialId) q = q.eq("comercial_id", comercialId);
     return (await q).count ?? 0;
   };
-  // Dirección general: lo que espera su aprobación (propuestas, contenidos del calendario y pedidos a marketing)
+  // Dirección general: lo que espera su aprobación (propuestas, contenidos del calendario, pedidos a marketing y viáticos)
   const contarParaAprobar = async () => {
     if (rol !== "direccion") return 0;
-    const [p, c, m] = await Promise.all([
+    const [p, c, m, v] = await Promise.all([
       supabase.from("cotizacion_versiones").select("id", { count: "exact", head: true }).eq("aprobacion", "pendiente"),
       supabase.from("contenidos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
       supabase.from("pedidos_material").select("id", { count: "exact", head: true }).eq("estado", "para_aprobar"),
+      supabase.from("rendiciones").select("id", { count: "exact", head: true }).eq("estado", "enviada"),
     ]);
-    return (p.count ?? 0) + (c.count ?? 0) + (m.count ?? 0);
+    return (p.count ?? 0) + (c.count ?? 0) + (m.count ?? 0) + (v.count ?? 0);
   };
   const [interesesHoy, agendaHoy, paraAprobar] = await Promise.all([
     contarInteresesHoy(),

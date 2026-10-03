@@ -583,6 +583,51 @@ export const TAREAS: Tarea[] = [
     ],
     ojo: "Cada ficha tiene su propio estado. El borde de color es la cuenta; la pastilla con texto, el estado. Lo ven marketing, dirección y a quien dirección habilite en Administración → Usuarios.",
   },
+  {
+    id: "viaticos",
+    titulo: "Cargar y rendir viáticos",
+    pasos: [
+      { texto: "Entrá a Viáticos (en el celular, desde Más) y tocá “Cargar gasto”.", href: "/viaticos/nuevo", boton: "Cargar gasto" },
+      { texto: "Sacale foto al ticket o subí el PDF: la IA lee la fecha, el importe, el comercio, el CUIT y de qué es, y completa el formulario. Revisalo." },
+      { texto: "Elegí cómo se pagó: “Lo pagué yo” (se te devuelve), “Tarjeta de la empresa” o “Con un adelanto” (no se devuelven). Si fue por una visita, elegí el cliente." },
+      { texto: "Cargá cada gasto cuando lo hacés. Hasta que lo rendís lo podés corregir o borrar." },
+      { texto: "Cuando quieras (por ejemplo, a fin de mes o al volver de un viaje), en Viáticos tildá los gastos y tocá “Rendir”. Le llega a dirección.", href: "/viaticos", boton: "Ir a Viáticos" },
+      { texto: "Te avisa cuando dirección la revisó (qué se aprobó y qué no, con el motivo) y cuando administración te devolvió la plata." },
+    ],
+    ojo: "Si te equivocaste después de rendir, “Retirar la rendición” la devuelve a “sin rendir”, siempre que dirección no haya empezado a revisarla.",
+  },
+  {
+    id: "aprobar-viaticos",
+    titulo: "Aprobar viáticos",
+    pasos: [
+      { texto: "Las rendiciones para aprobar están en Viáticos, en Aprobaciones y en Mi día.", href: "/viaticos", boton: "Ir a Viáticos" },
+      { texto: "Cada gasto muestra la foto del comprobante (tocala para verla grande), el importe, cómo se pagó y el detalle." },
+      { texto: "“Aprobar” o “Rechazar” con el motivo en cada uno, o “Aprobar los que faltan” de una vez." },
+      { texto: "Con todo decidido, a quien rindió le llega el resumen y a administración, lo que hay que devolver." },
+    ],
+    ojo: "Si aprobaste algo por error, “Reabrir la revisión” (antes de que administración lo reintegre). En “Resumen del mes” ves cuánto gastó cada uno por tipo de gasto y bajás el Excel.",
+  },
+  {
+    id: "reintegrar-viaticos",
+    titulo: "Reintegrar viáticos",
+    pasos: [
+      { texto: "En Viáticos (y en Mi día) están las rendiciones aprobadas “Para reintegrar”, con cuánto hay que devolver.", href: "/viaticos", boton: "Ir a Viáticos" },
+      { texto: "Se devuelve lo aprobado que la persona pagó con su plata (lo de la tarjeta de la empresa o un adelanto no)." },
+      { texto: "Hacé el pago y marcá “Reintegrado” con la fecha y cómo se pagó (ej: transferencia). A la persona le llega el aviso." },
+      { texto: "Mientras no haya nadie en administración, el aviso y la bandeja de Mi día le llegan a dirección." },
+    ],
+    ojo: "“Resumen del mes” → “Excel del mes” baja todos los gastos con comprobante, CUIT e IVA para la contabilidad.",
+  },
+  {
+    id: "conversar-cotizacion",
+    titulo: "Conversar sobre una cotización",
+    pasos: [
+      { texto: "Debajo de la cotización (en el interés, en la pestaña Cotizaciones o en Aprobaciones) tocá “Conversación”." },
+      { texto: "Escribí lo que quieras anotar o preguntar. Es interno: no sale en el PDF." },
+      { texto: "Con @ le avisás a alguien: escribí @ y elegí a la persona (o tocá el botón @). Le llega a la campana y al celular." },
+      { texto: "El botón muestra cuántos mensajes hay y cuántos son nuevos para vos." },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -616,6 +661,8 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "responder-caso",
       "informe",
       "pedir-material",
+      "conversar-cotizacion",
+      "viaticos",
     ],
   },
   direccion: {
@@ -630,6 +677,9 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
     ],
     tareas: [
       "aprobar-propuestas",
+      "aprobar-viaticos",
+      "reintegrar-viaticos",
+      "conversar-cotizacion",
       "contenidos",
       "responder-informes",
       "tablero",
@@ -655,7 +705,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Garantías con fábrica.",
       "Cobranza vencida y ventas frenadas por atraso.",
     ],
-    tareas: ["asignar-service", "controlar-remito", "presupuesto", "garantia", "aliados", "cobranzas", "aprobar-condicion", "tablero", "equipo"],
+    tareas: ["asignar-service", "controlar-remito", "presupuesto", "garantia", "aliados", "cobranzas", "aprobar-viaticos", "reintegrar-viaticos", "aprobar-condicion", "tablero", "equipo"],
   },
   administrativa: {
     titulo: "Administrativa y atención comercial",
@@ -681,6 +731,8 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "recontactos",
       "presupuesto",
       "deposito",
+      "reintegrar-viaticos",
+      "viaticos",
     ],
   },
   servicio: {
@@ -693,7 +745,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Remitos para controlar.",
       "Garantías con fábrica.",
     ],
-    tareas: ["repuestos", "asignar-service", "presupuesto", "controlar-remito", "garantia", "aliados", "service-hecho", "cerrar-trabajo"],
+    tareas: ["repuestos", "asignar-service", "presupuesto", "controlar-remito", "garantia", "aliados", "service-hecho", "cerrar-trabajo", "viaticos"],
   },
   tecnico: {
     titulo: "Técnico de servicio y depósito",
@@ -706,14 +758,14 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "Qué preparar hoy en el depósito.",
       "Viernes: repuestos en el mínimo.",
     ],
-    tareas: ["repuestos", "cerrar-trabajo", "service-hecho", "deposito", "abrir-caso"],
+    tareas: ["repuestos", "cerrar-trabajo", "service-hecho", "deposito", "abrir-caso", "viaticos"],
   },
   marketing: {
     titulo: "Marketing y contenido",
     resumen: "Contenido, material comercial, videos por modelo y campañas.",
     abreEn: { texto: "Mi día", href: "/hoy" },
     cadaDia: ["Calendario de contenidos: lo de la semana y lo que volvió con re-edición.", "Pedidos a marketing: los nuevos y los que volvieron con cambios.", "Modelos sin video instructivo.", "Consultas del mes por canal."],
-    tareas: ["contenidos", "material-cargar", "material", "atender-pedidos", "videos", "nueva-consulta"],
+    tareas: ["contenidos", "material-cargar", "material", "atender-pedidos", "videos", "nueva-consulta", "viaticos"],
   },
   distribuidor: {
     titulo: "Distribuidor",

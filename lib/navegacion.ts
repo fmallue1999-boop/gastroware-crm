@@ -28,6 +28,7 @@ export type ClaveIcono =
   | "repuestos"
   | "contenidos"
   | "material"
+  | "viaticos"
   | "mas";
 
 export type ItemMenu = { href: string; label: string; icono: ClaveIcono; badgeHoy?: boolean; badgeAprobar?: boolean };
@@ -57,6 +58,7 @@ const I = {
   repuestos: { href: "/repuestos", label: "Repuestos", icono: "repuestos" },
   contenidos: { href: "/contenidos", label: "Contenidos", icono: "contenidos" },
   material: { href: "/material", label: "Material", icono: "material" },
+  viaticos: { href: "/viaticos", label: "Viáticos", icono: "viaticos" },
   mas: { href: "/mas", label: "Más", icono: "mas" },
 } satisfies Record<string, ItemMenu>;
 
@@ -82,32 +84,32 @@ function menuDelPuesto(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
   switch (rol) {
     case "tecnico":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.services, I.repuestos, I.equipos, I.contactos, I.stock, I.ventas, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.services, I.repuestos, I.equipos, I.contactos, I.stock, I.ventas, I.movimientos, I.viaticos, I.guia, I.mas],
         celular: [I.midia, I.services, I.equipos, I.mas],
       };
     case "servicio":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.services, I.casos, I.repuestos, I.equipos, I.contactos, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.services, I.casos, I.repuestos, I.equipos, I.contactos, I.stock, I.movimientos, I.viaticos, I.guia, I.mas],
         celular: [I.midia, I.services, I.casos, I.mas],
       };
     case "administrativa":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.contactos, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.viaticos, I.contactos, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.midia, I.ventas, I.cobranzas, I.mas],
       };
     case "admin":
       return {
-        lateral: [I.midia, I.tareas, I.asistente, I.tablero, I.cobranzas, I.ventas, I.consumibles, I.repuestos, I.services, I.casos, I.contactos, I.stock, I.informes, I.contenidos, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.tareas, I.asistente, I.tablero, I.cobranzas, I.viaticos, I.ventas, I.consumibles, I.repuestos, I.services, I.casos, I.contactos, I.stock, I.informes, I.contenidos, I.movimientos, I.guia, I.mas],
         celular: [I.midia, I.cobranzas, I.services, I.mas],
       };
     case "marketing":
       return {
-        lateral: [I.midia, I.contenidos, I.material, I.tareas, I.asistente, I.pedidos_material, I.videos, I.marketing, I.contactos, I.movimientos, I.guia, I.mas],
+        lateral: [I.midia, I.contenidos, I.material, I.tareas, I.asistente, I.pedidos_material, I.videos, I.marketing, I.contactos, I.movimientos, I.viaticos, I.guia, I.mas],
         celular: [I.midia, I.contenidos, I.material, I.mas],
       };
     case "direccion":
       return {
-        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.tablero, I.aprobaciones, I.informes, I.contenidos, I.pedidos_material, I.contactos, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.tablero, I.aprobaciones, I.informes, I.contenidos, I.pedidos_material, I.contactos, I.ventas, I.consumibles, I.repuestos, I.cobranzas, I.viaticos, I.casos, I.services, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.embudo, I.midia, I.contactos, I.mas],
       };
     case "distribuidor":
@@ -115,7 +117,7 @@ function menuDelPuesto(rol: string): { lateral: ItemMenu[]; celular: ItemMenu[] 
     default:
       // Vendedor de territorio
       return {
-        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.contactos, I.material, I.ventas, I.consumibles, I.repuestos, I.casos, I.informe, I.stock, I.movimientos, I.guia, I.mas],
+        lateral: [I.embudo, I.midia, I.tareas, I.asistente, I.contactos, I.material, I.ventas, I.consumibles, I.repuestos, I.casos, I.informe, I.viaticos, I.stock, I.movimientos, I.guia, I.mas],
         celular: [I.embudo, I.midia, I.contactos, I.mas],
       };
   }

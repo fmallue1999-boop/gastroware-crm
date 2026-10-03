@@ -206,6 +206,28 @@ export async function cargarMiDia(
         lista: ((pedAprobar ?? []) as { id: string; titulo: string }[]).map((p) => ({ id: p.id, titulo: p.titulo, href: `/marketing/pedidos/${p.id}` })),
       })
     );
+    // v1.25: rendiciones de viáticos
+    const { data: rends } = await supabase
+      .from("rendiciones")
+      .select("id, numero, usuario:usuarios!rendiciones_usuario_id_fkey(nombre)")
+      .eq("estado", "enviada")
+      .order("enviada_at")
+      .limit(50);
+    bandejas.push(
+      bandeja({
+        clave: "viaticos_aprobar",
+        titulo: "Viáticos para aprobar",
+        ayuda: "Aprobá o rechazá cada gasto",
+        href: "/viaticos",
+        tono: "violeta",
+        lista: ((rends ?? []) as unknown as { id: string; numero: number; usuario: { nombre: string | null } | null }[]).map((r) => ({
+          id: r.id,
+          titulo: r.usuario?.nombre ?? "Rendición",
+          detalle: `rendición N° ${r.numero}`,
+          href: `/viaticos/rendicion/${r.id}`,
+        })),
+      })
+    );
     bandejas.push(
       bandeja({
         clave: "informes",
@@ -508,6 +530,36 @@ export async function cargarMiDia(
         href: "/stock",
         tono: viernes ? "ambar" : "gris",
         lista: bajos.map((r) => ({ id: r.id, titulo: r.descripcion, detalle: `stock ${r.stock ?? 0} · mínimo ${r.stock_minimo}`, href: "/stock" })),
+      })
+    );
+  }
+
+  // --- Administración: viáticos aprobados para reintegrar (v1.25). Si el
+  // puesto está vacante, lo ve dirección.
+  const administracionVacante = async () => {
+    const { count } = await supabase.from("usuarios").select("id", { count: "exact", head: true }).eq("activo", true).in("rol", ["administrativa", "admin"]);
+    return !count;
+  };
+  if (rol === "administrativa" || rol === "admin" || (rol === "direccion" && (await administracionVacante()))) {
+    const { data: rends } = await supabase
+      .from("rendiciones")
+      .select("id, numero, usuario:usuarios!rendiciones_usuario_id_fkey(nombre)")
+      .eq("estado", "aprobada")
+      .order("revisada_at")
+      .limit(50);
+    bandejas.push(
+      bandeja({
+        clave: "viaticos_reintegrar",
+        titulo: "Viáticos para reintegrar",
+        ayuda: "Devolvé lo aprobado y marcalo",
+        href: "/viaticos",
+        tono: "ambar",
+        lista: ((rends ?? []) as unknown as { id: string; numero: number; usuario: { nombre: string | null } | null }[]).map((r) => ({
+          id: r.id,
+          titulo: r.usuario?.nombre ?? "Rendición",
+          detalle: `rendición N° ${r.numero}`,
+          href: `/viaticos/rendicion/${r.id}`,
+        })),
       })
     );
   }
