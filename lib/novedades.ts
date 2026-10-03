@@ -19,6 +19,12 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.25.1",
+    fecha: "2026-10-02",
+    titulo: "Arreglo de fechas",
+    cambios: ["Lo que pasa a la noche (de 21 a 24 h) aparecía con la fecha del día siguiente (por ejemplo “3 oct” cuando todavía era 2). Ahora todas las fechas cortas van en hora de Argentina."],
+  },
+  {
     version: "1.25.0",
     fecha: "2026-10-02",
     titulo: "Viáticos: cargar, rendir, aprobar y reintegrar",
