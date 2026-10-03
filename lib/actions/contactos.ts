@@ -13,7 +13,7 @@ import { hoyISO, sumarDias, normalizarTelefono, fechaCorta } from "@/lib/format"
 import { CONDICIONES_FISCALES, ETAPAS_ABIERTAS, RUBROS } from "@/lib/constants";
 import { cuitValido, faltanParaCotizar } from "@/lib/datos-cotizar";
 import type { Cliente } from "@/lib/types";
-import { usuarioActual, type SupabaseServidor } from "./comun";
+import { avisar, usuarioActual, type SupabaseServidor } from "./comun";
 import { crearInteres } from "./intereses";
 
 // =====================================================================
@@ -451,11 +451,20 @@ export async function asignarComercial(clienteId: string, usuarioId: string | nu
   if (bloqueo) return bloqueo;
   const supabase = await createClient();
   const user = await usuarioActual();
+  const { data: antes } = await supabase.from("clientes").select("nombre_comercial, comercial_id").eq("id", clienteId).maybeSingle();
   const { error } = await supabase
     .from("clientes")
     .update({ comercial_id: usuarioId })
     .eq("id", clienteId);
   if (error) return { error: error.message };
+  // v1.26.1: a quien le pasan el cliente le llega el aviso (campana y celular)
+  if (usuarioId && antes && antes.comercial_id !== usuarioId)
+    await avisar(
+      supabase,
+      [usuarioId],
+      { tipo: "cliente_asignado", titulo: `Te asignaron un cliente: ${antes.nombre_comercial}`, url: `/clientes/${clienteId}` },
+      user?.id
+    );
   let nombre = "un vendedor";
   if (usuarioId) {
     const { data: u } = await supabase.from("usuarios").select("nombre").eq("id", usuarioId).single();
