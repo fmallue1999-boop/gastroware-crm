@@ -50,7 +50,7 @@ export default function OTCorregir({ ot }: { ot: OrdenTrabajo }) {
 
   if (!abierto)
     return (
-      <div className="flex flex-wrap items-center gap-2">
+      <>
         <button
           type="button"
           onClick={() => setAbierto(true)}
@@ -59,11 +59,11 @@ export default function OTCorregir({ ot }: { ot: OrdenTrabajo }) {
           <Pencil className="h-4 w-4" /> Corregir la orden
         </button>
         {aviso && <span className="text-[14px] font-bold text-verde">✓ {aviso}</span>}
-      </div>
+      </>
     );
 
   return (
-    <section className="space-y-3 rounded-2xl border-2 border-celeste-deep bg-white p-4 shadow-sm">
+    <section className="basis-full space-y-3 rounded-2xl border-2 border-celeste-deep bg-white p-4 shadow-sm">
       <div>
         <h2 className="text-[15px] font-extrabold">Corregir la orden</h2>
         <p className="text-[13px] text-piedra">Queda anotado en los movimientos del cliente. Lo que hizo el técnico se corrige en su recuadro, más abajo.</p>

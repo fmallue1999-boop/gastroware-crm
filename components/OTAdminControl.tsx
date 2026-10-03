@@ -75,7 +75,7 @@ export default function OTAdminControl({
       </p>
       {ot.estado === "aprobado_facturar" && (
         <p className="rounded-xl bg-ambar-soft p-3 text-sm font-medium text-ambar">
-          Remito aprobado: {aFacturar ? `facturar ${dinero(Number(ot.total))} a la razón social del local${ot.cobertura === "garantia" ? " (en garantía: lo que se cobra)" : ""}.` : "no hay nada para facturar (cerrar sin facturar)."}
+          Remito aprobado: {aFacturar ? `facturar ${dinero(Number(ot.total))} a la razón social del local${ot.cobertura === "garantia" ? " (en garantía: lo que se cobra)" : ""}.` : ot.sin_cargo ? "sin cargo, autorizado por dirección: cerrar sin facturar." : "no hay nada para facturar (cerrar sin facturar)."}
         </p>
       )}
 
@@ -234,7 +234,7 @@ const ETIQUETAS: Record<string, string> = {
   asignado: "Marcar asignada",
   programado: "Marcar programada",
   aprobado_facturar: "Remito controlado: aprobar para facturar (calcula el total)",
-  cerrado: "Cerrar sin facturar (garantía sin cargo, contrato o ya cobrado)",
+  cerrado: "Cerrar sin facturar",
   cancelado: "Anular orden",
   revision_admin: "Reabrir revisión",
   en_proceso: "Reabrir para el técnico",

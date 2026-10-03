@@ -402,7 +402,7 @@ export const TAREAS: Tarea[] = [
       { texto: "Revisá repuestos y gastos, fotos y remito. Si hay algo mal, corregilo vos mismo: en el recuadro del técnico (diagnóstico, trabajo, repuestos, fotos, remito) o con “Corregir la orden” (tipo, cobertura, prioridad, problema)." },
       { texto: "En “Cobro y factura”, poné las horas a cobrar si no son las trabajadas. En garantía también se pueden cobrar (por ejemplo, la movilidad): elegí “Se cobra como” y guardá." },
       { texto: "“Remito controlado: aprobar para facturar” o “Devolver al técnico” con lo que falta." },
-      { texto: "Si no hay nada para cobrar (garantía sin cargo o ya cobrado): “Cerrar sin facturar”." },
+      { texto: "Si no hay nada para cobrar: “Cerrar sin facturar”. Si tiene importe y no se va a cobrar, lo autoriza dirección con “No cobrar” (con el motivo)." },
     ],
     ojo: "Lo puede corregir dirección o servicio técnico en cualquier momento antes de facturar; queda anotado en los movimientos del cliente.",
   },
@@ -588,6 +588,17 @@ export const TAREAS: Tarea[] = [
     ojo: "Cada ficha tiene su propio estado. El borde de color es la cuenta; la pastilla con texto, el estado. Lo ven marketing, dirección y a quien dirección habilite en Administración → Usuarios.",
   },
   {
+    id: "autorizar-service",
+    titulo: "No cobrar o dar de baja un service",
+    pasos: [
+      { texto: "Abrí la orden en Servicio técnico. Arriba están “No cobrar” y “Dar de baja” (los ve dirección).", href: "/servicio", boton: "Ir a Servicio técnico" },
+      { texto: "“No cobrar”: elegí el motivo (cortesía, error nuestro, ya se cobró aparte, garantía sin cargo u otro) y, si querés, un detalle. La orden queda en $0. Si el trabajo ya está terminado, se cierra sin facturar en el mismo paso." },
+      { texto: "Si te arrepentís antes de cerrarla: “Volver a cobrarla”." },
+      { texto: "“Dar de baja”: elegí el motivo (duplicada, el cliente ya no la quiere, se resolvió sin ir, no corresponde u otro). Queda anulada y al técnico le llega el aviso. Se puede reabrir." },
+    ],
+    ojo: "El motivo y quién lo autorizó quedan en el historial de la orden y en los movimientos del cliente. Una orden con importe ya no se cierra sin facturar sin esta autorización.",
+  },
+  {
     id: "viaticos",
     titulo: "Cargar y rendir viáticos",
     pasos: [
@@ -685,6 +696,7 @@ export const GUIA_PUESTOS: Record<Puesto, GuiaPuesto> = {
       "aprobar-propuestas",
       "aprobar-viaticos",
       "reintegrar-viaticos",
+      "autorizar-service",
       "conversar-cotizacion",
       "contenidos",
       "responder-informes",

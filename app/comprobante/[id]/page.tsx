@@ -150,6 +150,14 @@ export default async function ComprobantePage({
           })}
         </tbody>
         <tfoot>
+          {cuenta.bonificado > 0 && (
+            <tr>
+              <td className="py-1.5" colSpan={2}>
+                Sin cargo
+              </td>
+              <td className="py-1.5 text-right">−{dinero(cuenta.bonificado)}</td>
+            </tr>
+          )}
           <tr className="font-bold">
             <td className="py-2" colSpan={2}>
               Total

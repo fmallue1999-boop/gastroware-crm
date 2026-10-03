@@ -3,6 +3,15 @@
 La lista para el equipo está en la pantalla Novedades (`lib/novedades.ts`).
 Cómo se versiona: `docs/VERSIONES.md`.
 
+## v1.28.0 — 3 de octubre de 2026
+
+Pedido de dirección: "que Emilia autorice no cobrar la orden o darla de baja por un motivo". Migración 050_autorizar_sin_cargo_y_baja.sql.
+
+- Migración 050: ordenes_trabajo.sin_cargo + motivo/por/at y baja_motivo/por/at; requiere_rol "direccion" en ot_transiciones; cualquier estado abierto → cancelado (dirección) y finalizado_tecnico/revision_admin → cerrado (dirección). Trigger tg_ot_autorizacion (solo dirección marca sin cargo o da de baja; quién y cuándo se completan solos). fn_valida_transicion_ot: 'direccion', baja con motivo obligatorio, cerrar desde terminado solo con sin cargo, y desde aprobado para facturar con importe solo si es sin cargo o el presupuesto ya se cobró; al reabrir una baja se limpia.
+- lib/servicio-cobro: MOTIVOS_SIN_CARGO, MOTIVOS_BAJA, motivoCompleto; cuentaOT con sin_cargo (bonificado = lo que salía, total 0). Tests.
+- Acciones: noCobrarOT (motivo; total 0; cierra si está terminada y se pidió), volverACobrarOT, darDeBajaOT (avisa al técnico). Motivo en status_history y en actividades del cliente.
+- Orden: OTAutorizar ("No cobrar" / "Volver a cobrarla" / "Dar de baja", con motivos) junto a "Corregir la orden"; avisos "Sin cargo, autorizado por…" y "Dada de baja por…"; "Anular orden" y "Cerrar sin facturar" ya no salen sueltos (cerrar solo sin importe, ya cobrada o sin cargo). OTCobro e informe de service muestran "Sin cargo". Guía: autorizar-service.
+
 ## v1.27.0 — 3 de octubre de 2026
 
 Pedido de dirección: "que Emilia pueda cambiar las órdenes de servicio", "que se puedan cobrar horas de trabajo en garantía" y "que se determine el concepto para facturarlo: no por horas, sino 'ST XXX - Cambio de luz por garantía (Movilidad)'". Antes la orden solo se editaba mientras el técnico trabajaba (lo cargado como service hecho nunca) y en garantía la mano de obra era siempre $0. Migración 049_cobro_y_concepto_ot.sql.
