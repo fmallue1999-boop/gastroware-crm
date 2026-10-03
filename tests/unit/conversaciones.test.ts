@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cuandoMensaje, detectarMenciones, mencionEnCurso, partesMensaje, sugerirPersonas, veLaCotizacion } from "@/lib/conversaciones";
+import { cuandoMensaje, detectarMenciones, mencionEnCurso, partesMensaje, sugerirPersonas, veElInteres } from "@/lib/conversaciones";
 
 const personas = [
   { id: "a", nombre: "Ana Pérez" },
@@ -46,14 +46,20 @@ describe("menciones con @ (v1.24)", () => {
   });
 });
 
-describe("quién ve la cotización (v1.24, igual que la base)", () => {
-  it("dirección y administración siempre; el vendedor solo la suya", () => {
-    expect(veLaCotizacion({ id: "x", rol: "direccion" }, "v1")).toBe(true);
-    expect(veLaCotizacion({ id: "x", rol: "administrativa" }, "v1")).toBe(true);
-    expect(veLaCotizacion({ id: "v1", rol: "comercial" }, "v1")).toBe(true);
-    expect(veLaCotizacion({ id: "v2", rol: "comercial" }, "v1")).toBe(false);
-    expect(veLaCotizacion({ id: "m", rol: "marketing" }, "v1")).toBe(false);
-    expect(veLaCotizacion({ id: "v2", rol: "comercial" }, null)).toBe(true);
+describe("quién ve el interés y su conversación (v1.26, igual que la base)", () => {
+  const deVendedor = { comercialId: "v1", comercialEsVendedor: true };
+  it("dirección, administración, servicio y técnicos siempre", () => {
+    for (const rol of ["direccion", "admin", "administrativa", "servicio", "tecnico"]) expect(veElInteres({ id: "x", rol }, deVendedor)).toBe(true);
+  });
+  it("un vendedor: lo suyo, lo sin vendedor y lo que atiende alguien que no vende", () => {
+    expect(veElInteres({ id: "v1", rol: "comercial" }, deVendedor)).toBe(true);
+    expect(veElInteres({ id: "v2", rol: "comercial" }, deVendedor)).toBe(false);
+    expect(veElInteres({ id: "v2", rol: "comercial" }, { comercialId: null, comercialEsVendedor: false })).toBe(true);
+    expect(veElInteres({ id: "v2", rol: "comercial" }, { comercialId: "d1", comercialEsVendedor: false })).toBe(true);
+  });
+  it("marketing y distribuidores no", () => {
+    expect(veElInteres({ id: "m", rol: "marketing" }, deVendedor)).toBe(false);
+    expect(veElInteres({ id: "d", rol: "distribuidor" }, { comercialId: null, comercialEsVendedor: false })).toBe(false);
   });
 });
 

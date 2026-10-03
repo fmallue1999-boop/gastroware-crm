@@ -19,6 +19,18 @@ export type Version = {
 
 export const VERSIONES: Version[] = [
   {
+    version: "1.26.0",
+    fecha: "2026-10-02",
+    titulo: "Conversación del equipo en cada interés",
+    cambios: [
+      "La conversación ahora es del interés (antes colgaba de la cotización): cada interés tiene su “Conversación del equipo” desde la consulta hasta la postventa, esté cotizado o no. Lo que ya estaba escrito pasó a su interés.",
+      "Está una sola vez donde trabajás: en el embudo (abrí la tarjeta → “Conversación del equipo”; si hay mensajes, la tarjeta muestra cuántos y en naranja los nuevos), en la tarjeta del interés y en la venta dentro de la ficha, y en Aprobaciones. Se sacó de la pestaña Cotizaciones, donde estaba repetida.",
+      "Cerrada muestra el último mensaje (“Emilia: ¿le hacemos 5%?”) y cuántos son nuevos para vos. Los avisos y el embudo llevan a la conversación en pantalla propia, con el resumen del interés y su cotización.",
+      "Mi día suma “Conversaciones con mensajes nuevos”: las de tus intereses y las que ya abriste o donde escribiste.",
+      "Para no mezclar: lo que hablaste con el cliente va en “¿Qué pasó?” (queda en los movimientos); la conversación del equipo es interna, para hablar entre ustedes con @.",
+    ],
+  },
+  {
     version: "1.25.1",
     fecha: "2026-10-02",
     titulo: "Arreglo de fechas",

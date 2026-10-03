@@ -9,7 +9,7 @@ import { cambiarEtapa, cambiarProductoInteres, setTemperatura } from "@/lib/acti
 import { ETAPAS, MOTIVOS_PERDIDA, NIVELES_INTERES } from "@/lib/constants";
 import { dinero, fechaCorta, diasDesde } from "@/lib/format";
 import BotonesPdfCotizacion from "@/components/BotonesPdfCotizacion";
-import ConversacionCotizacion from "@/components/ConversacionCotizacion";
+import ConversacionInteres, { type ResumenCharla } from "@/components/ConversacionInteres";
 import IAMensaje from "@/components/IAMensaje";
 import { SelectorProductos, chipCls } from "@/components/InteresAgregar";
 import { COLOR_ETAPA, PuntoNivel, textoProximo } from "@/components/PuntoNivel";
@@ -72,7 +72,8 @@ function cuandoCorto(iso: string) {
  * arriba qué quiere y en qué etapa está (con el lápiz se cambian producto y
  * nivel); el recuadro del próximo paso con los botones rápidos (primer
  * contacto, no respondió, reprogramar); la cotización si hay; Cotizar / Me
- * compró / No se dio; y los movimientos de este interés con quién los hizo.
+ * compró / No se dio; la conversación del equipo (v1.26) y los movimientos
+ * de este interés con quién los hizo.
  * Lo que se usa poco (IA, lista de espera, financiación, eliminar) va en "⋯".
  */
 export default function InteresFijado({
@@ -90,7 +91,7 @@ export default function InteresFijado({
   responsableNombre = null,
   ahoraMs = 0,
   movimientos = [],
-  charlas = {},
+  charla = null,
 }: {
   interes: Oportunidad;
   nombre: string;
@@ -107,8 +108,8 @@ export default function InteresFijado({
   ahoraMs?: number;
   /** Lo que pasó con este interés, lo más nuevo primero. */
   movimientos?: MovimientoInteres[];
-  /** Mensajes de la conversación de cada cotización (total y sin leer). */
-  charlas?: Record<string, { total: number; sinLeer: number }>;
+  /** La conversación del equipo de este interés (total, sin leer y el último mensaje). */
+  charla?: ResumenCharla | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -304,11 +305,6 @@ export default function InteresFijado({
               )}
             </div>
           )}
-          <ConversacionCotizacion
-            cotizacionId={vigente.cotizacion_id}
-            total={charlas[vigente.cotizacion_id]?.total ?? 0}
-            sinLeer={charlas[vigente.cotizacion_id]?.sinLeer ?? 0}
-          />
         </div>
       )}
 
@@ -368,6 +364,11 @@ export default function InteresFijado({
           </button>
         </div>
       )}
+
+      {/* La conversación del equipo (interna) */}
+      <div className="mt-3">
+        <ConversacionInteres oportunidadId={interes.id} resumen={charla} />
+      </div>
 
       {/* Lo que pasó con este interés, con quién lo hizo */}
       <div className="mt-3 border-t border-borde pt-2.5">

@@ -1,6 +1,6 @@
 /**
- * Conversaciones de las cotizaciones (v1.24): menciones con @ y quién puede
- * ver cada cotización. Funciones puras.
+ * Conversación del equipo de cada interés (v1.24, por interés desde v1.26):
+ * menciones con @ y quién la ve. Funciones puras.
  */
 
 export type Persona = { id: string; nombre: string };
@@ -92,13 +92,17 @@ export function sugerirPersonas(busqueda: string, personas: Persona[]): Persona[
 }
 
 /**
- * Quién puede ver una cotización (igual que la base): los que ven toda la
- * operación, el vendedor del interés, y todos si el interés no tiene vendedor.
+ * Quién ve un interés (igual que la base, opps_select): los que ven toda la
+ * operación y los técnicos; un vendedor, si el cliente no tiene vendedor, es
+ * suyo o lo atiende alguien que no es vendedor. Marketing y distribuidores no.
  */
-export function veLaCotizacion(u: { id: string; rol: string }, comercialId: string | null): boolean {
-  if (["direccion", "admin", "administrativa", "servicio"].includes(u.rol)) return true;
-  if (!comercialId) return true;
-  return u.id === comercialId;
+export function veElInteres(
+  u: { id: string; rol: string },
+  cliente: { comercialId: string | null; comercialEsVendedor: boolean }
+): boolean {
+  if (["direccion", "admin", "administrativa", "servicio", "tecnico"].includes(u.rol)) return true;
+  if (u.rol !== "comercial") return false;
+  return !cliente.comercialId || cliente.comercialId === u.id || !cliente.comercialEsVendedor;
 }
 
 const ZONA = "America/Argentina/Buenos_Aires";

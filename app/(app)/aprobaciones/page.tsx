@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dinero, fechaCorta } from "@/lib/format";
 import { esGestor } from "@/lib/puestos";
 import DecidirPropuesta from "@/components/DecidirPropuesta";
-import ConversacionCotizacion from "@/components/ConversacionCotizacion";
+import ConversacionInteres from "@/components/ConversacionInteres";
 import { resumenConversaciones } from "@/lib/servidor/conversaciones";
 import { cargarRendiciones } from "@/lib/servidor/viaticos";
 import { textoTotales, totalPorMoneda } from "@/lib/viaticos";
@@ -91,7 +91,7 @@ export default async function AprobacionesPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const [charlas, rendiciones] = await Promise.all([
-    resumenConversaciones(supabase, pendientes.map((p) => p.cotizacion?.id ?? "").filter(Boolean), user?.id ?? ""),
+    resumenConversaciones(supabase, pendientes.map((p) => p.cotizacion?.oportunidad?.id ?? "").filter(Boolean), user?.id ?? ""),
     cargarRendiciones(supabase, { estados: ["enviada"] }),
   ]);
   const nombre = new Map(((usuarios ?? []) as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]));
@@ -229,9 +229,9 @@ export default async function AprobacionesPage() {
                 {(p.forma_pago || p.condiciones) && (
                   <p className="mt-1 text-[14px] text-tinta/80">{[p.forma_pago, p.condiciones].filter(Boolean).join(" · ")}</p>
                 )}
-                {p.cotizacion && (
+                {opp && (
                   <div className="mt-2">
-                    <ConversacionCotizacion cotizacionId={p.cotizacion.id} total={charlas[p.cotizacion.id]?.total ?? 0} sinLeer={charlas[p.cotizacion.id]?.sinLeer ?? 0} />
+                    <ConversacionInteres oportunidadId={opp.id} resumen={charlas[opp.id] ?? null} />
                   </div>
                 )}
                 {rol === "direccion" ? <DecidirPropuesta versionId={p.id} /> : <p className="mt-2 text-[14px] font-bold text-piedra">Esperando a dirección general.</p>}

@@ -620,13 +620,15 @@ export const TAREAS: Tarea[] = [
   },
   {
     id: "conversar-cotizacion",
-    titulo: "Conversar sobre una cotización",
+    titulo: "Conversación del equipo en cada interés",
     pasos: [
-      { texto: "Debajo de la cotización (en el interés, en la pestaña Cotizaciones o en Aprobaciones) tocá “Conversación”." },
-      { texto: "Escribí lo que quieras anotar o preguntar. Es interno: no sale en el PDF." },
-      { texto: "Con @ le avisás a alguien: escribí @ y elegí a la persona (o tocá el botón @). Le llega a la campana y al celular." },
-      { texto: "El botón muestra cuántos mensajes hay y cuántos son nuevos para vos." },
+      { texto: "Cada interés tiene su “Conversación del equipo”, de la consulta a la postventa: en la tarjeta del interés en la ficha (cotizado o no), en la venta y en Aprobaciones." },
+      { texto: "En el embudo, abrí la tarjeta y tocá “Conversación del equipo”. Si hay mensajes, la tarjeta muestra cuántos (en naranja, los nuevos)." },
+      { texto: "Escribí lo que quieras anotar o preguntar. Es interna: no la ve el cliente ni sale en el PDF." },
+      { texto: "Con @ le avisás a alguien: escribí @ y elegí a la persona (o tocá el botón @). Le llega a la campana y al celular y lo lleva directo a la conversación." },
+      { texto: "Las conversaciones con mensajes nuevos para vos aparecen en Mi día." },
     ],
+    ojo: "Lo que hablaste con el cliente (llamada, WhatsApp, visita) va en “¿Qué pasó?”, abajo de la ficha: queda en los movimientos. La conversación del equipo es para hablar entre ustedes.",
   },
 ];
 
